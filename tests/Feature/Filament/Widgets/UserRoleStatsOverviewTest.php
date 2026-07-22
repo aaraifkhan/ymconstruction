@@ -2,7 +2,8 @@
 
 namespace Tests\Feature\Filament\Widgets;
 
-use App\Filament\Widgets\UserRoleStatsOverview;
+use App\Filament\Widgets\RoleStatsOverview;
+use App\Filament\Widgets\UserStatsOverview;
 use App\Models\User;
 use Filament\Enums\UserMenuPosition;
 use Filament\Facades\Filament;
@@ -25,32 +26,41 @@ class UserRoleStatsOverviewTest extends TestCase
         Filament::setCurrentPanel(Filament::getPanel('admin'));
     }
 
-    public function test_widget_requires_its_shield_permission(): void
+    public function test_each_widget_requires_its_own_shield_permission(): void
     {
         $user = User::factory()->create();
 
         $this->actingAs($user);
 
-        $this->assertFalse(UserRoleStatsOverview::canView());
+        $this->assertFalse(UserStatsOverview::canView());
+        $this->assertFalse(RoleStatsOverview::canView());
 
-        $user->givePermissionTo(Permission::findOrCreate('View:UserRoleStatsOverview'));
+        $user->givePermissionTo(Permission::findOrCreate('View:UserStatsOverview'));
 
-        $this->assertTrue(UserRoleStatsOverview::canView());
+        $this->assertTrue(UserStatsOverview::canView());
+        $this->assertFalse(RoleStatsOverview::canView());
+
+        $user->givePermissionTo(Permission::findOrCreate('View:RoleStatsOverview'));
+
+        $this->assertTrue(UserStatsOverview::canView());
+        $this->assertTrue(RoleStatsOverview::canView());
     }
 
-    public function test_widget_displays_user_and_role_totals(): void
+    public function test_widgets_display_their_own_totals(): void
     {
         User::factory()->count(3)->create();
         Role::create(['name' => 'Manager']);
         Role::create(['name' => 'Supervisor']);
 
-        Livewire::test(UserRoleStatsOverview::class)
-            ->assertSeeInOrder([
-                'Total Users',
-                '3',
-                'Total Roles',
-                '2',
-            ]);
+        Livewire::test(UserStatsOverview::class)
+            ->assertSee('Total Users')
+            ->assertSee('3')
+            ->assertDontSee('Total Roles');
+
+        Livewire::test(RoleStatsOverview::class)
+            ->assertSee('Total Roles')
+            ->assertSee('2')
+            ->assertDontSee('Total Users');
     }
 
     public function test_profile_menu_stays_in_topbar_and_account_widget_is_not_on_the_dashboard(): void

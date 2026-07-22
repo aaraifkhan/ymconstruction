@@ -2,6 +2,9 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Pages\MyProfile;
+use App\Settings\GeneralSettings;
+use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -17,8 +20,9 @@ use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
-use Illuminate\View\View;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use Illuminate\View\View;
+use Jeffgreco13\FilamentBreezy\BreezyCore;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -29,16 +33,16 @@ class AdminPanelProvider extends PanelProvider
         $brandLogo = null;
 
         try {
-            $settings = app(\App\Settings\GeneralSettings::class);
-            if (!empty($settings->primary_color)) {
+            $settings = app(GeneralSettings::class);
+            if (! empty($settings->primary_color)) {
                 // Determine if it's hex, rgb, or just use the color directly
                 $primaryColor = Color::hex($settings->primary_color);
             }
-            if (!empty($settings->brand_name)) {
+            if (! empty($settings->brand_name)) {
                 $brandName = $settings->brand_name;
             }
-            if (!empty($settings->brand_logo)) {
-                $brandLogo = asset('storage/' . $settings->brand_logo);
+            if (! empty($settings->brand_logo)) {
+                $brandLogo = asset('storage/'.$settings->brand_logo);
             }
         } catch (\Throwable $e) {
             // Safe fallback during migrations
@@ -58,6 +62,7 @@ class AdminPanelProvider extends PanelProvider
                 Dashboard::class,
             ])
             ->assets([
+                Css::make('profile-page', resource_path('css/filament/admin/profile-page.css')),
                 Css::make('sidebar-user-menu', resource_path('css/filament/admin/sidebar-user-menu.css')),
             ])
             ->renderHook(
@@ -79,15 +84,15 @@ class AdminPanelProvider extends PanelProvider
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([])
             ->plugins([
-                \BezhanSalleh\FilamentShield\FilamentShieldPlugin::make(),
-                \Jeffgreco13\FilamentBreezy\BreezyCore::make()
+                FilamentShieldPlugin::make(),
+                BreezyCore::make()
                     ->myProfile(
                         shouldRegisterUserMenu: true,
                         shouldRegisterNavigation: false,
                         hasAvatars: true,
                         slug: 'my-profile'
                     )
-                    ->customMyProfilePage(\App\Filament\Pages\MyProfile::class)
+                    ->customMyProfilePage(MyProfile::class)
                     ->enableTwoFactorAuthentication(),
             ])
             ->middleware([
