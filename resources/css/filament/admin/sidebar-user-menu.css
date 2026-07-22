@@ -1,0 +1,15 @@
+.fi-sidebar-user-menu-with-logout {
+    position: relative;
+}
+
+.fi-sidebar-user-menu-logout {
+    inset-inline-end: 2.25rem;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+}
+
+.fi-sidebar-user-menu-logout .fi-icon-btn {
+    margin: 0;
+}

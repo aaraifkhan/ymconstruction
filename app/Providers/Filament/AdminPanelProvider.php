@@ -1,0 +1,108 @@
+<?php
+
+namespace App\Providers\Filament;
+
+use Filament\Http\Middleware\Authenticate;
+use Filament\Http\Middleware\AuthenticateSession;
+use Filament\Http\Middleware\DisableBladeIconComponents;
+use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Filament\Pages\Dashboard;
+use Filament\Panel;
+use Filament\PanelProvider;
+use Filament\Support\Assets\Css;
+use Filament\Support\Colors\Color;
+use Filament\View\PanelsRenderHook;
+use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
+use Illuminate\Cookie\Middleware\EncryptCookies;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
+use Illuminate\Routing\Middleware\SubstituteBindings;
+use Illuminate\Session\Middleware\StartSession;
+use Illuminate\View\View;
+use Illuminate\View\Middleware\ShareErrorsFromSession;
+
+class AdminPanelProvider extends PanelProvider
+{
+    public function panel(Panel $panel): Panel
+    {
+        $primaryColor = Color::Amber;
+        $brandName = 'YM Construction';
+        $brandLogo = null;
+
+        try {
+            $settings = app(\App\Settings\GeneralSettings::class);
+            if (!empty($settings->primary_color)) {
+                // Determine if it's hex, rgb, or just use the color directly
+                $primaryColor = Color::hex($settings->primary_color);
+            }
+            if (!empty($settings->brand_name)) {
+                $brandName = $settings->brand_name;
+            }
+            if (!empty($settings->brand_logo)) {
+                $brandLogo = asset('storage/' . $settings->brand_logo);
+            }
+        } catch (\Throwable $e) {
+            // Safe fallback during migrations
+        }
+
+        $panel
+            ->default()
+            ->id('admin')
+            ->path('admin')
+            ->login()
+            ->colors([
+                'primary' => $primaryColor,
+            ])
+            ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
+            ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
+            ->pages([
+                Dashboard::class,
+            ])
+            ->assets([
+                Css::make('sidebar-user-menu', resource_path('css/filament/admin/sidebar-user-menu.css')),
+            ])
+            ->renderHook(
+                PanelsRenderHook::SIDEBAR_FOOTER,
+                fn (): View => view('filament.admin.sidebar-user-menu'),
+            )
+            ->navigationGroups([
+                'User Management',
+                'System',
+                'Settings',
+            ])
+            ->brandName($brandName);
+
+        if ($brandLogo) {
+            $panel->brandLogo($brandLogo);
+        }
+
+        return $panel
+            ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
+            ->widgets([])
+            ->plugins([
+                \BezhanSalleh\FilamentShield\FilamentShieldPlugin::make(),
+                \Jeffgreco13\FilamentBreezy\BreezyCore::make()
+                    ->myProfile(
+                        shouldRegisterUserMenu: true,
+                        shouldRegisterNavigation: false,
+                        hasAvatars: true,
+                        slug: 'my-profile'
+                    )
+                    ->customMyProfilePage(\App\Filament\Pages\MyProfile::class)
+                    ->enableTwoFactorAuthentication(),
+            ])
+            ->middleware([
+                EncryptCookies::class,
+                AddQueuedCookiesToResponse::class,
+                StartSession::class,
+                AuthenticateSession::class,
+                ShareErrorsFromSession::class,
+                PreventRequestForgery::class,
+                SubstituteBindings::class,
+                DisableBladeIconComponents::class,
+                DispatchServingFilamentEvent::class,
+            ])
+            ->authMiddleware([
+                Authenticate::class,
+            ]);
+    }
+}
