@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 use Filament\Schemas\Components\Livewire;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
@@ -11,6 +12,8 @@ use Jeffgreco13\FilamentBreezy\Pages\MyProfilePage;
 
 class MyProfile extends MyProfilePage
 {
+    use HasPageShield;
+
     protected string $view = 'filament-panels::pages.page';
 
     public function getSubheading(): string

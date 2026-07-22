@@ -5,6 +5,7 @@ namespace App\Providers\Filament;
 use App\Filament\Pages\MyProfile;
 use App\Settings\GeneralSettings;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
+use Filament\Actions\Action;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -77,7 +78,12 @@ class AdminPanelProvider extends PanelProvider
                 'Settings',
             ])
             ->brandName($brandName)
-            ->favicon($favicon);
+            ->favicon($favicon)
+            ->userMenuItems([
+                'profile' => fn (Action $action): Action => $action
+                    ->url(MyProfile::getUrl())
+                    ->visible(fn (): bool => MyProfile::canAccess()),
+            ]);
 
         if ($brandLogo) {
             $panel->brandLogo($brandLogo);
@@ -90,7 +96,7 @@ class AdminPanelProvider extends PanelProvider
                 FilamentShieldPlugin::make(),
                 BreezyCore::make()
                     ->myProfile(
-                        shouldRegisterUserMenu: true,
+                        shouldRegisterUserMenu: false,
                         shouldRegisterNavigation: false,
                         hasAvatars: true,
                         slug: 'my-profile'

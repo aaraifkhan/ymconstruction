@@ -14,6 +14,7 @@ use Jeffgreco13\FilamentBreezy\Livewire\PersonalInfo;
 use Jeffgreco13\FilamentBreezy\Livewire\TwoFactorAuthentication;
 use Jeffgreco13\FilamentBreezy\Livewire\UpdatePassword;
 use Livewire\Livewire;
+use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
 class MyProfilePageTest extends TestCase
@@ -24,10 +25,33 @@ class MyProfilePageTest extends TestCase
     {
         parent::setUp();
 
+        config()->set('app.env', 'local');
+
         $panel = Filament::getPanel('admin');
 
         Filament::setCurrentPanel($panel);
         $panel->getPlugin('filament-breezy')->boot($panel);
+    }
+
+    public function test_profile_page_and_user_menu_item_require_the_page_permission(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user);
+
+        $this->assertFalse(MyProfile::canAccess());
+        $this->assertArrayNotHasKey('profile', Filament::getCurrentPanel()->getUserMenuItems());
+
+        $this->get(MyProfile::getUrl())
+            ->assertForbidden();
+
+        $user->givePermissionTo(Permission::findOrCreate('View:MyProfile'));
+
+        $this->assertTrue(MyProfile::canAccess());
+        $this->assertArrayHasKey('profile', Filament::getCurrentPanel()->getUserMenuItems());
+
+        $this->get(MyProfile::getUrl())
+            ->assertOk();
     }
 
     public function test_profile_components_are_organized_into_filament_tabs(): void
