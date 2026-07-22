@@ -68,6 +68,7 @@ class UserRoleStatsOverviewTest extends TestCase
         $panel = Filament::getCurrentPanel();
 
         $this->assertSame(UserMenuPosition::Topbar, $panel->getUserMenuPosition());
+        $this->assertStringEndsWith('/images/favicon.svg', $panel->getFavicon());
         $this->assertNotContains(AccountWidget::class, $panel->getWidgets());
     }
 

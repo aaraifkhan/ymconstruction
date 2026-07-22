@@ -31,6 +31,7 @@ class AdminPanelProvider extends PanelProvider
         $primaryColor = Color::Amber;
         $brandName = 'YM Construction';
         $brandLogo = null;
+        $favicon = asset('images/favicon.svg');
 
         try {
             $settings = app(GeneralSettings::class);
@@ -43,6 +44,7 @@ class AdminPanelProvider extends PanelProvider
             }
             if (! empty($settings->brand_logo)) {
                 $brandLogo = asset('storage/'.$settings->brand_logo);
+                $favicon = $brandLogo;
             }
         } catch (\Throwable $e) {
             // Safe fallback during migrations
@@ -74,7 +76,8 @@ class AdminPanelProvider extends PanelProvider
                 'System',
                 'Settings',
             ])
-            ->brandName($brandName);
+            ->brandName($brandName)
+            ->favicon($favicon);
 
         if ($brandLogo) {
             $panel->brandLogo($brandLogo);
