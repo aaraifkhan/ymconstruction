@@ -41,7 +41,10 @@ return new class extends Migration
             $table->decimal('credit_total', 19, 4)->default(0);
             $table->timestamps();
 
-            $table->unique(['company_id', 'financial_year_id', 'voucher_number']);
+            $table->unique(
+                ['company_id', 'financial_year_id', 'voucher_number'],
+                'journal_entries_company_year_voucher_unique',
+            );
             $table->unique(['company_id', 'idempotency_key']);
             $table->index(['company_id', 'status', 'transaction_date']);
             $table->index(['company_id', 'financial_period_id', 'status']);

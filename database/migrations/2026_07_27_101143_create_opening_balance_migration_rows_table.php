@@ -13,7 +13,9 @@ return new class extends Migration
     {
         Schema::create('opening_balance_migration_rows', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('opening_balance_migration_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('opening_balance_migration_id')
+                ->constrained(indexName: 'opening_migration_rows_migration_foreign')
+                ->cascadeOnDelete();
             $table->foreignId('company_id')->constrained()->restrictOnDelete();
             $table->unsignedInteger('source_row_number');
             $table->string('account_code', 50);

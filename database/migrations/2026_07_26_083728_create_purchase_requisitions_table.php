@@ -40,7 +40,10 @@ return new class extends Migration
 
             $table->unique(['company_id', 'requisition_number']);
             $table->index(['company_id', 'status', 'required_date']);
-            $table->index(['company_id', 'project_id', 'project_site_id']);
+            $table->index(
+                ['company_id', 'project_id', 'project_site_id'],
+                'purchase_requisitions_project_site_index',
+            );
         });
     }
 

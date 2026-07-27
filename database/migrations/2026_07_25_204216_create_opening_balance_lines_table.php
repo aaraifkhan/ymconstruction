@@ -25,7 +25,10 @@ return new class extends Migration
             $table->foreignId('cost_center_id')->nullable()->constrained('cost_centers')->restrictOnDelete();
             $table->timestamps();
 
-            $table->unique(['opening_balance_batch_id', 'line_number']);
+            $table->unique(
+                ['opening_balance_batch_id', 'line_number'],
+                'opening_balance_lines_batch_line_unique',
+            );
             $table->index(['company_id', 'account_id']);
         });
     }

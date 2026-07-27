@@ -37,7 +37,10 @@ return new class extends Migration
             $table->unique(['goods_receipt_id', 'line_number']);
             $table->unique(['goods_receipt_id', 'purchase_order_line_id'], 'goods_receipt_po_line_unique');
             $table->index(['company_id', 'item_id']);
-            $table->index(['purchase_order_line_id', 'inspection_result']);
+            $table->index(
+                ['purchase_order_line_id', 'inspection_result'],
+                'goods_receipt_lines_po_inspection_index',
+            );
         });
     }
 

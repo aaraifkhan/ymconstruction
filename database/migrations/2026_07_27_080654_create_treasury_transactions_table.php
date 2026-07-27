@@ -19,7 +19,13 @@ return new class extends Migration
             $table->foreignId('source_account_id')->nullable()->constrained('accounts')->restrictOnDelete();
             $table->foreignId('destination_account_id')->nullable()->constrained('accounts')->restrictOnDelete();
             $table->foreignId('source_company_bank_account_id')->nullable()->constrained('company_bank_accounts')->restrictOnDelete();
-            $table->foreignId('destination_company_bank_account_id')->nullable()->constrained('company_bank_accounts')->restrictOnDelete();
+            $table->foreignId('destination_company_bank_account_id')
+                ->nullable()
+                ->constrained(
+                    table: 'company_bank_accounts',
+                    indexName: 'treasury_transactions_destination_bank_foreign',
+                )
+                ->restrictOnDelete();
             $table->string('transaction_number')->nullable();
             $table->string('type');
             $table->string('purpose');

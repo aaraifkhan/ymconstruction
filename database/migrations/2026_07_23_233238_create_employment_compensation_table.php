@@ -36,7 +36,10 @@ return new class extends Migration
             $table->softDeletes();
 
             $table->index(['company_id', 'status']);
-            $table->index(['employment_id', 'status', 'effective_from']);
+            $table->index(
+                ['employment_id', 'status', 'effective_from'],
+                'employment_compensation_effective_lookup_index',
+            );
         });
     }
 

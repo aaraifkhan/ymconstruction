@@ -26,7 +26,10 @@ return new class extends Migration
                 ['bank_reconciliation_id', 'bank_statement_line_id', 'journal_line_id'],
                 'bank_reconciliation_match_unique',
             );
-            $table->index(['company_id', 'bank_statement_line_id']);
+            $table->index(
+                ['company_id', 'bank_statement_line_id'],
+                'bank_reconciliation_matches_statement_index',
+            );
             $table->index(['company_id', 'journal_line_id']);
         });
     }

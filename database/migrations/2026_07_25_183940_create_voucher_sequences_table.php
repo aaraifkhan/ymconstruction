@@ -22,7 +22,10 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->timestamps();
 
-            $table->unique(['company_id', 'financial_year_id', 'voucher_type']);
+            $table->unique(
+                ['company_id', 'financial_year_id', 'voucher_type'],
+                'voucher_sequences_company_year_type_unique',
+            );
             $table->index(['company_id', 'is_active']);
         });
     }

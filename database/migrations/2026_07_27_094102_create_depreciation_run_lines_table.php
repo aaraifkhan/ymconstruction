@@ -17,7 +17,12 @@ return new class extends Migration
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->foreignId('fixed_asset_id')->constrained()->restrictOnDelete();
             $table->foreignId('expense_account_id')->constrained('accounts')->restrictOnDelete();
-            $table->foreignId('accumulated_depreciation_account_id')->constrained('accounts')->restrictOnDelete();
+            $table->foreignId('accumulated_depreciation_account_id')
+                ->constrained(
+                    table: 'accounts',
+                    indexName: 'depreciation_run_lines_accumulated_account_foreign',
+                )
+                ->restrictOnDelete();
             $table->foreignId('project_id')->nullable()->constrained()->restrictOnDelete();
             $table->foreignId('project_site_id')->nullable()->constrained()->restrictOnDelete();
             $table->foreignId('cost_center_id')->nullable()->constrained()->restrictOnDelete();

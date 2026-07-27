@@ -23,7 +23,10 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index(['company_id', 'project_id']);
-            $table->index(['payroll_entry_id', 'expense_account_id']);
+            $table->index(
+                ['payroll_entry_id', 'expense_account_id'],
+                'payroll_project_allocations_entry_expense_index',
+            );
         });
     }
 

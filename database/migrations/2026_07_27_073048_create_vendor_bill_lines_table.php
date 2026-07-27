@@ -44,7 +44,10 @@ return new class extends Migration
 
             $table->unique(['vendor_bill_id', 'line_number']);
             $table->index(['company_id', 'purchase_order_line_id']);
-            $table->index(['company_id', 'project_id', 'clearing_account_id']);
+            $table->index(
+                ['company_id', 'project_id', 'clearing_account_id'],
+                'vendor_bill_lines_project_clearing_index',
+            );
         });
     }
 
