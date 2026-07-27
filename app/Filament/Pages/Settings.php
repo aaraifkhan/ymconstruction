@@ -15,15 +15,18 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Facades\Gate;
 
 class Settings extends Page
 {
     use HasPageShield;
 
-    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-cog-6-tooth';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-cog-6-tooth';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'Settings';
+    protected static string|\UnitEnum|null $navigationGroup = 'Settings';
+
     protected static ?string $title = 'App Settings';
+
     protected static ?string $navigationLabel = 'App Settings';
 
     public ?array $data = [];
@@ -98,6 +101,7 @@ class Settings extends Page
                         Actions::make([
                             Action::make('save')
                                 ->label('Save Settings')
+                                ->authorize('Update:Settings')
                                 ->submit('save'),
                         ])->key('form-actions'),
                     ]),
@@ -106,6 +110,8 @@ class Settings extends Page
 
     public function save(GeneralSettings $settings): void
     {
+        Gate::authorize('Update:Settings');
+
         $oldData = $settings->toArray();
         $data = $this->form->getState();
 

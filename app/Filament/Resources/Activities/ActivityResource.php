@@ -2,8 +2,6 @@
 
 namespace App\Filament\Resources\Activities;
 
-use App\Filament\Resources\Activities\Pages\CreateActivity;
-use App\Filament\Resources\Activities\Pages\EditActivity;
 use App\Filament\Resources\Activities\Pages\ListActivities;
 use App\Filament\Resources\Activities\Pages\ViewActivity;
 use App\Filament\Resources\Activities\Schemas\ActivityForm;
@@ -14,11 +12,14 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
 use Spatie\Activitylog\Models\Activity;
 
 class ActivityResource extends Resource
 {
     protected static ?string $model = Activity::class;
+
+    protected static bool $isScopedToTenant = false;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedClipboardDocumentList;
 
@@ -54,12 +55,12 @@ class ActivityResource extends Resource
         return false;
     }
 
-    public static function canEdit(\Illuminate\Database\Eloquent\Model|Activity $record): bool
+    public static function canEdit(Model|Activity $record): bool
     {
         return false;
     }
 
-    public static function canDelete(\Illuminate\Database\Eloquent\Model|Activity $record): bool
+    public static function canDelete(Model|Activity $record): bool
     {
         return false;
     }

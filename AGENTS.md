@@ -5,6 +5,24 @@
 
 The Laravel Boost guidelines are specifically curated by Laravel maintainers for this application. These guidelines should be followed closely to ensure the best experience when building Laravel applications.
 
+## Project State
+
+- Before changing the application, read `docs/PROJECT_STATE.md` completely.
+- Treat its "Implemented now" and "Not implemented yet" sections as distinct; verify the repository and database before relying on either.
+- Update `docs/PROJECT_STATE.md` whenever implementation status, architecture, workflow decisions, or project-wide standards materially change.
+
+## Finance and Operations Implementation Plan
+
+- Before planning or changing Accounts, Chart of Accounts, Projects, Sales, Purchases, Inventory, Banking, Payroll accounting-posting, Assets, or consolidated reporting, read `docs/FINANCE_PROJECTS_OPERATIONS_IMPLEMENTATION_PLAN.md` completely.
+- The plan is the controlling cross-chat implementation and handoff document for those domains. Follow its phase order, dependencies, decision gates, status vocabulary, acceptance criteria, and completion protocol.
+- Work on only one numbered phase at a time. At most one phase may be marked `In Progress`.
+- Do not begin a later phase until all earlier dependencies are `Implemented and Verified`. Do not begin implementation merely because the plan exists; wait for the user to request the relevant phase.
+- When starting, blocking, reopening, or completing a phase, update the plan in the same change. On completion, record the actual implementation, migrations, permissions, tests, verification commands, deviations, limitations, and Progress Ledger entry.
+- A phase may be marked `Implemented and Verified` only after its full acceptance criteria and relevant tests pass. File presence or partial CRUD is not completion.
+- Update `docs/PROJECT_STATE.md` whenever a phase status or material architecture/workflow decision changes.
+- After context compaction or in a new chat, re-read the full plan, inspect the repository, database, current diff, and tests, then resume the single `In Progress` phase. Never rely on conversation memory for phase status.
+- Stop after completing a phase unless the user explicitly requests the next phase. Never bulk-mark future phases complete.
+
 ## Foundational Context
 
 This application is a Laravel application and its main Laravel ecosystems package & versions are below. You are an expert with them all. Ensure you abide by these specific packages & versions.

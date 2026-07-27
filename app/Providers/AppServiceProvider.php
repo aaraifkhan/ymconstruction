@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\CompanyBankAccount;
+use App\Observers\CompanyBankAccountObserver;
 use App\Policies\ActivityPolicy;
 use App\Policies\RolePolicy;
 use Illuminate\Support\Facades\Gate;
@@ -24,6 +26,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        CompanyBankAccount::observe(CompanyBankAccountObserver::class);
         Gate::policy(Activity::class, ActivityPolicy::class);
         Gate::policy(Role::class, RolePolicy::class);
 

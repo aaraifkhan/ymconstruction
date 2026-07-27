@@ -1,7 +1,25 @@
 <?php
 
 declare(strict_types=1);
+use App\Filament\Resources\Activities\ActivityResource;
+use App\Filament\Resources\Companies\CompanyResource;
+use App\Filament\Resources\CompanyBankAccounts\CompanyBankAccountResource;
+use App\Filament\Resources\CompanyModules\CompanyModuleResource;
+use App\Filament\Resources\Departments\DepartmentResource;
+use App\Filament\Resources\Designations\DesignationResource;
+use App\Filament\Resources\DocumentCategories\DocumentCategoryResource;
+use App\Filament\Resources\Documents\DocumentResource;
+use App\Filament\Resources\Employees\EmployeeResource;
+use App\Filament\Resources\EmploymentCompensation\EmploymentCompensationResource;
+use App\Filament\Resources\Employments\EmploymentResource;
+use App\Filament\Resources\JoiningLetters\JoiningLetterResource;
+use App\Filament\Resources\JoiningLetterTemplates\JoiningLetterTemplateResource;
+use App\Filament\Resources\JournalEntries\JournalEntryResource;
+use App\Filament\Resources\Modules\ModuleResource;
+use App\Filament\Resources\OpeningBalanceBatches\OpeningBalanceBatchResource;
+use App\Filament\Resources\PayrollRuns\PayrollRunResource;
 use App\Filament\Resources\Roles\RoleResource;
+use App\Filament\Resources\Users\UserResource;
 use Filament\Pages\Dashboard;
 use Filament\Widgets\AccountWidget;
 use Filament\Widgets\FilamentInfoWidget;
@@ -27,7 +45,7 @@ return [
             'pages' => true,
             'widgets' => true,
             'resources' => true,
-            'custom_permissions' => false,
+            'custom_permissions' => true,
         ],
     ],
 
@@ -175,7 +193,7 @@ return [
                 'delete',
                 'deleteAny',
             ],
-            \App\Filament\Resources\Users\UserResource::class => [
+            UserResource::class => [
                 'viewAny',
                 'view',
                 'create',
@@ -188,9 +206,165 @@ return [
                 'forceDeleteAny',
                 'resetPassword',
             ],
-            \App\Filament\Resources\Activities\ActivityResource::class => [
+            ActivityResource::class => [
                 'viewAny',
                 'view',
+            ],
+            CompanyResource::class => [
+                'viewAny',
+                'view',
+                'create',
+                'update',
+                'delete',
+                'deleteAny',
+                'restore',
+                'restoreAny',
+                'manageMembers',
+            ],
+            ModuleResource::class => [
+                'viewAny',
+                'view',
+                'create',
+                'update',
+                'delete',
+                'deleteAny',
+            ],
+            CompanyModuleResource::class => [
+                'viewAny',
+                'view',
+                'create',
+                'update',
+                'delete',
+                'deleteAny',
+            ],
+            CompanyBankAccountResource::class => [
+                'viewAny',
+                'view',
+                'create',
+                'update',
+                'delete',
+                'deleteAny',
+                'restore',
+                'restoreAny',
+                'viewSensitive',
+            ],
+            DocumentCategoryResource::class => [
+                'viewAny',
+                'view',
+                'create',
+                'update',
+                'delete',
+                'deleteAny',
+                'restore',
+                'restoreAny',
+            ],
+            DocumentResource::class => [
+                'viewAny',
+                'view',
+                'create',
+                'update',
+                'delete',
+                'deleteAny',
+                'restore',
+                'restoreAny',
+                'viewSensitive',
+                'download',
+                'preview',
+                'uploadVersion',
+                'verify',
+                'approve',
+                'reject',
+            ],
+            EmployeeResource::class => [
+                'viewAny',
+                'view',
+                'create',
+                'update',
+                'delete',
+                'restore',
+                'viewIdentity',
+                'viewContact',
+                'viewMedical',
+                'manageSensitive',
+            ],
+            DepartmentResource::class => [
+                'viewAny',
+                'view',
+                'create',
+                'update',
+                'delete',
+                'restore',
+                'restoreAny',
+            ],
+            DesignationResource::class => [
+                'viewAny',
+                'view',
+                'create',
+                'update',
+                'delete',
+                'restore',
+                'restoreAny',
+            ],
+            EmploymentResource::class => [
+                'viewAny',
+                'view',
+                'create',
+                'update',
+                'delete',
+                'deleteAny',
+                'restore',
+                'restoreAny',
+                'viewHrNotes',
+                'manageHrVerification',
+            ],
+            JoiningLetterTemplateResource::class => [
+                'viewAny',
+                'view',
+                'create',
+                'update',
+                'delete',
+                'restore',
+            ],
+            JoiningLetterResource::class => [
+                'viewAny',
+                'view',
+                'create',
+                'update',
+                'delete',
+                'restore',
+                'viewSensitive',
+                'viewCompensation',
+                'manageCompensation',
+                'regenerate',
+                'submit',
+                'approve',
+                'reject',
+                'issue',
+                'recordAcceptance',
+            ],
+            EmploymentCompensationResource::class => [
+                'viewAny',
+                'view',
+                'create',
+                'update',
+                'delete',
+                'restore',
+                'viewAmounts',
+                'manageAmounts',
+                'submit',
+                'approve',
+                'reject',
+            ],
+            PayrollRunResource::class => [
+                'viewAny', 'view', 'create', 'update', 'delete', 'restore', 'viewAmounts',
+                'generateEntries', 'submit', 'approve', 'reject', 'markPaid', 'lock',
+            ],
+            JournalEntryResource::class => [
+                'viewAny', 'view', 'create', 'update', 'delete',
+                'submit', 'approve', 'reject', 'post', 'reverse',
+            ],
+            OpeningBalanceBatchResource::class => [
+                'viewAny', 'view', 'create', 'update', 'delete', 'validate', 'post',
             ],
         ],
         'exclude' => [
@@ -249,6 +423,32 @@ return [
     */
 
     'custom_permissions' => [
+        'Update:Settings',
+        'ViewAny:EmployeeEmergencyContact',
+        'View:EmployeeEmergencyContact',
+        'Create:EmployeeEmergencyContact',
+        'Update:EmployeeEmergencyContact',
+        'Delete:EmployeeEmergencyContact',
+        'Restore:EmployeeEmergencyContact',
+        'ViewAny:EmployeeQualification',
+        'View:EmployeeQualification',
+        'Create:EmployeeQualification',
+        'Update:EmployeeQualification',
+        'Delete:EmployeeQualification',
+        'Restore:EmployeeQualification',
+        'ViewAny:EmployeeExperience',
+        'View:EmployeeExperience',
+        'Create:EmployeeExperience',
+        'Update:EmployeeExperience',
+        'Delete:EmployeeExperience',
+        'Restore:EmployeeExperience',
+        'ViewAny:EmployeeBankAccount',
+        'View:EmployeeBankAccount',
+        'Create:EmployeeBankAccount',
+        'Update:EmployeeBankAccount',
+        'Delete:EmployeeBankAccount',
+        'Restore:EmployeeBankAccount',
+        'ViewSensitive:EmployeeBankAccount',
     ],
 
     /*

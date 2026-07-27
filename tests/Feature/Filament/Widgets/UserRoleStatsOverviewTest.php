@@ -4,6 +4,7 @@ namespace Tests\Feature\Filament\Widgets;
 
 use App\Filament\Widgets\RoleStatsOverview;
 use App\Filament\Widgets\UserStatsOverview;
+use App\Models\Company;
 use App\Models\User;
 use Filament\Enums\UserMenuPosition;
 use Filament\Facades\Filament;
@@ -75,10 +76,12 @@ class UserRoleStatsOverviewTest extends TestCase
     public function test_sidebar_footer_renders_the_default_filament_user_menu(): void
     {
         $user = User::factory()->create(['name' => 'Aaraif Hanif']);
+        $company = Company::factory()->create();
 
+        $company->members()->attach($user, ['is_active' => true]);
         $this->actingAs($user);
-
-        Filament::getCurrentPanel()->boot();
+        Filament::setTenant($company);
+        Filament::bootCurrentPanel();
 
         $sidebar = Livewire::test(Sidebar::class)
             ->assertSee('Aaraif Hanif')

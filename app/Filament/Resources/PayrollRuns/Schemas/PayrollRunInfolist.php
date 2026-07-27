@@ -1,0 +1,50 @@
+<?php
+
+namespace App\Filament\Resources\PayrollRuns\Schemas;
+
+use App\Enums\PayrollRunStatus;
+use App\Models\PayrollRun;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
+use Illuminate\Support\Facades\Gate;
+
+class PayrollRunInfolist
+{
+    public static function configure(Schema $schema): Schema
+    {
+        return $schema->components([
+            Section::make('Payroll run')->schema([
+                TextEntry::make('reference_number'),
+                TextEntry::make('status')->badge()
+                    ->formatStateUsing(fn (PayrollRunStatus $state): string => $state->getLabel())
+                    ->color(fn (PayrollRunStatus $state): string => $state->getColor()),
+                TextEntry::make('period_start')->date(),
+                TextEntry::make('period_end')->date(),
+                TextEntry::make('entries_count')->state(fn (PayrollRun $record): int => $record->entries()->count())->label('Employees'),
+                TextEntry::make('currency_code'),
+            ])->columns(2)->columnSpanFull(),
+            Section::make('Protected payroll totals')->schema([
+                TextEntry::make('gross_total')->state(fn (PayrollRun $record): string => $record->currency_code.' '.number_format($record->total('gross_salary'), 2)),
+                TextEntry::make('deductions_total')->state(fn (PayrollRun $record): string => $record->currency_code.' '.number_format($record->total('absence_deduction') + $record->total('loan_advance_deduction') + $record->total('other_deduction'), 2)),
+                TextEntry::make('net_total')->state(fn (PayrollRun $record): string => $record->currency_code.' '.number_format($record->total('net_salary'), 2))->weight('bold'),
+                TextEntry::make('bank_total')->state(fn (PayrollRun $record): string => $record->currency_code.' '.number_format($record->total('bank_amount'), 2)),
+                TextEntry::make('cash_total')->state(fn (PayrollRun $record): string => $record->currency_code.' '.number_format($record->total('cash_amount'), 2)),
+                TextEntry::make('notes')->placeholder('—')->columnSpanFull(),
+            ])->visible(fn (PayrollRun $record): bool => Gate::allows('viewAmounts', $record))->columns(2)->columnSpanFull(),
+            Section::make('Workflow evidence')->schema([
+                TextEntry::make('createdBy.name')->label('Created by')->placeholder('—'),
+                TextEntry::make('submittedBy.name')->label('Submitted by')->placeholder('—'),
+                TextEntry::make('submitted_at')->dateTime()->placeholder('—'),
+                TextEntry::make('approvedBy.name')->label('Approved by')->placeholder('—'),
+                TextEntry::make('approved_at')->dateTime()->placeholder('—'),
+                TextEntry::make('rejectedBy.name')->label('Rejected by')->placeholder('—'),
+                TextEntry::make('rejection_reason')->placeholder('—'),
+                TextEntry::make('paidBy.name')->label('Paid by')->placeholder('—'),
+                TextEntry::make('paid_at')->dateTime()->placeholder('—'),
+                TextEntry::make('lockedBy.name')->label('Locked by')->placeholder('—'),
+                TextEntry::make('locked_at')->dateTime()->placeholder('—'),
+            ])->columns(2)->columnSpanFull(),
+        ]);
+    }
+}

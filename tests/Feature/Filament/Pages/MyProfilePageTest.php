@@ -3,6 +3,7 @@
 namespace Tests\Feature\Filament\Pages;
 
 use App\Filament\Pages\MyProfile;
+use App\Models\Company;
 use App\Models\User;
 use Filament\Facades\Filament;
 use Filament\Schemas\Components\Livewire as LivewireComponent;
@@ -21,6 +22,8 @@ class MyProfilePageTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
+    private Company $company;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -31,13 +34,14 @@ class MyProfilePageTest extends TestCase
 
         Filament::setCurrentPanel($panel);
         $panel->getPlugin('filament-breezy')->boot($panel);
+        $this->company = Company::factory()->create();
     }
 
     public function test_profile_page_and_user_menu_item_require_the_page_permission(): void
     {
         $user = User::factory()->create();
 
-        $this->actingAs($user);
+        $this->actingAsCompanyUser($user);
 
         $this->assertFalse(MyProfile::canAccess());
         $this->assertArrayNotHasKey('profile', Filament::getCurrentPanel()->getUserMenuItems());
@@ -52,6 +56,27 @@ class MyProfilePageTest extends TestCase
 
         $this->get(MyProfile::getUrl())
             ->assertOk();
+    }
+
+    public function test_tenant_registration_page_can_be_rendered_without_url_generation_exception(): void
+    {
+        $user = User::factory()->create();
+        $user->givePermissionTo(Permission::findOrCreate('Create:Company'));
+
+        $this->actingAs($user);
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        $this->get('/admin/new')
+            ->assertOk();
+    }
+
+    private function actingAsCompanyUser(User $user): void
+    {
+        $this->company->members()->attach($user, ['is_active' => true]);
+
+        $this->actingAs($user);
+        Filament::setTenant($this->company);
+        Filament::bootCurrentPanel();
     }
 
     public function test_profile_components_are_organized_into_filament_tabs(): void

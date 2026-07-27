@@ -3,9 +3,12 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Pages\MyProfile;
+use App\Filament\Pages\Tenancy\RegisterCompany;
+use App\Models\Company;
 use App\Settings\GeneralSettings;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use Filament\Actions\Action;
+use Filament\Facades\Filament;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -56,6 +59,10 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
+            ->tenant(Company::class, slugAttribute: 'slug')
+            ->tenantRoutePrefix('company')
+            ->tenantRegistration(RegisterCompany::class)
+            ->searchableTenantMenu()
             ->colors([
                 'primary' => $primaryColor,
             ])
@@ -73,6 +80,10 @@ class AdminPanelProvider extends PanelProvider
                 fn (): View => view('filament.admin.sidebar-user-menu'),
             )
             ->navigationGroups([
+                'Master Data',
+                'Accounting',
+                'Reports',
+                'Company Management',
                 'User Management',
                 'System',
                 'Settings',
@@ -81,8 +92,8 @@ class AdminPanelProvider extends PanelProvider
             ->favicon($favicon)
             ->userMenuItems([
                 'profile' => fn (Action $action): Action => $action
-                    ->url(MyProfile::getUrl())
-                    ->visible(fn (): bool => MyProfile::canAccess()),
+                    ->url(fn (): ?string => Filament::getTenant() !== null ? MyProfile::getUrl() : null)
+                    ->visible(fn (): bool => Filament::getTenant() !== null && MyProfile::canAccess()),
             ]);
 
         if ($brandLogo) {
@@ -93,7 +104,8 @@ class AdminPanelProvider extends PanelProvider
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([])
             ->plugins([
-                FilamentShieldPlugin::make(),
+                FilamentShieldPlugin::make()
+                    ->scopeToTenant(false),
                 BreezyCore::make()
                     ->myProfile(
                         shouldRegisterUserMenu: false,

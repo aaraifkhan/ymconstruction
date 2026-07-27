@@ -3,6 +3,7 @@
 namespace Tests\Feature\Filament\Resources;
 
 use App\Filament\Resources\Activities\ActivityResource;
+use App\Models\Company;
 use App\Models\User;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -13,19 +14,22 @@ class ActivityResourceAuthorizationTest extends TestCase
 {
     use LazilyRefreshDatabase;
 
+    private Company $company;
+
     protected function setUp(): void
     {
         parent::setUp();
 
         config()->set('app.env', 'local');
         Filament::setCurrentPanel(Filament::getPanel('admin'));
+        $this->company = Company::factory()->create();
     }
 
     public function test_user_without_activity_permission_cannot_see_or_open_activity_log(): void
     {
         $user = User::factory()->create();
 
-        $this->actingAs($user);
+        $this->actingAsCompanyUser($user);
 
         $this->assertFalse(ActivityResource::canViewAny());
         $this->assertFalse(ActivityResource::canAccess());
@@ -39,7 +43,7 @@ class ActivityResourceAuthorizationTest extends TestCase
         $user = User::factory()->create();
         $user->givePermissionTo(Permission::findOrCreate('ViewAny:Activity'));
 
-        $this->actingAs($user);
+        $this->actingAsCompanyUser($user);
 
         $this->assertTrue(ActivityResource::canViewAny());
         $this->assertTrue(ActivityResource::canAccess());
@@ -57,7 +61,7 @@ class ActivityResourceAuthorizationTest extends TestCase
 
         $user->givePermissionTo(Permission::findOrCreate('ViewAny:Activity'));
 
-        $this->actingAs($user);
+        $this->actingAsCompanyUser($user);
 
         $this->get(ActivityResource::getUrl('view', ['record' => $activity]))
             ->assertForbidden();
@@ -66,5 +70,14 @@ class ActivityResourceAuthorizationTest extends TestCase
 
         $this->get(ActivityResource::getUrl('view', ['record' => $activity]))
             ->assertOk();
+    }
+
+    private function actingAsCompanyUser(User $user): void
+    {
+        $this->company->members()->attach($user, ['is_active' => true]);
+
+        $this->actingAs($user);
+        Filament::setTenant($this->company);
+        Filament::bootCurrentPanel();
     }
 }

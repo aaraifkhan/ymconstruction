@@ -6,6 +6,7 @@ use App\Filament\Resources\Users\Pages\CreateUser;
 use App\Filament\Resources\Users\Pages\EditUser;
 use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Filament\Resources\Users\Schemas\UserForm;
+use App\Filament\Resources\Users\Schemas\UserInfolist;
 use App\Filament\Resources\Users\Tables\UsersTable;
 use App\Models\User;
 use BackedEnum;
@@ -18,6 +19,8 @@ class UserResource extends Resource
 {
     protected static ?string $model = User::class;
 
+    protected static bool $isScopedToTenant = false;
+
     protected static \UnitEnum|string|null $navigationGroup = 'User Management';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUsers;
@@ -29,7 +32,7 @@ class UserResource extends Resource
 
     public static function infolist(Schema $schema): Schema
     {
-        return \App\Filament\Resources\Users\Schemas\UserInfolist::configure($schema);
+        return UserInfolist::configure($schema);
     }
 
     public static function table(Table $table): Table
