@@ -21,7 +21,9 @@ return new class extends Migration
             $table->date('effective_on');
             $table->foreignId('target_department_id')->nullable()->constrained('departments')->restrictOnDelete();
             $table->foreignId('target_designation_id')->nullable()->constrained('designations')->restrictOnDelete();
-            $table->foreignId('target_reporting_employment_id')->nullable()->constrained('employments')->restrictOnDelete();
+            $table->foreignId('target_reporting_employment_id')->nullable()
+                ->constrained(table: 'employments', indexName: 'employment_movement_target_reporting_foreign')
+                ->restrictOnDelete();
             $table->foreignId('target_work_location_id')->nullable()->constrained('work_locations')->restrictOnDelete();
             $table->string('target_employment_category')->nullable();
             $table->foreignId('employment_compensation_id')->nullable()->constrained('employment_compensation')->restrictOnDelete();

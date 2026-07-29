@@ -16,7 +16,8 @@ return new class extends Migration
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->foreignId('employee_financing_id')->constrained()->cascadeOnDelete();
             $table->foreignId('employee_financing_installment_id')->nullable()
-                ->constrained()->nullOnDelete();
+                ->constrained(indexName: 'employee_financing_tx_installment_foreign')
+                ->nullOnDelete();
             $table->foreignId('treasury_transaction_id')->nullable()
                 ->constrained()->nullOnDelete();
             $table->foreignId('payroll_entry_id')->nullable()
