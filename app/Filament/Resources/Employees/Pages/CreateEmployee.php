@@ -31,13 +31,18 @@ class CreateEmployee extends CreateRecord
         $employment = [];
 
         foreach ([
-            'employee_code',
             'joining_date',
             'department_id',
             'designation_id',
             'reporting_to_employment_id',
             'employment_category',
+            'employment_type',
             'employment_status',
+            'probation_start_date',
+            'probation_end_date',
+            'confirmation_date',
+            'notice_period_days',
+            'work_location_id',
             'work_start_time',
             'work_end_time',
             'working_days_per_week',

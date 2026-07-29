@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Validation\ValidationException;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
@@ -18,6 +19,7 @@ use Spatie\Activitylog\Support\LogOptions;
 
 #[Fillable([
     'company_id', 'reference_number', 'period_start', 'period_end', 'status', 'currency_code', 'notes',
+    'payroll_calculation_rule_id', 'generation_revision', 'source_checksum', 'generated_by_id', 'generated_at',
     'created_by_id', 'submitted_by_id', 'submitted_at', 'approved_by_id', 'approved_at',
     'rejected_by_id', 'rejected_at', 'rejection_reason', 'paid_by_id', 'paid_at', 'locked_by_id', 'locked_at',
     'journal_entry_id', 'reversal_journal_entry_id', 'posted_by_id', 'posted_at', 'reversed_by_id', 'reversed_at',
@@ -71,6 +73,21 @@ class PayrollRun extends Model
     public function entries(): HasMany
     {
         return $this->hasMany(PayrollEntry::class);
+    }
+
+    public function components(): HasManyThrough
+    {
+        return $this->hasManyThrough(PayrollEntryComponent::class, PayrollEntry::class);
+    }
+
+    public function calculationRule(): BelongsTo
+    {
+        return $this->belongsTo(PayrollCalculationRule::class, 'payroll_calculation_rule_id');
+    }
+
+    public function generatedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'generated_by_id');
     }
 
     public function createdBy(): BelongsTo
@@ -152,6 +169,7 @@ class PayrollRun extends Model
     {
         return LogOptions::defaults()->useLogName('payroll_runs')->logOnly([
             'company_id', 'reference_number', 'period_start', 'period_end', 'status', 'currency_code',
+            'payroll_calculation_rule_id', 'generation_revision', 'source_checksum', 'generated_by_id', 'generated_at',
             'created_by_id', 'submitted_by_id', 'submitted_at', 'approved_by_id', 'approved_at',
             'rejected_by_id', 'rejected_at', 'rejection_reason', 'paid_by_id', 'paid_at', 'locked_by_id', 'locked_at',
             'journal_entry_id', 'reversal_journal_entry_id', 'posted_by_id', 'posted_at', 'reversed_by_id', 'reversed_at',
@@ -164,7 +182,7 @@ class PayrollRun extends Model
             'status' => PayrollRunStatus::class, 'period_start' => 'date', 'period_end' => 'date', 'notes' => 'encrypted',
             'submitted_at' => 'datetime', 'approved_at' => 'datetime', 'rejected_at' => 'datetime',
             'paid_at' => 'datetime', 'locked_at' => 'datetime',
-            'posted_at' => 'datetime', 'reversed_at' => 'datetime',
+            'posted_at' => 'datetime', 'reversed_at' => 'datetime', 'generated_at' => 'datetime',
         ];
     }
 }

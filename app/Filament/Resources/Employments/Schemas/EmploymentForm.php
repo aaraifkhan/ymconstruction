@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Employments\Schemas;
 
 use App\Enums\EmploymentCategory;
 use App\Enums\EmploymentStatus;
+use App\Enums\EmploymentType;
 use App\Models\Employee;
 use App\Models\Employment;
 use Filament\Facades\Filament;
@@ -17,7 +18,6 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Validation\Rules\Unique;
 
 class EmploymentForm
 {
@@ -55,15 +55,10 @@ class EmploymentForm
                         ->disabledOn('edit'),
                     TextInput::make('employee_code')
                         ->label('Employee code')
-                        ->required()
-                        ->maxLength(100)
-                        ->unique(
-                            ignoreRecord: true,
-                            modifyRuleUsing: fn (Unique $rule): Unique => $rule->where(
-                                'company_id',
-                                Filament::getTenant()?->getKey(),
-                            ),
-                        ),
+                        ->placeholder('Assigned automatically')
+                        ->helperText('Company-specific code; existing codes remain unchanged.')
+                        ->disabled()
+                        ->dehydrated(false),
                     DatePicker::make('joining_date')
                         ->label('Date of joining')
                         ->required(),
@@ -110,13 +105,48 @@ class EmploymentForm
                         )->all())
                         ->default(EmploymentCategory::AdministrativeStaff->value)
                         ->required(),
+                    Select::make('employment_type')
+                        ->label('Employment type')
+                        ->options(collect(EmploymentType::cases())->mapWithKeys(
+                            fn (EmploymentType $type): array => [$type->value => $type->label()],
+                        )->all())
+                        ->default(EmploymentType::Permanent->value)
+                        ->required(),
                     Select::make('employment_status')
                         ->label('Status')
-                        ->options(collect(EmploymentStatus::cases())->mapWithKeys(
-                            fn (EmploymentStatus $status): array => [$status->value => $status->label()],
-                        )->all())
+                        ->options(fn (?Employment $record): array => collect(EmploymentStatus::cases())
+                            ->reject(fn (EmploymentStatus $status): bool => $status->isLegacy()
+                                && $record?->employment_status !== EmploymentStatus::Ended)
+                            ->mapWithKeys(
+                                fn (EmploymentStatus $status): array => [$status->value => $status->label()],
+                            )->all())
                         ->default(EmploymentStatus::Probation->value)
                         ->required(),
+                    DatePicker::make('probation_start_date')
+                        ->label('Probation start')
+                        ->afterOrEqual('joining_date'),
+                    DatePicker::make('probation_end_date')
+                        ->label('Probation end')
+                        ->afterOrEqual('probation_start_date'),
+                    DatePicker::make('confirmation_date')
+                        ->label('Confirmation date')
+                        ->afterOrEqual('joining_date'),
+                    TextInput::make('notice_period_days')
+                        ->label('Notice period (calendar days)')
+                        ->numeric()
+                        ->minValue(1)
+                        ->maxValue(65535),
+                    Select::make('work_location_id')
+                        ->label('Work location')
+                        ->relationship(
+                            name: 'workLocation',
+                            titleAttribute: 'name',
+                            modifyQueryUsing: fn (Builder $query): Builder => $query
+                                ->whereBelongsTo(Filament::getTenant())
+                                ->where('is_active', true),
+                        )
+                        ->searchable()
+                        ->preload(),
                 ])
                 ->columns(2)
                 ->columnSpanFull(),

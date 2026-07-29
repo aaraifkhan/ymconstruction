@@ -8,7 +8,12 @@ enum PayrollAccountComponent: string
     case HouseTravelAllowance = 'house_travel_allowance';
     case FoodAllowance = 'food_allowance';
     case OtherAllowance = 'other_allowance';
+    case Bonus = 'bonus';
+    case Incentive = 'incentive';
     case AbsenceDeduction = 'absence_deduction';
+    case UnpaidLeaveDeduction = 'unpaid_leave_deduction';
+    case LateDeduction = 'late_deduction';
+    case HalfDayDeduction = 'half_day_deduction';
     case OtherDeduction = 'other_deduction';
 
     public function label(): string

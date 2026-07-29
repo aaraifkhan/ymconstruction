@@ -6,6 +6,7 @@ use App\Filament\Resources\PayrollRuns\Pages\CreatePayrollRun;
 use App\Filament\Resources\PayrollRuns\Pages\EditPayrollRun;
 use App\Filament\Resources\PayrollRuns\Pages\ListPayrollRuns;
 use App\Filament\Resources\PayrollRuns\Pages\ViewPayrollRun;
+use App\Filament\Resources\PayrollRuns\RelationManagers\ComponentsRelationManager;
 use App\Filament\Resources\PayrollRuns\RelationManagers\EntriesRelationManager;
 use App\Filament\Resources\PayrollRuns\Schemas\PayrollRunForm;
 use App\Filament\Resources\PayrollRuns\Schemas\PayrollRunInfolist;
@@ -50,6 +51,7 @@ class PayrollRunResource extends Resource
     {
         return [
             EntriesRelationManager::class,
+            ComponentsRelationManager::class,
         ];
     }
 

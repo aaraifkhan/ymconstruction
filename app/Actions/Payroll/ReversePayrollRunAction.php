@@ -13,7 +13,10 @@ use Illuminate\Validation\ValidationException;
 
 class ReversePayrollRunAction
 {
-    public function __construct(private ReverseJournalEntryAction $reverseJournalEntry) {}
+    public function __construct(
+        private ReverseJournalEntryAction $reverseJournalEntry,
+        private ReversePayrollFinancingRecoveriesAction $reverseFinancingRecoveries,
+    ) {}
 
     public function handle(PayrollRun $payrollRun, User $actor, CarbonInterface $reversalDate, string $reason): PayrollRun
     {
@@ -35,6 +38,7 @@ class ReversePayrollRunAction
             }
 
             $reversal = $this->reverseJournalEntry->handle($run->journalEntry()->firstOrFail(), $actor, $reversalDate, $reason);
+            $this->reverseFinancingRecoveries->handle($run, $reversal, $actor, $reason);
             $run->update([
                 'reversal_journal_entry_id' => $reversal->getKey(),
                 'reversed_by_id' => $actor->getKey(),

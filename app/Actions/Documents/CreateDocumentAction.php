@@ -4,6 +4,7 @@ namespace App\Actions\Documents;
 
 use App\Enums\DocumentClassification;
 use App\Enums\DocumentStatus;
+use App\Enums\HrDocumentApplicability;
 use App\Models\BankReconciliation;
 use App\Models\BankStatement;
 use App\Models\Company;
@@ -11,11 +12,19 @@ use App\Models\CustomerInvoice;
 use App\Models\Document;
 use App\Models\DocumentCategory;
 use App\Models\Employee;
+use App\Models\EmployeeAssetCustody;
+use App\Models\EmployeeClearance;
+use App\Models\EmployeeFinancing;
+use App\Models\EmployeeWarning;
 use App\Models\Employment;
+use App\Models\EmploymentSeparation;
+use App\Models\FinalSettlement;
 use App\Models\FixedAsset;
 use App\Models\GoodsReceipt;
+use App\Models\HrDocumentType;
 use App\Models\InventoryTransaction;
 use App\Models\JournalEntry;
+use App\Models\LeaveRequest;
 use App\Models\Project;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseRequisition;
@@ -61,7 +70,8 @@ class CreateDocumentAction
                     Rule::unique((new Document)->getTable())
                         ->where('company_id', $company->getKey()),
                 ],
-                'classification' => ['required', Rule::enum(DocumentClassification::class)],
+                'hr_document_type_id' => ['nullable', 'integer'],
+                'classification' => ['nullable', Rule::enum(DocumentClassification::class)],
                 'issue_date' => ['nullable', 'date'],
                 'expiry_date' => ['nullable', 'date', 'after_or_equal:issue_date'],
                 'description' => ['nullable', 'string'],
@@ -72,6 +82,9 @@ class CreateDocumentAction
                     'inventory_transaction', 'vendor_bill', 'customer_invoice',
                     'treasury_transaction', 'bank_statement', 'bank_reconciliation',
                     'fixed_asset',
+                    'leave_request', 'employee_financing', 'employee_warning',
+                    'employment_separation',
+                    'employee_asset_custody', 'employee_clearance',
                 ])],
                 'related_record_id' => ['nullable', 'integer'],
             ])->validate();
@@ -94,12 +107,28 @@ class CreateDocumentAction
             }
 
             $documentable = $this->resolveDocumentable($company, $attributes);
+            $hrDocumentType = $this->resolveHrDocumentType($company, $attributes, $documentable);
+            $classification = $this->resolveClassification($attributes, $category, $hrDocumentType);
+
+            if ($hrDocumentType?->requires_issue_date && blank($attributes['issue_date'] ?? null)) {
+                throw ValidationException::withMessages([
+                    'issue_date' => 'An issue date is required for this HR document type.',
+                ]);
+            }
+
+            if ($hrDocumentType?->requires_expiry && blank($attributes['expiry_date'] ?? null)) {
+                throw ValidationException::withMessages([
+                    'expiry_date' => 'An expiry date is required for this HR document type.',
+                ]);
+            }
 
             return DB::transaction(function () use (
                 $actor,
                 $attributes,
+                $classification,
                 $company,
                 $documentable,
+                $hrDocumentType,
                 $originalFileName,
                 $uploadedFilePath,
             ): Document {
@@ -108,12 +137,13 @@ class CreateDocumentAction
                         'document_category_id',
                         'title',
                         'reference_number',
-                        'classification',
                         'issue_date',
                         'expiry_date',
                         'description',
                         'metadata',
                     ]),
+                    'hr_document_type_id' => $hrDocumentType?->getKey(),
+                    'classification' => $classification,
                     'company_id' => $company->getKey(),
                     'documentable_type' => $documentable::class,
                     'documentable_id' => $documentable->getKey(),
@@ -155,6 +185,24 @@ class CreateDocumentAction
             'employment' => Employment::query()
                 ->whereBelongsTo($company)
                 ->find($relatedRecordId),
+            'employee_financing' => EmployeeFinancing::query()
+                ->whereBelongsTo($company)
+                ->find($relatedRecordId),
+            'employee_warning' => EmployeeWarning::query()
+                ->whereBelongsTo($company)
+                ->find($relatedRecordId),
+            'employment_separation' => EmploymentSeparation::query()
+                ->whereBelongsTo($company)
+                ->find($relatedRecordId),
+            'employee_asset_custody' => EmployeeAssetCustody::query()
+                ->whereBelongsTo($company)
+                ->find($relatedRecordId),
+            'employee_clearance' => EmployeeClearance::query()
+                ->whereBelongsTo($company)
+                ->find($relatedRecordId),
+            'final_settlement' => FinalSettlement::query()
+                ->whereBelongsTo($company)
+                ->find($relatedRecordId),
             'project' => Project::query()
                 ->whereBelongsTo($company)
                 ->find($relatedRecordId),
@@ -191,6 +239,9 @@ class CreateDocumentAction
             'fixed_asset' => FixedAsset::query()
                 ->whereBelongsTo($company)
                 ->find($relatedRecordId),
+            'leave_request' => LeaveRequest::query()
+                ->whereBelongsTo($company)
+                ->find($relatedRecordId),
             default => $company,
         };
 
@@ -201,5 +252,67 @@ class CreateDocumentAction
         }
 
         return $documentable;
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    private function resolveHrDocumentType(
+        Company $company,
+        array $attributes,
+        Model $documentable,
+    ): ?HrDocumentType {
+        $typeId = $attributes['hr_document_type_id'] ?? null;
+
+        if ($typeId === null) {
+            return null;
+        }
+
+        $type = HrDocumentType::query()
+            ->whereBelongsTo($company)
+            ->where('is_active', true)
+            ->find($typeId);
+
+        if ($type === null) {
+            throw ValidationException::withMessages([
+                'hr_document_type_id' => 'Select an active HR document type belonging to the current company.',
+            ]);
+        }
+
+        $expectedClass = match ($type->applicability) {
+            HrDocumentApplicability::Employee => Employee::class,
+            HrDocumentApplicability::Employment => Employment::class,
+        };
+
+        if (! $documentable instanceof $expectedClass) {
+            throw ValidationException::withMessages([
+                'hr_document_type_id' => 'The HR document type does not apply to the selected record.',
+            ]);
+        }
+
+        return $type;
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     */
+    private function resolveClassification(
+        array $attributes,
+        DocumentCategory $category,
+        ?HrDocumentType $hrDocumentType,
+    ): DocumentClassification {
+        $requested = $attributes['classification'] ?? null;
+        $classification = $requested instanceof DocumentClassification
+            ? $requested
+            : ($requested === null
+                ? $category->default_classification
+                : DocumentClassification::from($requested));
+
+        if ($hrDocumentType !== null
+            && $classification->sensitivityRank() < $hrDocumentType->default_classification->sensitivityRank()) {
+            return $hrDocumentType->default_classification;
+        }
+
+        return $classification;
     }
 }

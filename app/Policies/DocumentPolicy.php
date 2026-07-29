@@ -22,7 +22,8 @@ class DocumentPolicy
     {
         return $this->hasPermission($user, 'View:Document')
             && $user->canAccessTenant($document->company)
-            && $this->canViewClassification($user, $document);
+            && $this->canViewClassification($user, $document)
+            && $this->canViewHrDocumentType($user, $document);
     }
 
     public function create(User $user): bool
@@ -120,6 +121,21 @@ class DocumentPolicy
         }
 
         return $this->hasPermission($user, 'ViewSensitive:Document');
+    }
+
+    private function canViewHrDocumentType(User $user, Document $document): bool
+    {
+        $typeCode = $document->hrDocumentType?->code;
+
+        if ($typeCode?->requiresIdentityPermission()) {
+            return $this->hasPermission($user, 'ViewIdentity:EmployeeDocument');
+        }
+
+        if ($typeCode?->requiresMedicalPermission()) {
+            return $this->hasPermission($user, 'ViewMedical:EmployeeDocument');
+        }
+
+        return true;
     }
 
     private function canAccessCurrentCompany(User $user): bool

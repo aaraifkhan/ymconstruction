@@ -26,6 +26,7 @@ class DepartmentFactory extends Factory
 
         return [
             'company_id' => Company::factory(),
+            'parent_department_id' => null,
             'name' => $name,
             'code' => Str::upper(Str::substr(Str::slug($name, ''), 0, 12)),
             'description' => fake()->optional()->sentence(),

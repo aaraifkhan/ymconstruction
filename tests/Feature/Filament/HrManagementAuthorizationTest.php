@@ -9,11 +9,13 @@ use App\Filament\Resources\Employees\Pages\CreateEmployee;
 use App\Filament\Resources\Employees\Pages\ListEmployees;
 use App\Filament\Resources\Employments\EmploymentResource;
 use App\Filament\Resources\Employments\Pages\CreateEmployment;
+use App\Filament\Resources\WorkLocations\WorkLocationResource;
 use App\Models\Company;
 use App\Models\Department;
 use App\Models\Employee;
 use App\Models\Employment;
 use App\Models\User;
+use App\Models\WorkLocation;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Gate;
@@ -40,10 +42,13 @@ class HrManagementAuthorizationTest extends TestCase
         $otherDepartment = Department::factory()->for($otherCompany)->create();
         $currentEmployment = Employment::factory()->forCompany($currentCompany)->create();
         $otherEmployment = Employment::factory()->forCompany($otherCompany)->create();
+        $currentWorkLocation = WorkLocation::factory()->for($currentCompany)->create();
+        $otherWorkLocation = WorkLocation::factory()->for($otherCompany)->create();
         $user = $this->userWithCompany($currentCompany, [
             'ViewAny:Department',
             'ViewAny:Employee',
             'ViewAny:Employment',
+            'ViewAny:WorkLocation',
         ]);
 
         $this->actingAs($user);
@@ -51,9 +56,11 @@ class HrManagementAuthorizationTest extends TestCase
 
         $this->assertSame([$currentDepartment->getKey()], DepartmentResource::getEloquentQuery()->pluck('id')->all());
         $this->assertSame([$currentEmployment->getKey()], EmploymentResource::getEloquentQuery()->pluck('id')->all());
+        $this->assertSame([$currentWorkLocation->getKey()], WorkLocationResource::getEloquentQuery()->pluck('id')->all());
         $this->assertSame([$currentEmployment->employee_id], EmployeeResource::getEloquentQuery()->pluck('id')->all());
         $this->assertNotContains($otherDepartment->getKey(), DepartmentResource::getEloquentQuery()->pluck('id')->all());
         $this->assertNotContains($otherEmployment->employee_id, EmployeeResource::getEloquentQuery()->pluck('id')->all());
+        $this->assertNotContains($otherWorkLocation->getKey(), WorkLocationResource::getEloquentQuery()->pluck('id')->all());
     }
 
     public function test_sensitive_employee_capabilities_have_separate_permissions(): void
@@ -103,7 +110,6 @@ class HrManagementAuthorizationTest extends TestCase
             ->fillForm([
                 'full_name' => 'Ali Raza',
                 'is_active' => true,
-                'employment_employee_code' => 'EMP-1001',
                 'employment_joining_date' => '2026-07-24',
                 'employment_department_id' => $department->getKey(),
                 'employment_employment_category' => 'administrative_staff',
@@ -117,7 +123,7 @@ class HrManagementAuthorizationTest extends TestCase
         $employment = $employee->employments()->firstOrFail();
 
         $this->assertTrue($employment->company->is($company));
-        $this->assertSame('EMP-1001', $employment->employee_code);
+        $this->assertSame('EMP-00001', $employment->employee_code);
         $this->assertTrue($employment->department->is($department));
     }
 
@@ -138,7 +144,6 @@ class HrManagementAuthorizationTest extends TestCase
         Livewire::test(CreateEmployment::class)
             ->fillForm([
                 'employee_id' => $employee->getKey(),
-                'employee_code' => 'SECOND-001',
                 'joining_date' => '2026-07-24',
                 'employment_category' => 'project_staff',
                 'employment_status' => 'active',
@@ -148,6 +153,12 @@ class HrManagementAuthorizationTest extends TestCase
             ->assertHasNoFormErrors();
 
         $this->assertDatabaseHas('employments', [
+            'company_id' => $secondCompany->getKey(),
+            'employee_id' => $employee->getKey(),
+            'employee_code' => 'EMP-00001',
+        ]);
+
+        $this->assertDatabaseHas('employments', [
             'employee_id' => $employee->getKey(),
             'company_id' => $firstCompany->getKey(),
             'deleted_at' => null,
@@ -155,7 +166,7 @@ class HrManagementAuthorizationTest extends TestCase
         $this->assertDatabaseHas('employments', [
             'employee_id' => $employee->getKey(),
             'company_id' => $secondCompany->getKey(),
-            'employee_code' => 'SECOND-001',
+            'employee_code' => 'EMP-00001',
             'deleted_at' => null,
         ]);
     }

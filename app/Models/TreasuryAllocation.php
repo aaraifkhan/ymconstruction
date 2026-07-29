@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\CustomerInvoiceStatus;
 use App\Enums\CustomerInvoiceType;
+use App\Enums\FinalSettlementStatus;
 use App\Enums\PayrollRunStatus;
 use App\Enums\TreasuryAllocationType;
 use App\Enums\TreasuryTransactionType;
@@ -64,8 +65,23 @@ class TreasuryAllocation extends Model
                 $partyId = null;
                 $employmentId = $openItem?->employment_id;
                 $reference = $openItem?->payrollRun?->reference_number;
+            } elseif ($allocation->allocation_type === TreasuryAllocationType::FinalSettlement
+                && $allocation->allocatable_type === FinalSettlement::class) {
+                $openItem = FinalSettlement::query()->whereKey($allocation->allocatable_id)
+                    ->where('company_id', $allocation->company_id)
+                    ->whereIn('status', [
+                        FinalSettlementStatus::Posted, FinalSettlementStatus::Settled,
+                    ])->first();
+                $expectedType = $openItem?->balance_direction === 'receivable'
+                    ? TreasuryTransactionType::Receipt : TreasuryTransactionType::Payment;
+                if ($transaction->type !== $expectedType) {
+                    $openItem = null;
+                }
+                $partyId = null;
+                $employmentId = $openItem?->employment_id;
+                $reference = $openItem?->reference_number;
             } else {
-                throw ValidationException::withMessages(['allocation_type' => 'Choose a Vendor Bill, Customer Invoice, or posted Payroll Entry allocation.']);
+                throw ValidationException::withMessages(['allocation_type' => 'Choose a Vendor Bill, Customer Invoice, posted Payroll Entry, or posted Final Settlement allocation.']);
             }
             $counterpartyMatches = isset($employmentId)
                 ? $transaction->party_id === null && (int) $transaction->employment_id === (int) $employmentId
@@ -74,9 +90,11 @@ class TreasuryAllocation extends Model
                 throw ValidationException::withMessages(['allocatable_id' => 'Choose a posted same-company open item for the transaction counterparty and direction.']);
             }
             $allocation->reference_snapshot = $reference;
-            $allocation->due_date_snapshot = $openItem instanceof PayrollEntry
-                ? $openItem->payrollRun->period_end
-                : $openItem->due_date;
+            $allocation->due_date_snapshot = match (true) {
+                $openItem instanceof PayrollEntry => $openItem->payrollRun->period_end,
+                $openItem instanceof FinalSettlement => $openItem->cutoff_date,
+                default => $openItem->due_date,
+            };
         });
 
         static::deleting(function (self $allocation): void {

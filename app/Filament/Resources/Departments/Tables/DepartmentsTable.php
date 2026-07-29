@@ -19,6 +19,7 @@ class DepartmentsTable
             ->columns([
                 TextColumn::make('name')->searchable()->sortable(),
                 TextColumn::make('code')->badge()->searchable()->sortable(),
+                TextColumn::make('parentDepartment.name')->label('Parent department')->placeholder('—'),
                 TextColumn::make('employments_count')
                     ->label('Employees')
                     ->counts('employments'),

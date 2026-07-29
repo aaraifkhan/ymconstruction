@@ -76,8 +76,7 @@ class PayrollWorkflowTest extends TestCase
         $entry = $run->entries()->sole();
 
         $entry->update([
-            'absence_deduction' => 5000,
-            'loan_advance_deduction' => 10000,
+            'other_deduction' => 15000,
             'bank_amount' => 100000,
             'cash_amount' => 0,
         ]);

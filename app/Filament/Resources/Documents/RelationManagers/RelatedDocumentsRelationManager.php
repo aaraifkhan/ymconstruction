@@ -14,11 +14,19 @@ use App\Models\Company;
 use App\Models\CustomerInvoice;
 use App\Models\Document;
 use App\Models\Employee;
+use App\Models\EmployeeAssetCustody;
+use App\Models\EmployeeClearance;
+use App\Models\EmployeeFinancing;
+use App\Models\EmployeeWarning;
 use App\Models\Employment;
+use App\Models\EmploymentSeparation;
+use App\Models\FinalSettlement;
 use App\Models\FixedAsset;
 use App\Models\GoodsReceipt;
+use App\Models\HrDocumentType;
 use App\Models\InventoryTransaction;
 use App\Models\JournalEntry;
+use App\Models\LeaveRequest;
 use App\Models\Project;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseRequisition;
@@ -34,6 +42,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -66,7 +75,7 @@ class RelatedDocumentsRelationManager extends RelationManager
                 $user = auth()->user();
 
                 return $user instanceof User
-                    ? $query->visibleTo($user)->with(['category', 'currentVersion'])
+                    ? $query->visibleTo($user)->with(['category', 'hrDocumentType', 'currentVersion'])
                     : $query->whereRaw('1 = 0');
             })
             ->recordTitleAttribute('title')
@@ -74,6 +83,10 @@ class RelatedDocumentsRelationManager extends RelationManager
             ->columns([
                 TextColumn::make('title')->searchable()->sortable(),
                 TextColumn::make('category.name')->label('Category')->badge(),
+                TextColumn::make('hrDocumentType.name')
+                    ->label('Document type')
+                    ->badge()
+                    ->placeholder('Legacy / free-form'),
                 TextColumn::make('classification')
                     ->label('Sensitivity')
                     ->formatStateUsing(fn (DocumentClassification $state): string => $state->label())
@@ -84,6 +97,18 @@ class RelatedDocumentsRelationManager extends RelationManager
                     ->color(fn (DocumentStatus $state): string => $state->color()),
                 TextColumn::make('currentVersion.version')->label('Version')->prefix('v'),
                 TextColumn::make('expiry_date')->label('Expires')->date()->placeholder('—'),
+            ])
+            ->filters([
+                SelectFilter::make('hr_document_type_id')
+                    ->label('Document type')
+                    ->relationship(
+                        name: 'hrDocumentType',
+                        titleAttribute: 'name',
+                        modifyQueryUsing: fn (Builder $query): Builder => $query
+                            ->whereBelongsTo(Filament::getTenant()),
+                    )
+                    ->searchable()
+                    ->preload(),
             ])
             ->headerActions([
                 Action::make('uploadDocument')
@@ -102,6 +127,33 @@ class RelatedDocumentsRelationManager extends RelationManager
                             ->searchable()
                             ->preload()
                             ->required(),
+                        Select::make('hr_document_type_id')
+                            ->label('Document name / type')
+                            ->options(function (): array {
+                                $applicability = match (true) {
+                                    $this->getOwnerRecord() instanceof Employee => 'employee',
+                                    $this->getOwnerRecord() instanceof Employment => 'employment',
+                                    default => null,
+                                };
+
+                                if ($applicability === null) {
+                                    return [];
+                                }
+
+                                return HrDocumentType::query()
+                                    ->whereBelongsTo(Filament::getTenant())
+                                    ->where('applicability', $applicability)
+                                    ->where('is_active', true)
+                                    ->orderBy('name')
+                                    ->pluck('name', 'id')
+                                    ->all();
+                            })
+                            ->searchable()
+                            ->preload()
+                            ->required(fn (): bool => $this->getOwnerRecord() instanceof Employee
+                                || $this->getOwnerRecord() instanceof Employment)
+                            ->visible(fn (): bool => $this->getOwnerRecord() instanceof Employee
+                                || $this->getOwnerRecord() instanceof Employment),
                         Select::make('classification')
                             ->label('Sensitivity')
                             ->options(collect(DocumentClassification::cases())->mapWithKeys(
@@ -193,6 +245,13 @@ class RelatedDocumentsRelationManager extends RelationManager
         return match (true) {
             $ownerRecord instanceof Employee => 'employee',
             $ownerRecord instanceof Employment => 'employment',
+            $ownerRecord instanceof EmployeeFinancing => 'employee_financing',
+            $ownerRecord instanceof EmployeeAssetCustody => 'employee_asset_custody',
+            $ownerRecord instanceof EmployeeClearance => 'employee_clearance',
+            $ownerRecord instanceof FinalSettlement => 'final_settlement',
+            $ownerRecord instanceof EmployeeWarning => 'employee_warning',
+            $ownerRecord instanceof EmploymentSeparation => 'employment_separation',
+            $ownerRecord instanceof LeaveRequest => 'leave_request',
             $ownerRecord instanceof Project => 'project',
             $ownerRecord instanceof JournalEntry => 'journal',
             $ownerRecord instanceof PurchaseRequisition => 'purchase_requisition',

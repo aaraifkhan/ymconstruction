@@ -20,7 +20,7 @@ use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
 
 #[Fillable([
-    'company_id', 'party_id', 'employment_id', 'source_account_id', 'destination_account_id',
+    'company_id', 'party_id', 'employment_id', 'employee_financing_id', 'source_account_id', 'destination_account_id',
     'source_company_bank_account_id', 'destination_company_bank_account_id', 'transaction_number',
     'type', 'purpose', 'counterparty_type', 'transaction_date', 'value_date', 'status',
     'currency_code', 'amount', 'allocated_amount', 'unallocated_amount', 'instrument_type',
@@ -94,6 +94,11 @@ class TreasuryTransaction extends Model
     public function employment(): BelongsTo
     {
         return $this->belongsTo(Employment::class);
+    }
+
+    public function employeeFinancing(): BelongsTo
+    {
+        return $this->belongsTo(EmployeeFinancing::class);
     }
 
     public function sourceAccount(): BelongsTo
@@ -179,6 +184,13 @@ class TreasuryTransaction extends Model
 
     private function validateCounterparty(): void
     {
+        if ($this->employee_financing_id !== null && ! EmployeeFinancing::query()
+            ->whereKey($this->employee_financing_id)
+            ->where('company_id', $this->company_id)
+            ->where('employment_id', $this->employment_id)
+            ->exists()) {
+            throw ValidationException::withMessages(['employee_financing_id' => 'Choose financing for the same company and Employment.']);
+        }
         if ($this->counterparty_type === TreasuryCounterpartyType::Party) {
             if ($this->party_id === null || $this->employment_id !== null
                 || ! Party::query()->whereKey($this->party_id)->where('company_id', $this->company_id)->where('is_active', true)->exists()) {

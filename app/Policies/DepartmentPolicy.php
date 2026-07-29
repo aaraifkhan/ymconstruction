@@ -34,8 +34,9 @@ class DepartmentPolicy
     public function delete(User $user, Department $department): bool
     {
         return $this->hasPermission($user, 'Delete:Department')
-            && $user->canAccessTenant($department->company)
-            && ! $department->employments()->exists();
+        && $user->canAccessTenant($department->company)
+        && ! $department->employments()->exists()
+        && ! $department->childDepartments()->exists();
     }
 
     public function restore(User $user, Department $department): bool

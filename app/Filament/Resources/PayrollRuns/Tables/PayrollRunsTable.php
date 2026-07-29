@@ -20,6 +20,8 @@ class PayrollRunsTable
                 TextColumn::make('period_start')->date()->sortable(),
                 TextColumn::make('period_end')->date()->sortable(),
                 TextColumn::make('status')->badge()->sortable(),
+                TextColumn::make('calculationRule.name')->label('Calculation rule')->placeholder('Legacy')->toggleable(),
+                TextColumn::make('generation_revision')->label('Revision')->sortable()->toggleable(),
                 TextColumn::make('entries_count')->counts('entries')->label('Employees'),
             ])
             ->filters([

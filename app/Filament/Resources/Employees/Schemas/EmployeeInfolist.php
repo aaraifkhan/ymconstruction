@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Employees\Schemas;
 use App\Enums\Gender;
 use App\Enums\MaritalStatus;
 use App\Models\Employee;
+use Filament\Facades\Filament;
 use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Section;
@@ -50,6 +51,25 @@ class EmployeeInfolist
                     TextEntry::make('blood_group')->label('Blood group')->placeholder('—'),
                 ])
                 ->visible(fn (Employee $record): bool => Gate::allows('viewMedical', $record))
+                ->columnSpanFull(),
+            Section::make('Document compliance')
+                ->schema([
+                    TextEntry::make('hr_document_compliance')
+                        ->label('Required documents')
+                        ->state(function (Employee $record): string {
+                            $company = Filament::getTenant();
+
+                            if ($company === null) {
+                                return 'Company unavailable';
+                            }
+
+                            $missing = $record->missingRequiredHrDocumentTypes($company)->pluck('name');
+
+                            return $missing->isEmpty()
+                                ? 'Complete — no required document is missing'
+                                : 'Missing: '.$missing->join(', ');
+                        }),
+                ])
                 ->columnSpanFull(),
         ]);
     }

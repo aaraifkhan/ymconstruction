@@ -16,6 +16,7 @@ use App\Actions\Treasury\PostTreasuryTransactionAction;
 use App\Actions\Treasury\SubmitTreasuryTransactionAction;
 use App\Enums\AccountingProfile;
 use App\Enums\CompensationStatus;
+use App\Enums\EmployeeFinancingStatus;
 use App\Enums\EmploymentCategory;
 use App\Enums\JournalStatus;
 use App\Enums\PayrollAccountComponent;
@@ -25,6 +26,8 @@ use App\Enums\TreasuryCounterpartyType;
 use App\Enums\TreasuryPurpose;
 use App\Models\Company;
 use App\Models\CompanyBankAccount;
+use App\Models\EmployeeFinancing;
+use App\Models\EmployeeFinancingInstallment;
 use App\Models\Employment;
 use App\Models\EmploymentCompensation;
 use App\Models\PayrollAccountMapping;
@@ -47,8 +50,26 @@ class PayrollAccountingWorkflowTest extends TestCase
     public function test_payroll_posts_once_settles_through_treasury_and_locks(): void
     {
         [$company, $run, $employment, $maker, $approver, $poster] = $this->approvedPayroll(submit: false);
+        $financing = EmployeeFinancing::factory()->forCompany($company)->create([
+            'employment_id' => $employment->getKey(),
+            'status' => EmployeeFinancingStatus::Active,
+            'principal_amount' => 1000,
+            'total_repayable' => 1000,
+            'installment_count' => 1,
+            'first_due_date' => '2026-07-31',
+            'approved_by_id' => $approver->getKey(),
+            'approved_at' => now(),
+            'disbursed_at' => now(),
+        ]);
+        EmployeeFinancingInstallment::factory()->create([
+            'company_id' => $company->getKey(),
+            'employee_financing_id' => $financing->getKey(),
+            'due_date' => '2026-07-31',
+            'principal_due' => 1000,
+            'total_due' => 1000,
+        ]);
+        app(GeneratePayrollEntriesAction::class)->handle($run, $maker);
         $entry = $run->entries()->sole();
-        $entry->update(['loan_advance_deduction' => 1000, 'bank_amount' => 124000]);
         app(SubmitPayrollRunAction::class)->handle($run, $maker);
         app(ApprovePayrollRunAction::class)->handle($run, $approver);
         $this->configureExpenseMappings($company);

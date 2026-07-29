@@ -2,12 +2,14 @@
 
 namespace App\Actions\Treasury;
 
+use App\Enums\FinalSettlementStatus;
 use App\Enums\TreasuryInstrumentType;
 use App\Enums\TreasuryPurpose;
 use App\Enums\TreasuryStatus;
 use App\Enums\TreasuryTransactionType;
 use App\Models\Account;
 use App\Models\CustomerInvoice;
+use App\Models\FinalSettlement;
 use App\Models\PayrollEntry;
 use App\Models\TreasuryTransaction;
 use App\Models\User;
@@ -40,8 +42,17 @@ class SubmitTreasuryTransactionAction
             foreach ($allocations as $allocation) {
                 if (! $allocation->allocatable instanceof VendorBill
                     && ! $allocation->allocatable instanceof CustomerInvoice
-                    && ! $allocation->allocatable instanceof PayrollEntry) {
+                    && ! $allocation->allocatable instanceof PayrollEntry
+                    && ! $allocation->allocatable instanceof FinalSettlement) {
                     throw ValidationException::withMessages(['allocations' => 'Unsupported open-item allocation source.']);
+                }
+                if ($allocation->allocatable instanceof FinalSettlement
+                    && ! in_array($allocation->allocatable->status, [
+                        FinalSettlementStatus::Posted, FinalSettlementStatus::Settled,
+                    ], true)) {
+                    throw ValidationException::withMessages([
+                        'allocations' => 'Final Settlement allocations require a posted, unreversed settlement.',
+                    ]);
                 }
                 $openAmount = $allocation->allocatable->openAmount($transaction->getKey());
                 if (bccomp((string) $allocation->amount, $openAmount, 4) === 1) {

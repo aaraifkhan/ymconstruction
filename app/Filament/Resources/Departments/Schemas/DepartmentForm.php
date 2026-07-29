@@ -2,12 +2,15 @@
 
 namespace App\Filament\Resources\Departments\Schemas;
 
+use App\Models\Department;
 use Filament\Facades\Filament;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Validation\Rules\Unique;
 
 class DepartmentForm
@@ -39,6 +42,17 @@ class DepartmentForm
                                     Filament::getTenant()?->getKey(),
                                 ),
                             ),
+                        Select::make('parent_department_id')
+                            ->label('Parent department')
+                            ->relationship(
+                                'parentDepartment',
+                                'name',
+                                fn (Builder $query, ?Department $record): Builder => $query
+                                    ->whereBelongsTo(Filament::getTenant())
+                                    ->when($record !== null, fn (Builder $query): Builder => $query->whereKeyNot($record)),
+                            )
+                            ->searchable()
+                            ->preload(),
                         Textarea::make('description')
                             ->rows(3)
                             ->columnSpanFull(),

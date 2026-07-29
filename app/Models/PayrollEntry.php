@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\PayrollComponentType;
 use App\Enums\PayrollRunStatus;
 use App\Enums\TreasuryAllocationType;
 use App\Enums\TreasuryStatus;
@@ -20,12 +21,16 @@ use Spatie\Activitylog\Support\LogOptions;
 #[Fillable([
     'payroll_run_id', 'company_id', 'employment_id', 'employment_compensation_id', 'employee_name', 'employee_code',
     'designation', 'employment_category', 'period_days', 'payable_days', 'basic_salary', 'payable_basic',
-    'house_travel_allowance', 'food_allowance', 'other_allowance', 'gross_salary', 'absence_deduction',
-    'loan_advance_deduction', 'other_deduction', 'net_salary', 'bank_amount', 'cash_amount', 'currency_code', 'remarks',
+    'house_travel_allowance', 'food_allowance', 'other_allowance', 'bonus_amount', 'incentive_amount',
+    'gross_salary', 'absence_deduction', 'unpaid_leave_deduction', 'late_deduction',
+    'half_day_deduction', 'loan_advance_deduction', 'other_deduction', 'net_salary',
+    'bank_amount', 'cash_amount', 'currency_code', 'remarks',
 ])]
 #[Hidden([
-    'basic_salary', 'payable_basic', 'house_travel_allowance', 'food_allowance', 'other_allowance', 'gross_salary',
-    'absence_deduction', 'loan_advance_deduction', 'other_deduction', 'net_salary', 'bank_amount', 'cash_amount', 'remarks',
+    'basic_salary', 'payable_basic', 'house_travel_allowance', 'food_allowance', 'other_allowance',
+    'bonus_amount', 'incentive_amount', 'gross_salary', 'absence_deduction', 'unpaid_leave_deduction',
+    'late_deduction', 'half_day_deduction', 'loan_advance_deduction', 'other_deduction',
+    'net_salary', 'bank_amount', 'cash_amount', 'remarks',
 ])]
 class PayrollEntry extends Model
 {
@@ -55,7 +60,11 @@ class PayrollEntry extends Model
                 throw ValidationException::withMessages(['payable_days' => 'Payable days must be within the payroll period.']);
             }
 
-            foreach (['absence_deduction', 'loan_advance_deduction', 'other_deduction', 'bank_amount', 'cash_amount'] as $field) {
+            foreach ([
+                'bonus_amount', 'incentive_amount', 'absence_deduction', 'unpaid_leave_deduction',
+                'late_deduction', 'half_day_deduction', 'loan_advance_deduction',
+                'other_deduction', 'bank_amount', 'cash_amount',
+            ] as $field) {
                 if ((float) ($entry->getAttribute($field) ?? 0) < 0) {
                     throw ValidationException::withMessages([$field => 'Amounts cannot be negative.']);
                 }
@@ -64,14 +73,22 @@ class PayrollEntry extends Model
             $entry->payable_basic = round((float) $entry->basic_salary * (float) $entry->payable_days / $entry->period_days, 2);
             $entry->gross_salary = round(
                 (float) $entry->payable_basic + (float) $entry->house_travel_allowance
-                + (float) $entry->food_allowance + (float) $entry->other_allowance,
+                + (float) $entry->food_allowance + (float) $entry->other_allowance
+                + (float) ($entry->bonus_amount ?? 0) + (float) ($entry->incentive_amount ?? 0),
                 2,
             );
             $entry->net_salary = max(0, round(
                 (float) $entry->gross_salary - (float) $entry->absence_deduction
+                - (float) ($entry->unpaid_leave_deduction ?? 0)
+                - (float) ($entry->late_deduction ?? 0)
+                - (float) ($entry->half_day_deduction ?? 0)
                 - (float) $entry->loan_advance_deduction - (float) $entry->other_deduction,
                 2,
             ));
+
+            if ($entry->exists && $entry->components()->exists()) {
+                $entry->assertSourceComponentTotals();
+            }
         });
     }
 
@@ -100,6 +117,11 @@ class PayrollEntry extends Model
         return $this->hasMany(PayrollProjectAllocation::class);
     }
 
+    public function components(): HasMany
+    {
+        return $this->hasMany(PayrollEntryComponent::class);
+    }
+
     public function treasuryAllocations(): HasMany
     {
         return $this->hasMany(TreasuryAllocation::class, 'allocatable_id')
@@ -109,7 +131,46 @@ class PayrollEntry extends Model
 
     public function expenseBasis(): string
     {
-        return bcsub((string) $this->gross_salary, (string) $this->absence_deduction, 4);
+        return bcsub(
+            (string) $this->gross_salary,
+            collect([
+                'absence_deduction', 'unpaid_leave_deduction', 'late_deduction', 'half_day_deduction',
+            ])->reduce(fn (string $total, string $field): string => bcadd(
+                $total,
+                (string) ($this->getAttribute($field) ?? 0),
+                4,
+            ), '0.0000'),
+            4,
+        );
+    }
+
+    public function assertSourceComponentTotals(): void
+    {
+        $expected = [
+            'payable_basic' => [PayrollComponentType::PayableBasic],
+            'house_travel_allowance' => [PayrollComponentType::HouseTravelAllowance],
+            'food_allowance' => [PayrollComponentType::FoodAllowance],
+            'other_allowance' => [PayrollComponentType::OtherAllowance],
+            'bonus_amount' => [PayrollComponentType::Bonus],
+            'incentive_amount' => [PayrollComponentType::Incentive],
+            'absence_deduction' => [PayrollComponentType::AbsenceDeduction],
+            'unpaid_leave_deduction' => [PayrollComponentType::UnpaidLeaveDeduction],
+            'late_deduction' => [PayrollComponentType::LateDeduction],
+            'half_day_deduction' => [PayrollComponentType::HalfDayDeduction],
+            'loan_advance_deduction' => [PayrollComponentType::LoanInstallment, PayrollComponentType::AdvanceRecovery],
+        ];
+        $components = $this->components()->get();
+        foreach ($expected as $field => $types) {
+            $componentTotal = $components->whereIn('type', $types)
+                ->reduce(fn (string $total, PayrollEntryComponent $component): string => bcadd(
+                    $total,
+                    (string) $component->amount,
+                    4,
+                ), '0.0000');
+            if (bccomp((string) ($this->getAttribute($field) ?? 0), $componentTotal, 2) !== 0) {
+                throw ValidationException::withMessages([$field => 'Source-backed Payroll amount must match its immutable components.']);
+            }
+        }
     }
 
     public function postedOpenAmount(?int $excludingTransactionId = null): string
@@ -161,8 +222,11 @@ class PayrollEntry extends Model
         return [
             'payable_days' => 'decimal:2',
             'basic_salary' => 'encrypted', 'payable_basic' => 'encrypted', 'house_travel_allowance' => 'encrypted',
-            'food_allowance' => 'encrypted', 'other_allowance' => 'encrypted', 'gross_salary' => 'encrypted',
-            'absence_deduction' => 'encrypted', 'loan_advance_deduction' => 'encrypted', 'other_deduction' => 'encrypted',
+            'food_allowance' => 'encrypted', 'other_allowance' => 'encrypted', 'bonus_amount' => 'encrypted',
+            'incentive_amount' => 'encrypted', 'gross_salary' => 'encrypted',
+            'absence_deduction' => 'encrypted', 'unpaid_leave_deduction' => 'encrypted',
+            'late_deduction' => 'encrypted', 'half_day_deduction' => 'encrypted',
+            'loan_advance_deduction' => 'encrypted', 'other_deduction' => 'encrypted',
             'net_salary' => 'encrypted', 'bank_amount' => 'encrypted', 'cash_amount' => 'encrypted', 'remarks' => 'encrypted',
         ];
     }

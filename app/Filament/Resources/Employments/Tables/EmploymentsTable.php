@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Employments\Tables;
 
 use App\Enums\EmploymentStatus;
+use App\Enums\EmploymentType;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -27,11 +28,16 @@ class EmploymentsTable
                     ->label('Category')
                     ->formatStateUsing(fn ($state): string => $state->label())
                     ->badge(),
+                TextColumn::make('employment_type')
+                    ->label('Type')
+                    ->formatStateUsing(fn (EmploymentType $state): string => $state->label())
+                    ->badge(),
                 TextColumn::make('employment_status')
                     ->label('Status')
                     ->formatStateUsing(fn ($state): string => $state->label())
                     ->badge(),
                 TextColumn::make('joining_date')->date()->sortable(),
+                TextColumn::make('workLocation.name')->label('Work location')->placeholder('—')->toggleable(),
             ])
             ->filters([
                 TrashedFilter::make(),
@@ -39,6 +45,12 @@ class EmploymentsTable
                     ->options(collect(EmploymentStatus::cases())->mapWithKeys(
                         fn (EmploymentStatus $status): array => [$status->value => $status->label()],
                     )->all()),
+                SelectFilter::make('employment_type')
+                    ->options(collect(EmploymentType::cases())->mapWithKeys(
+                        fn (EmploymentType $type): array => [$type->value => $type->label()],
+                    )->all()),
+                SelectFilter::make('department')->relationship('department', 'name'),
+                SelectFilter::make('work_location')->relationship('workLocation', 'name'),
             ])
             ->recordActions([
                 ViewAction::make(),

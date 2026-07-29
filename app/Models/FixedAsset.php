@@ -122,6 +122,16 @@ class FixedAsset extends Model
         return $this->hasMany(AssetTransfer::class);
     }
 
+    public function employeeCustodies(): HasMany
+    {
+        return $this->hasMany(EmployeeAssetCustody::class);
+    }
+
+    public function employeeCustodyEvents(): HasMany
+    {
+        return $this->hasMany(EmployeeAssetCustodyEvent::class);
+    }
+
     public function disposal(): HasOne
     {
         return $this->hasOne(AssetDisposal::class);

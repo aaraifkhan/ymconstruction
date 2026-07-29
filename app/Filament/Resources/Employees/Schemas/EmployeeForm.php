@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Employees\Schemas;
 
 use App\Enums\EmploymentCategory;
 use App\Enums\EmploymentStatus;
+use App\Enums\EmploymentType;
 use App\Enums\Gender;
 use App\Enums\MaritalStatus;
 use App\Models\Employee;
@@ -18,7 +19,6 @@ use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Validation\Rules\Unique;
 
 class EmployeeForm
 {
@@ -65,18 +65,11 @@ class EmployeeForm
             Section::make('Initial company employment')
                 ->description('Creates the profile and its first employment in the active company together.')
                 ->schema([
-                    TextInput::make('employment_employee_code')
+                    TextInput::make('employment_employee_code_preview')
                         ->label('Employee code')
-                        ->required()
-                        ->maxLength(100)
-                        ->unique(
-                            table: 'employments',
-                            column: 'employee_code',
-                            modifyRuleUsing: fn (Unique $rule): Unique => $rule->where(
-                                'company_id',
-                                Filament::getTenant()?->getKey(),
-                            ),
-                        ),
+                        ->placeholder('Assigned automatically')
+                        ->disabled()
+                        ->dehydrated(false),
                     DatePicker::make('employment_joining_date')->label('Date of joining')->required(),
                     Select::make('employment_department_id')
                         ->label('Department')
@@ -115,13 +108,45 @@ class EmployeeForm
                         )->all())
                         ->default(EmploymentCategory::AdministrativeStaff->value)
                         ->required(),
+                    Select::make('employment_employment_type')
+                        ->label('Employment type')
+                        ->options(collect(EmploymentType::cases())->mapWithKeys(
+                            fn (EmploymentType $type): array => [$type->value => $type->label()],
+                        )->all())
+                        ->default(EmploymentType::Permanent->value)
+                        ->required(),
                     Select::make('employment_employment_status')
                         ->label('Status')
-                        ->options(collect(EmploymentStatus::cases())->mapWithKeys(
-                            fn (EmploymentStatus $status): array => [$status->value => $status->label()],
-                        )->all())
+                        ->options(collect(EmploymentStatus::cases())
+                            ->reject(fn (EmploymentStatus $status): bool => $status->isLegacy())
+                            ->mapWithKeys(
+                                fn (EmploymentStatus $status): array => [$status->value => $status->label()],
+                            )->all())
                         ->default(EmploymentStatus::Probation->value)
                         ->required(),
+                    DatePicker::make('employment_probation_start_date')
+                        ->label('Probation start')
+                        ->afterOrEqual('employment_joining_date'),
+                    DatePicker::make('employment_probation_end_date')
+                        ->label('Probation end')
+                        ->afterOrEqual('employment_probation_start_date'),
+                    DatePicker::make('employment_confirmation_date')
+                        ->label('Confirmation date')
+                        ->afterOrEqual('employment_joining_date'),
+                    TextInput::make('employment_notice_period_days')
+                        ->label('Notice period (calendar days)')
+                        ->numeric()
+                        ->minValue(1)
+                        ->maxValue(65535),
+                    Select::make('employment_work_location_id')
+                        ->label('Work location')
+                        ->options(fn (): array => Filament::getTenant()?->workLocations()
+                            ->where('is_active', true)
+                            ->orderBy('name')
+                            ->pluck('name', 'id')
+                            ->all() ?? [])
+                        ->searchable()
+                        ->preload(),
                     TimePicker::make('employment_work_start_time')->label('Start time')->seconds(false),
                     TimePicker::make('employment_work_end_time')->label('End time')->seconds(false),
                     TextInput::make('employment_working_days_per_week')

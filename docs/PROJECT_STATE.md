@@ -1,6 +1,6 @@
 # YM Construction Management System — Project State
 
-Last updated: 2026-07-27
+Last updated: 2026-07-29
 
 ## Purpose of this document
 
@@ -13,6 +13,7 @@ Future developers and AI agents must:
 3. Update this file whenever a module, workflow, architectural decision, or project-wide convention materially changes.
 4. Keep **Implemented**, **Planned**, and **Needs Business Confirmation** clearly separated.
 5. Read and follow `docs/FINANCE_PROJECTS_OPERATIONS_IMPLEMENTATION_PLAN.md` before working on Accounts, Chart of Accounts, Projects, Sales, Purchases, Inventory, Banking, Payroll accounting-posting, Assets, or consolidated reporting.
+6. Read and follow `docs/HR_WORKFORCE_IMPLEMENTATION_PLAN.md` before working on Departments, Employees, Employments, employee documents, Attendance, fingerprint/biometric attendance-machine integration, Leave, Employee Loans/Advances, Payroll calculations, performance, warnings, promotions/transfers, separation, employee asset custody, clearance, Final Settlement, or HR reporting.
 
 ## Product direction
 
@@ -44,7 +45,11 @@ Development is intentionally workflow-led and incremental:
 4. Permissions, company isolation, audit logging, documents, and tests are included in the same implementation.
 5. The next module or workflow is then discussed.
 
-HR foundations are implemented. Accounts, Projects, Procurement, Inventory, Banking, Sales, Assets, and related reporting are now governed by the phased plan in `docs/FINANCE_PROJECTS_OPERATIONS_IMPLEMENTATION_PLAN.md`.
+HR foundations are implemented. The remaining HR and workforce scope is governed by `docs/HR_WORKFORCE_IMPLEMENTATION_PLAN.md`, which includes a vendor-neutral attendance-ingestion foundation so the eventual fingerprint-machine connector can be added after its make, model, protocol, and deployment details are available. Accounts, Projects, Procurement, Inventory, Banking, Sales, Assets, and related reporting remain governed by `docs/FINANCE_PROJECTS_OPERATIONS_IMPLEMENTATION_PLAN.md`.
+
+HR plan Phases HR-0 through HR-4 and HR-6 through HR-12 are implemented and verified. HR-0 approved configuration-first architecture, safe synthetic evidence, approval boundaries, and production configuration gates. HR-1 delivered Department hierarchy, atomic company Employee codes, Employment lifecycle/type/location fields, Work Locations, and immutable Employment change evidence. HR-2 delivered controlled/configurable private HR document types, legacy mapping, separate identity/medical access, and required-document compliance status. HR-3 delivered effective-dated Attendance and Leave foundations, maker-checker evidence, immutable monthly Payroll inputs, and tenant workflow UI. HR-4 delivered the vendor-neutral Attendance Device registry, effective device-user mappings, immutable ingestion evidence, deterministic deduplication, quarantine/replay, normalized private CSV import, and a future-adapter boundary. HR-5 was explicitly requested on 2026-07-28 and is blocked because the actual machine identity, protocol, topology, safe event samples, clock behavior, and credential model are unavailable. HR-6 delivered Employee Loans and Advances with maker-checker, schedules, immutable subledger, Treasury/GL integration, recovery/rescheduling/waiver/reversal, documents, and Payroll/Final-Settlement balance boundaries. HR-7 delivered effective Payroll calculation rules, approved Bonus/Incentive sources, finalized Attendance/Leave deductions, due Loan/Advance recovery, immutable source components, deterministic regeneration, extended GL/reversal integration, and company Payroll report foundations. HR-8 delivered configurable appraisals and warnings, effective Promotion/Transfer, Resignation/Termination, immutable Employment evidence, private attachments, and explicit access review. HR-9 delivered Fixed Asset custody issuance, acknowledgement, immutable movement/return/exception evidence, and approved-separation departmental clearance. HR-10 delivered source-reconciled Final Settlement, independent review/approval/posting, reversible GL and financing recovery, bounded Treasury payment/receipt, printable letter, documents, and tenant reconciliation reporting. HR-11 delivered the complete company report catalog/dashboard, private audited CSV/XLSX exports, sensitive-section gates, indexed aggregates, and authorized hierarchy-only Group HR reporting. HR-12 delivered controlled migration/rollback, private source reconciliation, recovery/readiness evidence, security/performance hardening, and pilot Attendance-to-Treasury UAT.
+
+The user confirmed on 2026-07-28 that the application is in active development with no production deployment or production HR data. Until the first production baseline, unreleased migrations may be revised and the local database may be reset/reseeded when useful. This does not relax company isolation, authorization, private-document handling, immutable evidence, audit, accounting integrity, or test requirements. A production-safe migration baseline and rollout controls must be established before first deployment.
 
 Do not invent accounting or statutory values. Phase 0 approved configuration-first defaults and synthetic transaction evidence now govern initial development; later official legal data, statutory rates, opening balances, and redacted operational samples must supersede placeholders/configuration before affected production use. Shared foundations such as companies, permissions, company bank accounts, documents, and audit history must be reused.
 
@@ -117,6 +122,9 @@ The original multi-company foundation, document platform, HR foundation, joining
 - Approved and superseded budget headers and lines are immutable
 - Parties, Projects, Sites, Cost Centers, UOMs, Item Categories, Items, Tax Codes, and Project Budgets have tenant-scoped Filament resources and explicit permissions
 - Existing private Documents can relate to same-company Projects; cross-company Project links are rejected
+- Company-owned HR document-type configuration covers CNIC, Educational Document, Experience Certificate, Appointment Letter, Medical Certificate, and Police Verification with applicability, sensitivity, issue/expiry, verification, approval, required/optional, and active metadata
+- Employee/Employment document uploads use controlled type names, private immutable versions, type filtering, legacy-safe nullable mapping, and dedicated identity/medical permissions
+- Required HR document configurations expose missing compliance items without fabricating documents or silently making any default type mandatory
 - Operational master and Project changes use Activitylog; budget approval records actor, version, total, line count, and superseded budget IDs
 
 ### Accounting and Chart of Accounts foundation
@@ -390,7 +398,7 @@ The original multi-company foundation, document platform, HR foundation, joining
 - Workflow transitions use transactions, row locks, actor/timestamp evidence, and audit events
 - Entries cannot change after submission; locked payroll runs are immutable
 - Rejected payroll can be corrected and regenerated
-- Attendance integration, exports, printable payroll sheets, and a formal loan-origination/amortization module are not included yet
+- Attendance/Leave integration and formal Loan/Advance recovery are implemented through HR-7 and HR-6; exports and printable Payroll approval sheets remain planned
 - Approved Payroll Runs support explicit, idempotent Post to Accounts and linked reversal actions
 - Company payroll mappings route Basic Salary, allowances, absence offsets, and Other Deductions to validated Expense/Liability accounts; Employee Advance recovery uses the required system mapping
 - Administrative/Director payroll posts component expenses; Project Staff require Project/optional Site/Cost Center allocations that exactly equal Gross less Absence Deduction
@@ -398,6 +406,106 @@ The original multi-company foundation, document platform, HR foundation, joining
 - Treasury Payments allocate against posted Payroll Entries, prevent over-allocation, debit Salary Payable, and retain the employee dimension
 - A Payroll Run can only be marked Paid after its Accounts posting exists and all Payroll Entries are settled by posted Treasury Payments
 - Payroll/GL/settlement reconciliation and Employee Advance subledger views are available in the tenant Payroll & Advances report
+
+### HR workforce decision and evidence gate
+
+- HR-0 Business rules, samples, and approval matrix is implemented and verified
+- Company Employee codes will use atomic company sequences with initial `EMP-00001` format, configurable prefix/padding, no year/reset, and preservation/collision skipping for existing codes
+- Employment retains Probation, Active, On Leave, and legacy Ended while adding Resigned and Terminated; legacy Ended is not guessed into a separation reason
+- Employment Type uses Permanent, Contract, Daily Wages, and Internship
+- Work Locations will be controlled company records with an optional same-company Project Site
+- Departments remain company-specific and will receive optional same-company hierarchy with cycle prevention
+- Attendance, Leave, Loan/Advance, Bonus/Incentive, appraisal, separation, and Final Settlement values are effective-dated/configuration-led; no live numeric policy was invented
+- Attendance-machine integration is split into a vendor-neutral ingestion foundation and a later actual-device adapter
+- The default biometric boundary stores device-user mappings and raw punch evidence, not fingerprint templates
+- Production Attendance finalization, Leave, Loan/Advance, Payroll deductions, Final Settlement, and machine synchronization are blocked until their applicable configuration/evidence gates are satisfied
+- Approved synthetic source layouts and scenarios cover Employee codes, Department hierarchy, normal/overnight punches, duplicates, unknown device users, Leave, Loan/Advance recovery, Payroll posting, resignation, clearance, and Final Settlement
+- A complete future permission/approval matrix preserves company scope, sensitive-data permissions, maker-checker separation, audit evidence, immutable source snapshots, existing GL posting, Treasury settlement, and Fixed Asset boundaries
+- HR-0 changed documentation and architecture decisions only; no application schema, code, configuration, permission, or operational transaction data was changed
+
+### Performance, discipline, movement, and separation
+
+- Company KPI libraries and Appraisal Cycles configure score scales without seeded business values
+- Appraisals retain encrypted goals, KPI scores/comments, outcome and acknowledgement, exact weight/checksum evidence, independent review/approval, and immutable submitted data
+- Configurable Warning Letter Templates and sensitive Employee Warnings support issue, response, acknowledgement, closure, separate sensitive access, audit, and private Document attachments
+- Effective Promotion/Transfer requests snapshot before/target Employment terms and update Department, Designation, manager, Work Location, or Employment Category only after controlled approval/application
+- Compensation linked to a movement must be a separately approved, same-Employment, same-effective-date Compensation record
+- Resignation and Termination retain notice, reason, authority, protected/handover notes, documents, acceptance/withdrawal/rejection/approval, and independent actor evidence
+- Approved separation updates Employment ending date and status. Attendance, Leave, Payroll, clearance, and Final Settlement enforce that boundary
+- Linked application Users are not silently disabled; approved separation exposes a pending/complete access-review decision with actor/time evidence
+- Tenant Filament resources, workflow actions, policies, factories, migrations, 69 permissions, encryption, company isolation, row locks, audit, and focused regression coverage are included
+
+### Final Settlement
+
+- One company/Employment Final Settlement is prepared from an approved separation only after mandatory clearance is completed; the approved last-working date is the cutoff
+- Salary, Leave Encashment, Notice Pay/Recovery, Bonus, Incentive, Gratuity, benefits, Loan/Advance, Asset, and other recoveries are explicit source-backed components with encrypted amounts/evidence, references, checksums, mappings, and deterministic keys
+- Draft refresh reconciles exact active Loan/Advance balances and clearance recovery recommendations; submission refuses new, missing, or changed sources
+- Preparer, reviewer, approver, and Finance poster are independent actors; submitted inputs are immutable and rejection/reversal retains full evidence
+- Posting creates an idempotent balanced Payroll voucher in an Open period and updates Loan/Advance recovery subledgers only after posting
+- Net payable uses Salary Payable; net receivable and financing recovery reuse Employee Advances; dedicated company component mappings cover all other settlement accounts
+- Treasury Payment/Receipt allocation enforces company, Employment, direction, and posted-open limits and supports reversal before Final Settlement reversal
+- Tenant resources provide settlement/account mapping management, source lines, private Documents, approved-separation preparation, printable approved letters, amount permissions, and Final Settlement/GL/Treasury reconciliation
+
+### HR reports, dashboard, exports, and group reporting
+
+- A tenant HR Reports & Dashboard page provides Employee List, Department-wise Employees, Designation-wise Employees, Employee Loan, Employee Advance, Increment History, Attendance Summary, and Leave Summary reports
+- Existing Salary Register, Payroll Summary, Project-wise Payroll, Payroll reconciliation, and Final Settlement reports remain the authoritative Payroll/settlement views and now support exports
+- Dashboard cards expose company-scoped unique people, Employment records, active/probation, On Leave, current-month joiners/exits, pending Leave, and Attendance exceptions
+- Company reporting never includes identity, bank, medical, warning, termination-reason, or private HR-note fields
+- Compensation, Payroll, Financing, Attendance, Leave, and Final Settlement sections retain their existing separate view/amount permissions in addition to report access
+- Every report supports CSV and XLSX through private/no-store streamed responses; XLSX request-temporary files are deleted after streaming
+- Every export records actor, company/root, report, format, row count, and company/group scope in Activitylog
+- Group HR starts from a real parent/root company, recursively includes only its active hierarchy, and requires access to every included company
+- Group reports explicitly distinguish unique people from company Employment counts and compare status, Attendance, Leave, Payroll cost, Loans/Advances, joiners, and exits
+- Group Payroll and Financing amounts remain hidden/null without their existing sensitive permissions
+- HR reporting creates no synthetic “All Companies” tenant, consolidated transaction company, snapshot ledger, Payroll, Journal, or Treasury data
+- Reporting indexes support company/date, Department, Designation, approved Compensation, and Payroll Entry lookups
+
+### HR migration, recovery, and rollout hardening
+
+- Seven exact-header private CSV adapters cover Department hierarchy, Employees/Employments, HR document metadata, Leave opening balances, approved Loan/Advance schedules, issued Fixed Asset custody, and finalized historical monthly Attendance summaries
+- Prepare/dry-run, validation, and import require independent actors; row errors, checksums, company-safe reference resolution, duplicate protection, source counts/amounts, and imported-record checksums remain auditable
+- Controlled rollback retains immutable source/row evidence and refuses reversal after downstream Payroll, Treasury, document-version, financing-transaction, or custody use
+- Historical document metadata does not fabricate a file/version, historical financing does not invent disbursement/GL entries, and raw fingerprint-machine backfill remains unavailable until HR-5
+- Tenant HR Data Migrations and Operational Readiness pages expose migration workflow, configuration/reconciliation gates, device-offline fallback, rollout status, and limitations
+- The HR recovery manifest hashes 24 HR tables at row and aggregate level and detects post-manifest mutation without exposing source content
+- Readiness checks cover company isolation, duplicate integrity, Payroll/Final Settlement/financing reconciliation, configuration gates, device continuity, and realistic-volume query behavior
+- Pilot UAT verifies finalized Attendance input through Payroll components, balanced GL posting, Treasury settlement, and net expense-account reconciliation
+- Eight dedicated permissions, company policy enforcement, private storage, Activitylog evidence, transaction locks, and full regression coverage protect the workflow
+
+### Attendance and Leave foundations
+
+- Company Work Calendars define ISO working weekdays, timezone, effective dates, active state, and calendar-specific paid holidays
+- Company Work Shifts support day and overnight schedules, breaks, effective non-overlapping Employment assignments, and same-company validation
+- Effective-dated Attendance Rules configure grace, late rounding, half-day, absence, minimum overtime, and missing-punch treatment without provisioning live numeric business rules
+- Manual Attendance Punches retain separate immutable evidence, direction, reason, creator, independent approver/rejector, and decision time
+- Daily Attendance Records derive from the effective schedule/calendar/rule, approved punches, approved Leave, joining/ending dates, holidays, rest days, and overnight windows
+- Daily finalization calculates scheduled/worked/late/overtime minutes, status, evidence checksum, finalizer, and timestamp; finalized records are immutable
+- Attendance Corrections retain before/proposed snapshots, reason, independent decision evidence, and apply only approved fields without deleting the source punches
+- Monthly Attendance Summaries aggregate finalized daily evidence and approved unpaid Leave, retain a source checksum, and become immutable Payroll inputs after finalization
+- Leave Types configure day/hour unit, paid/unpaid classification, Payroll impact, attachment requirement, and active state
+- Effective Leave Policies define entitlement metadata, carry-forward metadata, negative-balance and encashment flags, and reject overlapping active versions
+- The append-only Leave Ledger records opening/accrual/adjustment/consumption/reversal units with source, reason, actor, and effective date
+- Leave follows Draft → Requested → Manager Approved → HR Approved, with independent actors, policy snapshot, balance validation, cancellation reversal, rejection reasons, and Activitylog evidence
+- Required Leave attachments reuse the existing private, versioned Document platform through a Leave Request upload tab
+- Work Calendars, Holidays, Shifts, Assignments, Attendance Rules/Records/Punches/Corrections/Summaries, Leave Types/Policies/Ledger/Requests have tenant-scoped Filament resources and dedicated CRUD/workflow permissions
+- HR-3 provisions no calendars, shifts, attendance rules, Leave policies, balances, punches, Attendance, or Leave transactions; production use remains gated by approved company configuration
+- HR-3 manual punches remain distinct from HR-4 machine-source punches and immutable raw device evidence
+
+### Attendance-machine ingestion foundation
+
+- Company-owned Attendance Devices support optional same-company Work Location, code/identifier, exact IANA timezone, transport capability, a non-secret connection-profile reference, active state, health, cursor, last-sync/last-seen, and safe error status
+- Effective-dated device-user mappings attach one external machine user to one same-company Employment without overlapping ranges
+- Import/sync batches retain source/checksum, cursor boundaries, safe metadata, source file reference, counts, actor/times, and failure summary as immutable evidence
+- Raw Attendance events retain the original local value, timezone, normalized UTC time, direction, safe payload, source ID, fingerprint, processing state, and error without storing fingerprint templates
+- Company/device/source-ID and deterministic event-fingerprint uniqueness prevent duplicate raw events; every machine punch links one-to-one to its raw event
+- Unknown device users are quarantined, missing directions require review, and finalized daily Attendance is not silently rewritten
+- Authorized replay after correcting a mapping is safe and idempotent; retained failed CSV batches preserve immutable row-level errors and create a separate replay attempt
+- The exact private CSV boundary is `device_code,external_user_id,punched_at_local,timezone,direction,source_event_id`; exact headers, device/timezone/company validation, and a 10 MB limit are enforced
+- CSV and the vendor-neutral future adapter contract use the same ingestion action and replay-safe HR-3 normalization
+- Machine events create approved machine-source punches without a manual creator, reuse/create draft daily Attendance, and respect overnight assignment dates
+- Tenant Filament resources manage Devices and mappings and expose read-only batches, raw events, and row errors with authorized import/reprocess actions and separate raw-payload access
+- HR-4 adds 25 permission capabilities and no seeded Devices, mappings, batches, raw events, or punches
 
 ### Fixed assets, inter-company accounting, consolidation, closing, and migration
 
@@ -422,9 +530,14 @@ The original multi-company foundation, document platform, HR foundation, joining
 - PHPUnit tests cover private document creation, checksums, version history, immutable versions, workflow transitions, company isolation, confidential-document filtering, category protection, Filament uploads, and action-level authorization
 - PHPUnit tests cover HR encryption, audit redaction, multi-company Employment, reporting cycles, company isolation, sensitive permissions, Filament creation flows, and Employee/Employment document links
 - PHPUnit tests cover repeatable employee details, primary-contact/account enforcement, encrypted employee bank data, relation-manager permissions, cross-company denial, document visibility, and private HR document uploads
+- PHPUnit tests cover HR document-type provisioning, optional defaults, company/applicability/date/sensitivity validation, dedicated identity/medical permissions, immutable legacy mapping/version replacement, compliance gaps, tenant configuration, and protected deletion
 - PHPUnit tests cover joining-letter company isolation, safe rendering, encrypted snapshots, workflow permissions and transitions, rejection/regeneration, audit redaction, checksums, and immutability
 - PHPUnit tests cover encrypted compensation, gross calculation, effective periods, automatic prior-period closure, overlap denial, workflow authorization, immutability, audit redaction, and company isolation
 - PHPUnit tests cover payroll generation, missing-compensation rollback, joining-date proration, encrypted snapshots, deduction recalculation, Project allocation reconciliation, idempotent Accounts posting, linked reversal, Employee Advance recovery, Treasury settlement, workflow permissions, post-submission freeze, reports, and final locking
+- PHPUnit tests cover company-independent automatic Employee codes and collision skipping, Department parent isolation/cycle rejection, Employment lifecycle/date/location validation, immutable before/after Employment snapshots, and authorization for the new tenant masters/history
+- PHPUnit tests cover HR-3 factory validity, company isolation, effective-rule/schedule overlap rejection, overnight shifts, holidays, rest days, missing punches, Employment lifecycle dates, maker-checker manual punches/corrections, immutable evidence, Leave balance consumption/negative-balance policy, cancellation reversal, unpaid Leave classification, finalized monthly-summary immutability, and tenant workflow page rendering
+- PHPUnit tests cover HR-4 file/event idempotency, quarantine and safe replay, missing-direction review, failed-batch row errors/reprocessing, shared adapter ingestion, immutable raw evidence, company/location boundaries, overnight machine events, and tenant UI isolation
+- PHPUnit tests cover HR-6 maker-checker, exact schedule reconciliation, due-as-of balances, tenant isolation, submitted-term/installment immutability, Treasury/GL disbursement and recovery, idempotency, rescheduling, early payoff, principal waiver, and reversal history
 - PHPUnit tests cover Phase 2 role-combined Parties, primary contacts, cross-company master-data rejection, tax effective dates, tenant resources, Project Documents, maker-checker budget approval, exact totals, supersession, audit evidence, and immutability
 - PHPUnit tests cover Phase 3 company COA idempotency and snapshots, profile activation, dynamic bank mappings, tree/manual-posting rules, period workflows, and sequential voucher numbering
 - PHPUnit tests cover Phase 4 balance/company/source validation, maker-checker, idempotent stale posting, four-decimal precision, period locks, immutability, reversals, opening balances, tenant permissions, Filament creation, and reconciled financial reports
@@ -433,7 +546,17 @@ The original multi-company foundation, document platform, HR foundation, joining
 - PHPUnit tests cover Phase 7 exact PO–GRN–invoice matching, hard accepted-quantity bounds, configurable tolerances and authorized exceptions, effective GST/WHT/retention posting, reversals, Credit Notes, AP-control reconciliation, aging/unpaid/unmatched reports, tenant UI, permissions, and private document boundaries
 - PHPUnit tests cover Fixed Asset capitalization/depreciation/transfer/disposal/reversal, tenant isolation, private evidence, reporting, and GL reconciliation
 - PHPUnit tests cover independent paired-company approvals, atomic posting/reversal, counterpart reconciliation, mapped consolidation/elimination, CSV export, reproducible year close/reopen, private migration dry-run/import/rollback, recovery manifests, permissions, and tenant isolation
-- The complete verified suite contains 199 tests and 999 assertions
+- The pre-HR-3 complete verified baseline contained 199 tests and 999 assertions
+- HR-3 focused verification passes 11 tests/62 assertions; the broader affected HR, Payroll, Document, and Filament regression passes 65 tests/327 assertions
+- HR-4 focused verification passes 8 tests/38 assertions; its broader affected HR, Document, and Filament regression passes 37 tests/189 assertions
+- Fresh post-HR-6 migrate/seed leaves 6 companies, 735 unique permissions, 36 optional HR Document Types, and zero Attendance Devices, mappings, batches, raw events, punches, Employment, financing, Treasury, Payroll, or Journal transactions
+- HR-10 focused verification passes 4 tests/40 assertions; affected HR-6/HR-9, Payroll, Treasury, and Document regression passes 35 tests/228 assertions
+- Fresh post-HR-10 migrate/seed plus two repeated seed runs leave 6 companies, 887 unique permissions, 36 optional HR Document Types, and zero Final Settlement, Journal, or Treasury transactions
+- HR-11 focused verification passes 4 tests/33 assertions; broader affected HR, Attendance, Leave, Financing, Payroll, Final Settlement, Filament, consolidation, and accounting regression passes 72 tests/434 assertions
+- Fresh post-HR-11 migration and two repeated seed runs leave 6 companies, 893 unique permissions, 36 optional HR Document Types, and zero Employment, Payroll, Attendance-summary, Leave, Financing, Final Settlement, or HR export-audit operational rows
+- HR-12 focused migration/hardening plus Payroll accounting/calculation verification passes 11 tests/100 assertions; the complete suite passes 263 tests/1,429 assertions with a 512 MB PHPUnit process limit
+- Fresh post-HR-12 migration and repeated permission seeding leave 6 companies, 901 unique permissions, 36 optional HR Document Types, and zero HR migration, Employment, Payroll, Attendance-summary, financing, Final Settlement, Journal, or Treasury operational rows
+- A post-HR-3 full-suite command was attempted, but its PHPUnit child process retained the existing 128 MB limit and exhausted memory during Document MIME detection; the affected Document test files pass in the broader focused command
 
 ## Not implemented yet
 
@@ -441,9 +564,8 @@ The following are planned only:
 
 - Printable/PDF joining-letter export
 - Electronic or digital signing
-- Formal employee-loan origination, schedules, interest, and installment management
-- Attendance and leave
-- Payroll exports, printable approval sheets, and attendance-based calculations
+- HR/workforce application scope remaining: the actual fingerprint-machine connector only
+- Fingerprint attendance-machine connector; HR-5 is **Blocked** pending the actual machine make/model/firmware, protocol/SDK/export capability, network topology, redacted users/events, timezone/clock behavior, and credential model
 - Foreign currency (PKR-only remains the approved initial scope)
 - Actual production source onboarding, statutory configuration, and infrastructure backup scheduling/restore execution; application validation, integrity, rollback, and recovery-manifest controls are implemented
 
@@ -881,9 +1003,84 @@ Completed on 2026-07-24:
 8. Effective-dated compensation history with encrypted amounts, approval, overlap protection, and immutable approved values.
 9. Payroll-run generation, employee snapshots, deductions, payment allocation, approval, payment, and final locking.
 
-Next:
+Completed on 2026-07-28 under HR-1:
 
-10. Loans and advances, payroll exports, and later attendance integration.
+10. Optional same-company Department hierarchy with cycle prevention and protected parents.
+11. Configurable, transactional, collision-safe company Employee-code sequences with automatic allocation and stable existing codes.
+12. Employment Type, Resigned/Terminated statuses, probation/confirmation/notice fields, and controlled company Work Locations with optional same-company Project Site links.
+13. Immutable, actor-aware, effective-dated Employment before/after history exposed through a read-only relation manager.
+14. Tenant resources, filters, policies, permissions, factories, migrations, and focused regression coverage for the HR-1 changes.
+
+Completed on 2026-07-28 under HR-2:
+
+15. Six controlled company HR document types with configurable applicability, sensitivity, compliance, review, and date requirements.
+16. Nullable legacy-safe Document mapping, type-aware Employee/Employment upload tabs and filters, and immutable version reuse.
+17. Dedicated identity/medical document access layered over sensitive-document authorization.
+18. Required-document compliance summaries, deterministic optional type provisioning, tenant configuration UI, policies, permissions, and regression coverage.
+
+Completed on 2026-07-28 under HR-3:
+
+19. Effective company calendars/holidays, day/overnight shifts, non-overlapping Employment assignments, and configurable Attendance rules.
+20. Approved manual punch evidence, daily calculation/finalization, correction snapshots, and immutable monthly Attendance Payroll inputs.
+21. Leave Types/Policies, append-only balance ledger, request/manager/HR approval, over-consumption control, cancellation reversal, and paid/unpaid Payroll-impact snapshots.
+22. Leave Request private attachments, tenant resources, workflow actions, policies, 89 HR-3 permission capabilities, factories, migrations, audit evidence, and focused regression coverage.
+
+Completed on 2026-07-28 under HR-4:
+
+23. Company Attendance Device registry, optional Work Location assignment, IANA timezone, transport/health/cursor state, and non-secret connection reference.
+24. Effective device-user-to-Employment mappings, immutable batches/raw events/row errors, deterministic checksums/fingerprints, quarantine, replay, and company boundaries.
+25. Private normalized CSV import and vendor-neutral adapter contract feeding the same HR-3 normalization, with tenant UI, 25 permissions, factories, migrations, audit evidence, and focused regression coverage.
+
+Completed on 2026-07-28 under HR-6:
+
+26. Separate tenant-safe Employee Loan/Advance requests with explicit terms, maker-checker workflow, versioned schedules, immutable recovery/reversal ledger, and private documents.
+27. Treasury-linked disbursement/direct recovery, automatic Employee Advances receivable GL posting, approved principal-waiver Journal, rescheduling, partial recovery, early payoff, and reversal-safe schedule restoration.
+28. Exact outstanding and due-as-of installment boundaries for HR-7 Payroll and later clearance/Final Settlement, tenant UI/policies, 19 permissions, factories, five migrations, audit evidence, and focused regression coverage.
+
+Completed on 2026-07-29 under HR-7:
+
+29. Effective-dated company Payroll Calculation Rules, exact finalized Attendance/Leave consumption, and immutable source components with deterministic keys, encrypted amounts/evidence, checksums, and revisioned Payroll generation.
+30. Maker-checker Bonus/Incentive sources and active due-as-of Loan/Advance recovery components, with recovery applied only on Payroll posting and fully restored through linked Payroll/Journal reversal.
+31. Extended Bonus, Incentive, unpaid Leave, late, and half-day GL mappings/posting while preserving Salary Payable, Employee Advances, Project allocation, Treasury settlement, locking, and revisioned reposting.
+32. Tenant configuration/evidence UI, source-backed Payroll review, Salary Register, Payroll Summary, Project-wise Payroll foundations, 19 permissions, six migrations, factories, audit, and deterministic accounting/reversal tests.
+
+Completed on 2026-07-29 under HR-8:
+
+33. Configurable KPI libraries/Appraisal Cycles and encrypted Appraisal goals, scoring, review, approval, acknowledgement, rejection, checksums, and maker-checker audit.
+34. Configurable Warning Letter Templates and sensitive Warning issue/response/acknowledgement/closure with immutable evidence and private attachments.
+35. Effective Promotion/Transfer with before/target snapshots, separately approved Compensation linking, one-time application, and immutable effective-dated Employment Change history.
+36. Resignation/Termination with notice, authority/protected/handover evidence, private documents, acceptance/withdrawal/approval, Employment lifecycle propagation, Leave boundary, and explicit access review.
+
+Completed on 2026-07-29 under HR-9:
+
+37. One-live-custodian Fixed Asset issue, employee acknowledgement, transfer, return, damage/loss, encrypted recovery recommendation, and immutable custody/transfer evidence.
+38. Approved-separation clearance aggregating outstanding Assets, Loans, Advances, Leave, handover, and company-configured HR/Manager/IT/Admin/Store/Finance/Loans/Assets obligations.
+39. Department-specific decisions, blocking/waiver/recovery controls, independent completion, private attachments, tenant UI, policies, 42 permissions, and an explicit no-GL/no-Treasury boundary until HR-10.
+
+Completed on 2026-07-29 under HR-10:
+
+40. Approved-separation Final Settlement with exact last-working-date cutoff, completed mandatory clearance, source-backed earnings/recoveries, encrypted evidence, checksum reconciliation, and draft source refresh.
+41. Independent preparation/review/approval/Finance posting, dedicated component mappings, balanced period-aware Journal posting, financing subledger recovery, linked reversals, and immutable workflow evidence.
+42. Bounded Treasury Payment/Receipt settlement, payable/receivable state, private Documents, printable approved letter, tenant resources, 22 permissions, and Final Settlement/GL/Treasury reconciliation reporting.
+
+Next work is controlled by `docs/HR_WORKFORCE_IMPLEMENTATION_PLAN.md`.
+
+- Overall HR/workforce plan status: **In Progress**.
+- HR-0 Business rules, samples, and approval matrix is **Implemented and Verified**.
+- HR-1 Organization and Employment master enhancements is **Implemented and Verified**.
+- HR-2 Typed employee documents and compliance metadata is **Implemented and Verified**.
+- HR-3 Attendance and Leave foundations is **Implemented and Verified**.
+- HR-4 Attendance-machine ingestion foundation is **Implemented and Verified**.
+- HR-5 is **Blocked** after the user's explicit request because actual machine evidence is unavailable. The live database has zero configured Attendance Devices, and the repository/configuration contains no vendor connector, device fixture, or credential provider.
+- HR-6 Employee Loans and Advances is **Implemented and Verified**.
+- HR-7 Payroll calculation and accounting integration is **Implemented and Verified**.
+- HR-8 Performance, discipline, promotion, transfer, and separation is **Implemented and Verified**.
+- HR-9 Employee asset custody and clearance is **Implemented and Verified**.
+- HR-10 Final Settlement is **Implemented and Verified**.
+- HR-11 HR reports, dashboard, exports, and group consolidation is **Implemented and Verified**.
+- HR-12 Migration, UAT, security, performance, and rollout hardening is **Implemented and Verified**.
+- Implementation starts only when the user requests the relevant phase.
+- The fingerprint-machine model is intentionally not assumed. HR-4 provides vendor-neutral device/user mapping, immutable raw punches, deduplication, import batches, replay-safe normalization, and a normalized CSV/manual contract. HR-5 adds the actual device adapter after machine evidence is available.
 
 ### Finance, Projects, and operations
 
@@ -914,10 +1111,12 @@ The next planning session should confirm:
 - Official customer/vendor/contractor/consultant, Project, Item, UOM, Site, Cost Center, and tax-code master data
 - Required first document categories and retention expectations
 - Whether joining-letter signing means internal approval, employee acceptance, visual signature, ECAC/certificate signing, or an external e-sign provider
-- Employee code format
-- Whether departments and designations are shared, company-specific, or both
+- Company-specific Employee-code prefix/padding overrides, if the approved `EMP-00001` default should vary
 - Payroll meaning of "Pay For" and exact calculation formulas
 - Whether multiple-company employments are separately paid by each company
+- Attendance shifts, holidays, grace period, late/half-day/absence/overtime rules, and Leave policies
+- Fingerprint attendance-machine make/model, API/SDK/protocol/export options, network reachability, timezone behavior, and sample punch data when the device arrives
+- Loan/Advance terms, Bonus/Incentive rules, separation/clearance requirements, and Final Settlement formulas
 
 ## External signing references reviewed
 

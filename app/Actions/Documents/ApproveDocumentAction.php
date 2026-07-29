@@ -32,9 +32,9 @@ class ApproveDocumentAction
                 return $lockedDocument;
             }
 
-            if ($lockedDocument->category->requires_verification && $lockedDocument->verified_at === null) {
+            if ($lockedDocument->requiresVerification() && $lockedDocument->verified_at === null) {
                 throw ValidationException::withMessages([
-                    'document' => 'This document category requires verification before approval.',
+                    'document' => 'This document requires verification before approval.',
                 ]);
             }
 

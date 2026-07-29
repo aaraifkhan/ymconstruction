@@ -6,6 +6,7 @@ use App\Enums\DocumentClassification;
 use App\Models\BankReconciliation;
 use App\Models\BankStatement;
 use App\Models\CustomerInvoice;
+use App\Models\Document;
 use App\Models\Employee;
 use App\Models\Employment;
 use App\Models\GoodsReceipt;
@@ -81,6 +82,32 @@ class DocumentForm
                             ->searchable()
                             ->preload()
                             ->required(),
+                        Select::make('hr_document_type_id')
+                            ->label('HR document type')
+                            ->relationship(
+                                name: 'hrDocumentType',
+                                titleAttribute: 'name',
+                                modifyQueryUsing: function (Builder $query, Get $get, ?Document $record): Builder {
+                                    $scope = $record?->documentable_type === Employee::class
+                                        ? 'employee'
+                                        : ($record?->documentable_type === Employment::class
+                                            ? 'employment'
+                                            : $get('document_scope'));
+
+                                    return $query
+                                        ->whereBelongsTo(Filament::getTenant())
+                                        ->where('applicability', $scope)
+                                        ->where('is_active', true);
+                                },
+                            )
+                            ->searchable()
+                            ->preload()
+                            ->helperText('Required for new Employee/Employment uploads; existing free-form records can be mapped later.')
+                            ->required(fn (string $operation, Get $get): bool => $operation === 'create'
+                                && in_array($get('document_scope'), ['employee', 'employment'], true))
+                            ->visible(fn (string $operation, Get $get, ?Document $record): bool => $operation === 'edit'
+                                ? in_array($record?->documentable_type, [Employee::class, Employment::class], true)
+                                : in_array($get('document_scope'), ['employee', 'employment'], true)),
                         Select::make('document_scope')
                             ->label('Related record type')
                             ->options([

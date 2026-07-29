@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Validation\ValidationException;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
@@ -111,6 +112,11 @@ class Company extends Model
         return $this->hasMany(Document::class);
     }
 
+    public function hrDocumentTypes(): HasMany
+    {
+        return $this->hasMany(HrDocumentType::class);
+    }
+
     public function departments(): HasMany
     {
         return $this->hasMany(Department::class);
@@ -124,6 +130,226 @@ class Company extends Model
     public function employments(): HasMany
     {
         return $this->hasMany(Employment::class);
+    }
+
+    public function employeeFinancings(): HasMany
+    {
+        return $this->hasMany(EmployeeFinancing::class);
+    }
+
+    public function employeeFinancingInstallments(): HasMany
+    {
+        return $this->hasMany(EmployeeFinancingInstallment::class);
+    }
+
+    public function employeeFinancingTransactions(): HasMany
+    {
+        return $this->hasMany(EmployeeFinancingTransaction::class);
+    }
+
+    public function payrollCalculationRules(): HasMany
+    {
+        return $this->hasMany(PayrollCalculationRule::class);
+    }
+
+    public function payrollVariableComponents(): HasMany
+    {
+        return $this->hasMany(PayrollVariableComponent::class);
+    }
+
+    public function payrollEntryComponents(): HasMany
+    {
+        return $this->hasMany(PayrollEntryComponent::class);
+    }
+
+    public function performanceKpis(): HasMany
+    {
+        return $this->hasMany(PerformanceKpi::class);
+    }
+
+    public function appraisalCycles(): HasMany
+    {
+        return $this->hasMany(AppraisalCycle::class);
+    }
+
+    public function performanceAppraisals(): HasMany
+    {
+        return $this->hasMany(PerformanceAppraisal::class);
+    }
+
+    public function performanceAppraisalItems(): HasMany
+    {
+        return $this->hasMany(PerformanceAppraisalItem::class);
+    }
+
+    public function warningLetterTemplates(): HasMany
+    {
+        return $this->hasMany(WarningLetterTemplate::class);
+    }
+
+    public function employeeWarnings(): HasMany
+    {
+        return $this->hasMany(EmployeeWarning::class);
+    }
+
+    public function employmentMovementRequests(): HasMany
+    {
+        return $this->hasMany(EmploymentMovementRequest::class);
+    }
+
+    public function employmentSeparations(): HasMany
+    {
+        return $this->hasMany(EmploymentSeparation::class);
+    }
+
+    public function employeeAssetCustodies(): HasMany
+    {
+        return $this->hasMany(EmployeeAssetCustody::class);
+    }
+
+    public function employeeAssetCustodyEvents(): HasMany
+    {
+        return $this->hasMany(EmployeeAssetCustodyEvent::class);
+    }
+
+    public function clearanceChecklistTemplates(): HasMany
+    {
+        return $this->hasMany(ClearanceChecklistTemplate::class);
+    }
+
+    public function employeeClearances(): HasMany
+    {
+        return $this->hasMany(EmployeeClearance::class);
+    }
+
+    public function employeeClearanceItems(): HasMany
+    {
+        return $this->hasMany(EmployeeClearanceItem::class);
+    }
+
+    public function finalSettlements(): HasMany
+    {
+        return $this->hasMany(FinalSettlement::class);
+    }
+
+    public function finalSettlementLines(): HasMany
+    {
+        return $this->hasMany(FinalSettlementLine::class);
+    }
+
+    public function finalSettlementAccountMappings(): HasMany
+    {
+        return $this->hasMany(FinalSettlementAccountMapping::class);
+    }
+
+    public function workLocations(): HasMany
+    {
+        return $this->hasMany(WorkLocation::class);
+    }
+
+    public function workCalendars(): HasMany
+    {
+        return $this->hasMany(WorkCalendar::class);
+    }
+
+    public function companyHolidays(): HasMany
+    {
+        return $this->hasMany(CompanyHoliday::class);
+    }
+
+    public function workShifts(): HasMany
+    {
+        return $this->hasMany(WorkShift::class);
+    }
+
+    public function shiftAssignments(): HasMany
+    {
+        return $this->hasMany(ShiftAssignment::class);
+    }
+
+    public function attendanceRules(): HasMany
+    {
+        return $this->hasMany(AttendanceRule::class);
+    }
+
+    public function attendanceRecords(): HasMany
+    {
+        return $this->hasMany(AttendanceRecord::class);
+    }
+
+    public function attendancePunches(): HasMany
+    {
+        return $this->hasMany(AttendancePunch::class);
+    }
+
+    public function attendanceDevices(): HasMany
+    {
+        return $this->hasMany(AttendanceDevice::class);
+    }
+
+    public function attendanceDeviceUserMappings(): HasMany
+    {
+        return $this->hasMany(AttendanceDeviceUserMapping::class);
+    }
+
+    public function attendanceImportBatches(): HasMany
+    {
+        return $this->hasMany(AttendanceImportBatch::class);
+    }
+
+    public function hrDataMigrations(): HasMany
+    {
+        return $this->hasMany(HrDataMigration::class);
+    }
+
+    public function attendanceRawEvents(): HasMany
+    {
+        return $this->hasMany(AttendanceRawEvent::class);
+    }
+
+    public function attendanceImportRowErrors(): HasMany
+    {
+        return $this->hasMany(AttendanceImportRowError::class);
+    }
+
+    public function attendanceCorrections(): HasMany
+    {
+        return $this->hasMany(AttendanceCorrection::class);
+    }
+
+    public function attendanceMonthlySummaries(): HasMany
+    {
+        return $this->hasMany(AttendanceMonthlySummary::class);
+    }
+
+    public function leaveTypes(): HasMany
+    {
+        return $this->hasMany(LeaveType::class);
+    }
+
+    public function leavePolicies(): HasMany
+    {
+        return $this->hasMany(LeavePolicy::class);
+    }
+
+    public function leaveLedgerEntries(): HasMany
+    {
+        return $this->hasMany(LeaveLedgerEntry::class);
+    }
+
+    public function leaveRequests(): HasMany
+    {
+        return $this->hasMany(LeaveRequest::class);
+    }
+
+    public function employeeCodeSequence(): HasOne
+    {
+        return $this->hasOne(EmployeeCodeSequence::class);
+    }
+
+    public function employeeCodeSequences(): HasMany
+    {
+        return $this->hasMany(EmployeeCodeSequence::class);
     }
 
     public function joiningLetterTemplates(): HasMany

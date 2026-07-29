@@ -7,4 +7,5 @@ enum TreasuryAllocationType: string
     case VendorBill = 'vendor_bill';
     case CustomerInvoice = 'customer_invoice';
     case PayrollEntry = 'payroll_entry';
+    case FinalSettlement = 'final_settlement';
 }

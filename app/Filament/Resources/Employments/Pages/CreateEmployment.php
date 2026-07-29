@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Employments\Pages;
 
 use App\Filament\Resources\Employments\EmploymentResource;
+use Filament\Facades\Filament;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Support\Arr;
 
@@ -12,6 +13,8 @@ class CreateEmployment extends CreateRecord
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
+        $data['company_id'] = Filament::getTenant()->getKey();
+
         if (! (auth()->user()?->can('ManageHrVerification:Employment') ?? false)) {
             $data = Arr::except($data, [
                 'interviewed_by_id',

@@ -38,16 +38,19 @@ class EntriesRelationManager extends RelationManager
     public function form(Schema $schema): Schema
     {
         return $schema->components([
-            TextInput::make('payable_days')->numeric()->minValue(0)->required(),
-            TextInput::make('absence_deduction')->numeric()->minValue(0)->required(),
-            TextInput::make('loan_advance_deduction')->label('Loan & advance deduction')->numeric()->minValue(0)->required(),
+            TextInput::make('payable_days')->numeric()->disabled()->dehydrated(false),
+            TextInput::make('absence_deduction')->numeric()->disabled()->dehydrated(false),
+            TextInput::make('unpaid_leave_deduction')->numeric()->disabled()->dehydrated(false),
+            TextInput::make('late_deduction')->numeric()->disabled()->dehydrated(false),
+            TextInput::make('half_day_deduction')->numeric()->disabled()->dehydrated(false),
+            TextInput::make('loan_advance_deduction')->label('Loan & advance deduction')->numeric()->disabled()->dehydrated(false),
             TextInput::make('other_deduction')->numeric()->minValue(0)->required(),
             TextInput::make('bank_amount')->numeric()->minValue(0)->required(),
             TextInput::make('cash_amount')->numeric()->minValue(0)->required(),
             Textarea::make('remarks')->maxLength(2000)->columnSpanFull(),
             Repeater::make('projectAllocations')->relationship()
                 ->label('Project / Cost Center payroll allocation')
-                ->helperText('Required for Project Staff. Total must equal Gross Salary less Absence Deduction.')
+                ->helperText('Required for Project Staff. Total must equal source-backed earnings less attendance deductions.')
                 ->mutateRelationshipDataBeforeCreateUsing(fn (array $data): array => [
                     ...$data,
                     'company_id' => Filament::getTenant()->getKey(),
@@ -88,6 +91,14 @@ class EntriesRelationManager extends RelationManager
                 TextColumn::make('payable_days')->label('Pay for'),
                 TextColumn::make('payable_basic')->label('Basic')->formatStateUsing(fn ($state, PayrollEntry $record): string => $record->currency_code.' '.number_format((float) $state, 2)),
                 TextColumn::make('gross_salary')->formatStateUsing(fn ($state, PayrollEntry $record): string => number_format((float) $state, 2)),
+                TextColumn::make('bonus_amount')->label('Bonus')->formatStateUsing(fn ($state): string => number_format((float) $state, 2))->toggleable(),
+                TextColumn::make('incentive_amount')->label('Incentive')->formatStateUsing(fn ($state): string => number_format((float) $state, 2))->toggleable(),
+                TextColumn::make('attendance_deductions')->state(fn (PayrollEntry $record): string => number_format(
+                    (float) $record->absence_deduction + (float) ($record->unpaid_leave_deduction ?? 0)
+                    + (float) ($record->late_deduction ?? 0) + (float) ($record->half_day_deduction ?? 0),
+                    2,
+                ))->toggleable(),
+                TextColumn::make('loan_advance_deduction')->label('Loan/Advance')->formatStateUsing(fn ($state): string => number_format((float) $state, 2))->toggleable(),
                 TextColumn::make('net_salary')->formatStateUsing(fn ($state, PayrollEntry $record): string => number_format((float) $state, 2)),
                 TextColumn::make('payment_mode')->state(fn (PayrollEntry $record): string => $record->paymentMode()),
             ])

@@ -25,6 +25,10 @@ class DocumentInfolist
                         TextEntry::make('category.name')
                             ->label('Category')
                             ->badge(),
+                        TextEntry::make('hrDocumentType.name')
+                            ->label('HR document type')
+                            ->badge()
+                            ->placeholder('Legacy / free-form'),
                         TextEntry::make('classification')
                             ->label('Sensitivity')
                             ->formatStateUsing(

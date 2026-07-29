@@ -17,6 +17,7 @@ class DepartmentInfolist
                     ->schema([
                         TextEntry::make('name'),
                         TextEntry::make('code')->badge(),
+                        TextEntry::make('parentDepartment.name')->label('Parent department')->placeholder('—'),
                         IconEntry::make('is_active')->boolean(),
                         TextEntry::make('description')->placeholder('—')->columnSpanFull(),
                     ])

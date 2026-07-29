@@ -79,6 +79,8 @@ class JournalEntry extends Model
                                 && $entry->source_type === TreasuryTransaction::class)
                             || ($entry->voucher_type === VoucherType::Payroll
                                 && $entry->source_type === PayrollRun::class)
+                            || ($entry->voucher_type === VoucherType::Payroll
+                                && $entry->source_type === FinalSettlement::class)
                             || ($entry->voucher_type === VoucherType::Depreciation
                                 && in_array($entry->source_type, [DepreciationRun::class, FixedAsset::class], true))
                             || ($entry->voucher_type === VoucherType::Journal
@@ -91,6 +93,8 @@ class JournalEntry extends Model
                                 && $entry->source_type === IntercompanyTransaction::class)
                             || ($entry->voucher_type === VoucherType::Journal
                                 && $entry->source_type === YearEndClosing::class)
+                            || ($entry->voucher_type === VoucherType::Journal
+                                && $entry->source_type === EmployeeFinancing::class)
                         )),
                     JournalStatus::Rejected => in_array($targetStatus, [JournalStatus::Rejected, JournalStatus::Submitted], true),
                     JournalStatus::Submitted => in_array($targetStatus, [JournalStatus::Approved, JournalStatus::Rejected], true),

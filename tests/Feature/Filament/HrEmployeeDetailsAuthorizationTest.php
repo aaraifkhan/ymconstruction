@@ -13,6 +13,7 @@ use App\Models\DocumentCategory;
 use App\Models\EmployeeBankAccount;
 use App\Models\EmployeeEmergencyContact;
 use App\Models\Employment;
+use App\Models\HrDocumentType;
 use App\Models\User;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -147,6 +148,10 @@ class HrEmployeeDetailsAuthorizationTest extends TestCase
         $company = Company::factory()->create();
         $employee = Employment::factory()->forCompany($company)->create()->employee;
         $category = DocumentCategory::factory()->for($company)->create();
+        $documentType = HrDocumentType::factory()->for($company)->create([
+            'code' => 'cnic',
+            'name' => 'CNIC',
+        ]);
         $this->authenticateCompanyUser($company, [
             'View:Employee',
             'ViewAny:Document',
@@ -161,6 +166,7 @@ class HrEmployeeDetailsAuthorizationTest extends TestCase
             ->callTableAction('uploadDocument', data: [
                 'title' => 'Employee CNIC Copy',
                 'document_category_id' => $category->getKey(),
+                'hr_document_type_id' => $documentType->getKey(),
                 'classification' => DocumentClassification::Restricted->value,
                 'uploaded_file_path' => UploadedFile::fake()->createWithContent(
                     'cnic.pdf',
@@ -172,6 +178,7 @@ class HrEmployeeDetailsAuthorizationTest extends TestCase
         $document = $employee->documents()->where('title', 'Employee CNIC Copy')->firstOrFail();
 
         $this->assertTrue($document->company->is($company));
+        $this->assertTrue($document->hrDocumentType->is($documentType));
         $this->assertSame(1, $document->versions()->count());
         Storage::disk('local')->assertExists($document->currentVersion()->firstOrFail()->path);
     }

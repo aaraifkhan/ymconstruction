@@ -37,6 +37,11 @@ class DocumentsTable
                     ->label('Category')
                     ->badge()
                     ->sortable(),
+                TextColumn::make('hrDocumentType.name')
+                    ->label('HR type')
+                    ->badge()
+                    ->placeholder('—')
+                    ->toggleable(),
                 TextColumn::make('classification')
                     ->label('Sensitivity')
                     ->formatStateUsing(
@@ -66,6 +71,16 @@ class DocumentsTable
                     ->label('Category')
                     ->relationship(
                         name: 'category',
+                        titleAttribute: 'name',
+                        modifyQueryUsing: fn (Builder $query): Builder => $query
+                            ->whereBelongsTo(Filament::getTenant()),
+                    )
+                    ->searchable()
+                    ->preload(),
+                SelectFilter::make('hr_document_type_id')
+                    ->label('HR document type')
+                    ->relationship(
+                        name: 'hrDocumentType',
                         titleAttribute: 'name',
                         modifyQueryUsing: fn (Builder $query): Builder => $query
                             ->whereBelongsTo(Filament::getTenant()),

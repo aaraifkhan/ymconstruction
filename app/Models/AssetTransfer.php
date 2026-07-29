@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use LogicException;
 
 #[Fillable([
     'company_id', 'fixed_asset_id', 'from_custodian_employment_id', 'to_custodian_employment_id',
@@ -18,6 +19,12 @@ class AssetTransfer extends Model
 {
     /** @use HasFactory<AssetTransferFactory> */
     use HasFactory;
+
+    protected static function booted(): void
+    {
+        static::updating(fn () => throw new LogicException('Asset transfer evidence is immutable.'));
+        static::deleting(fn () => throw new LogicException('Asset transfer evidence is immutable.'));
+    }
 
     public function company(): BelongsTo
     {

@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Enums\EmploymentCategory;
 use App\Enums\EmploymentStatus;
+use App\Enums\EmploymentType;
 use App\Models\Company;
 use App\Models\Employee;
 use App\Models\Employment;
@@ -22,6 +23,7 @@ class EmploymentFactory extends Factory
             'employee_code' => 'EMP-'.fake()->unique()->numerify('#####'),
             'joining_date' => fake()->dateTimeBetween('-8 years', 'now'),
             'employment_category' => fake()->randomElement(EmploymentCategory::cases()),
+            'employment_type' => fake()->randomElement(EmploymentType::cases()),
             'employment_status' => EmploymentStatus::Active,
             'work_start_time' => '09:00',
             'work_end_time' => '18:00',

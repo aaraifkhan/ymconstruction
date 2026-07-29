@@ -1,0 +1,19 @@
+<?php
+
+namespace App\Filament\Resources\PerformanceAppraisals\Pages;
+
+use App\Filament\Resources\PerformanceAppraisals\PerformanceAppraisalResource;
+use Filament\Actions\CreateAction;
+use Filament\Resources\Pages\ListRecords;
+
+class ListPerformanceAppraisals extends ListRecords
+{
+    protected static string $resource = PerformanceAppraisalResource::class;
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            CreateAction::make(),
+        ];
+    }
+}

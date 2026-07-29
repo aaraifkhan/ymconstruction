@@ -77,6 +77,7 @@ class DocumentResource extends Resource
         $query = parent::getEloquentQuery()
             ->with([
                 'category',
+                'hrDocumentType',
                 'currentVersion.uploadedBy',
                 'verifiedBy',
                 'approvedBy',

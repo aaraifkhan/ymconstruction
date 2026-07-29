@@ -23,7 +23,10 @@ use Illuminate\Validation\ValidationException;
 
 class PostPayrollRunAction
 {
-    public function __construct(private PostJournalEntryAction $postJournalEntry) {}
+    public function __construct(
+        private PostJournalEntryAction $postJournalEntry,
+        private RecordPayrollFinancingRecoveriesAction $recordFinancingRecoveries,
+    ) {}
 
     public function handle(PayrollRun $payrollRun, User $actor): PayrollRun
     {
@@ -40,6 +43,7 @@ class PostPayrollRunAction
             }
 
             $journal = $this->journalFor($run, $actor);
+            $this->recordFinancingRecoveries->handle($run, $journal, $actor);
             $run->update([
                 'journal_entry_id' => $journal->getKey(),
                 'reversal_journal_entry_id' => null,
@@ -137,8 +141,13 @@ class PostPayrollRunAction
         $lineNumber = $this->componentLine($journal, $entry, $lineNumber, PayrollAccountComponent::HouseTravelAllowance, (string) $entry->house_travel_allowance);
         $lineNumber = $this->componentLine($journal, $entry, $lineNumber, PayrollAccountComponent::FoodAllowance, (string) $entry->food_allowance);
         $lineNumber = $this->componentLine($journal, $entry, $lineNumber, PayrollAccountComponent::OtherAllowance, (string) $entry->other_allowance);
+        $lineNumber = $this->componentLine($journal, $entry, $lineNumber, PayrollAccountComponent::Bonus, (string) ($entry->bonus_amount ?? 0));
+        $lineNumber = $this->componentLine($journal, $entry, $lineNumber, PayrollAccountComponent::Incentive, (string) ($entry->incentive_amount ?? 0));
+        $lineNumber = $this->componentLine($journal, $entry, $lineNumber, PayrollAccountComponent::AbsenceDeduction, (string) $entry->absence_deduction, true);
+        $lineNumber = $this->componentLine($journal, $entry, $lineNumber, PayrollAccountComponent::UnpaidLeaveDeduction, (string) ($entry->unpaid_leave_deduction ?? 0), true);
+        $lineNumber = $this->componentLine($journal, $entry, $lineNumber, PayrollAccountComponent::LateDeduction, (string) ($entry->late_deduction ?? 0), true);
 
-        return $this->componentLine($journal, $entry, $lineNumber, PayrollAccountComponent::AbsenceDeduction, (string) $entry->absence_deduction, true);
+        return $this->componentLine($journal, $entry, $lineNumber, PayrollAccountComponent::HalfDayDeduction, (string) ($entry->half_day_deduction ?? 0), true);
     }
 
     private function componentLine(

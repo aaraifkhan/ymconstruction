@@ -3,7 +3,9 @@
 namespace App\Actions\Treasury;
 
 use App\Actions\Accounting\PostJournalEntryAction;
+use App\Actions\HR\RecordEmployeeFinancingTreasuryAction;
 use App\Enums\AccountingMappingKey;
+use App\Enums\FinalSettlementStatus;
 use App\Enums\FinancialPeriodStatus;
 use App\Enums\JournalStatus;
 use App\Enums\PartyRole;
@@ -13,6 +15,7 @@ use App\Enums\TreasuryStatus;
 use App\Enums\TreasuryTransactionType;
 use App\Enums\VoucherType;
 use App\Models\AccountingMapping;
+use App\Models\FinalSettlement;
 use App\Models\FinancialPeriod;
 use App\Models\JournalEntry;
 use App\Models\TreasuryTransaction;
@@ -23,7 +26,10 @@ use Illuminate\Validation\ValidationException;
 
 class PostTreasuryTransactionAction
 {
-    public function __construct(private PostJournalEntryAction $postJournalEntry) {}
+    public function __construct(
+        private PostJournalEntryAction $postJournalEntry,
+        private RecordEmployeeFinancingTreasuryAction $recordEmployeeFinancing,
+    ) {}
 
     public function handle(TreasuryTransaction $transaction, User $actor): TreasuryTransaction
     {
@@ -49,6 +55,8 @@ class PostTreasuryTransactionAction
                 'posted_at' => now(),
                 'journal_entry_id' => $journal->getKey(),
             ]);
+            $this->recordEmployeeFinancing->handle($transaction, $actor);
+            $this->refreshFinalSettlements($transaction);
 
             activity('treasury_transactions')->causedBy($actor)->performedOn($transaction)->event('posted')
                 ->withProperties([
@@ -110,7 +118,10 @@ class PostTreasuryTransactionAction
             $this->line($journal, $lineNumber, (int) $transaction->source_account_id, (string) $transaction->amount, true, $transaction, true);
         } else {
             foreach ($transaction->allocations()->with('allocatable')->get() as $allocation) {
-                $isCustomerReceipt = $allocation->allocation_type === TreasuryAllocationType::CustomerInvoice;
+                $isReceiptAllocation = in_array($allocation->allocation_type, [
+                    TreasuryAllocationType::CustomerInvoice,
+                    TreasuryAllocationType::FinalSettlement,
+                ], true) && $transaction->type === TreasuryTransactionType::Receipt;
                 $this->line(
                     $journal,
                     $lineNumber++,
@@ -119,11 +130,14 @@ class PostTreasuryTransactionAction
                         match ($allocation->allocation_type) {
                             TreasuryAllocationType::CustomerInvoice => AccountingMappingKey::AccountsReceivable,
                             TreasuryAllocationType::PayrollEntry => AccountingMappingKey::SalaryPayable,
+                            TreasuryAllocationType::FinalSettlement => $allocation->allocatable->balance_direction === 'receivable'
+                                ? AccountingMappingKey::EmployeeAdvances
+                                : AccountingMappingKey::SalaryPayable,
                             default => AccountingMappingKey::AccountsPayable,
                         },
                     ),
                     (string) $allocation->amount,
-                    $isCustomerReceipt,
+                    $isReceiptAllocation,
                     $transaction,
                 );
             }
@@ -173,7 +187,10 @@ class PostTreasuryTransactionAction
                 : (int) $transaction->source_account_id;
         }
 
-        if ($transaction->employment_id !== null && $transaction->type === TreasuryTransactionType::Payment) {
+        if ($transaction->employment_id !== null && in_array($transaction->type, [
+            TreasuryTransactionType::Payment,
+            TreasuryTransactionType::Receipt,
+        ], true)) {
             return $this->mappedAccountId($transaction->company_id, AccountingMappingKey::EmployeeAdvances);
         }
 
@@ -223,5 +240,20 @@ class PostTreasuryTransactionAction
         }
 
         return (int) $accountId;
+    }
+
+    private function refreshFinalSettlements(TreasuryTransaction $transaction): void
+    {
+        $settlements = FinalSettlement::query()->whereIn(
+            'id',
+            $transaction->allocations()
+                ->where('allocation_type', TreasuryAllocationType::FinalSettlement)
+                ->pluck('allocatable_id'),
+        )->lockForUpdate()->get();
+        foreach ($settlements as $settlement) {
+            if (bccomp($settlement->postedOpenAmount(), '0', 4) === 0) {
+                $settlement->update(['status' => FinalSettlementStatus::Settled]);
+            }
+        }
     }
 }

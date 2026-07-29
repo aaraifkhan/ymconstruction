@@ -23,6 +23,18 @@ The Laravel Boost guidelines are specifically curated by Laravel maintainers for
 - After context compaction or in a new chat, re-read the full plan, inspect the repository, database, current diff, and tests, then resume the single `In Progress` phase. Never rely on conversation memory for phase status.
 - Stop after completing a phase unless the user explicitly requests the next phase. Never bulk-mark future phases complete.
 
+## HR and Workforce Implementation Plan
+
+- Before planning or changing Departments, Employees, Employments, employee documents, Attendance, fingerprint/biometric attendance-machine integration, Leave, Employee Loans/Advances, Payroll calculations, performance/appraisal, warnings, promotions/transfers, resignation/termination, employee asset custody, clearance, Final Settlement, HR reports, or group HR reporting, read `docs/HR_WORKFORCE_IMPLEMENTATION_PLAN.md` completely.
+- The HR plan is the controlling cross-chat implementation and handoff document for those domains. Follow its phase order, dependencies, decision gates, status vocabulary, acceptance criteria, and completion protocol.
+- Work on only one HR phase at a time. At most one HR phase may be marked `In Progress`.
+- Do not begin a later HR phase until all listed dependencies are `Implemented and Verified`. Do not begin implementation merely because the plan exists; wait for the user to request the relevant phase.
+- When starting, blocking, reopening, or completing an HR phase, update the HR plan in the same change. On completion, record the actual implementation, migrations, data migration, permissions, tests, verification commands, deviations, limitations, Project State changes, and Progress Ledger entry.
+- Update `docs/PROJECT_STATE.md` whenever an HR phase status or material architecture/workflow decision changes.
+- If HR work changes Payroll accounting-posting, Treasury, Assets, Final Settlement accounting, or consolidated reporting, also update `docs/FINANCE_PROJECTS_OPERATIONS_IMPLEMENTATION_PLAN.md` in the same change.
+- After context compaction or in a new chat, re-read the full HR plan, inspect the repository, database, current diff, and tests, then resume the one `In Progress` phase. Never rely on conversation memory for phase status.
+- Stop after completing one HR phase unless the user explicitly requests the next phase. Never bulk-mark future phases complete.
+
 ## Foundational Context
 
 This application is a Laravel application and its main Laravel ecosystems package & versions are below. You are an expert with them all. Ensure you abide by these specific packages & versions.

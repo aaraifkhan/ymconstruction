@@ -18,6 +18,7 @@ class CompanySeeder extends Seeder
 
         $this->call([
             DocumentCategorySeeder::class,
+            HrDocumentTypeSeeder::class,
             JoiningLetterTemplateSeeder::class,
         ]);
     }

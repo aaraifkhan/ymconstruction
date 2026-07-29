@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\Gender;
+use App\Enums\HrDocumentApplicability;
 use App\Enums\MaritalStatus;
 use Database\Factories\EmployeeFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -13,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
@@ -108,6 +110,25 @@ class Employee extends Model
         return $this->employments()
             ->whereBelongsTo($company)
             ->exists();
+    }
+
+    /**
+     * @return Collection<int, HrDocumentType>
+     */
+    public function missingRequiredHrDocumentTypes(Company $company): Collection
+    {
+        return $company->hrDocumentTypes()
+            ->where('applicability', HrDocumentApplicability::Employee)
+            ->where('is_active', true)
+            ->where('is_required', true)
+            ->whereDoesntHave(
+                'documents',
+                fn ($query) => $query
+                    ->where('documentable_type', self::class)
+                    ->where('documentable_id', $this->getKey()),
+            )
+            ->orderBy('name')
+            ->get();
     }
 
     public static function hashCnic(?string $cnic): ?string

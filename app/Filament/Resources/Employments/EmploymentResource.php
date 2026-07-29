@@ -6,6 +6,7 @@ use App\Filament\Resources\Employments\Pages\CreateEmployment;
 use App\Filament\Resources\Employments\Pages\EditEmployment;
 use App\Filament\Resources\Employments\Pages\ListEmployments;
 use App\Filament\Resources\Employments\Pages\ViewEmployment;
+use App\Filament\Resources\Employments\RelationManagers\ChangesRelationManager;
 use App\Filament\Resources\Employments\RelationManagers\DocumentsRelationManager;
 use App\Filament\Resources\Employments\Schemas\EmploymentForm;
 use App\Filament\Resources\Employments\Schemas\EmploymentInfolist;
@@ -49,6 +50,7 @@ class EmploymentResource extends Resource
     public static function getRelations(): array
     {
         return [
+            ChangesRelationManager::class,
             DocumentsRelationManager::class,
         ];
     }

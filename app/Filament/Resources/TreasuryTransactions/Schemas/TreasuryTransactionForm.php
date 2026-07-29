@@ -5,6 +5,7 @@ namespace App\Filament\Resources\TreasuryTransactions\Schemas;
 use App\Enums\AccountingMappingKey;
 use App\Enums\CustomerInvoiceStatus;
 use App\Enums\CustomerInvoiceType;
+use App\Enums\FinalSettlementStatus;
 use App\Enums\TreasuryAllocationType;
 use App\Enums\TreasuryCounterpartyType;
 use App\Enums\TreasuryInstrumentType;
@@ -17,6 +18,7 @@ use App\Models\AccountingMapping;
 use App\Models\CompanyBankAccount;
 use App\Models\CustomerInvoice;
 use App\Models\Employment;
+use App\Models\FinalSettlement;
 use App\Models\Party;
 use App\Models\PayrollEntry;
 use App\Models\VendorBill;
@@ -104,19 +106,39 @@ class TreasuryTransactionForm
                             'company_id' => Filament::getTenant()->getKey(),
                             'allocatable_type' => match (true) {
                                 $get('../../type') === TreasuryTransactionType::Receipt->value => CustomerInvoice::class,
+                                ($data['allocation_type'] ?? null) === TreasuryAllocationType::FinalSettlement->value => FinalSettlement::class,
                                 filled($get('../../employment_id')) => PayrollEntry::class,
                                 default => VendorBill::class,
                             },
                             'allocation_type' => match (true) {
                                 $get('../../type') === TreasuryTransactionType::Receipt->value => TreasuryAllocationType::CustomerInvoice,
+                                ($data['allocation_type'] ?? null) === TreasuryAllocationType::FinalSettlement->value => TreasuryAllocationType::FinalSettlement,
                                 filled($get('../../employment_id')) => TreasuryAllocationType::PayrollEntry,
                                 default => TreasuryAllocationType::VendorBill,
                             },
                         ])->schema([
                             Hidden::make('allocatable_type'),
-                            Hidden::make('allocation_type'),
+                            Select::make('allocation_type')->label('Open item type')
+                                ->options(fn (Get $get): array => filled($get('../../employment_id'))
+                                    ? [
+                                        TreasuryAllocationType::PayrollEntry->value => 'Payroll Entry',
+                                        TreasuryAllocationType::FinalSettlement->value => 'Final Settlement',
+                                    ] : [])
+                                ->default(TreasuryAllocationType::PayrollEntry->value)
+                                ->live()
+                                ->visible(fn (Get $get): bool => filled($get('../../employment_id')))
+                                ->required(fn (Get $get): bool => filled($get('../../employment_id'))),
                             Select::make('allocatable_id')->label('Posted open item')
                                 ->options(fn (Get $get): array => match (true) {
+                                    $get('allocation_type') === TreasuryAllocationType::FinalSettlement->value => FinalSettlement::query()
+                                        ->whereBelongsTo(Filament::getTenant())
+                                        ->where('employment_id', $get('../../employment_id'))
+                                        ->whereIn('status', [FinalSettlementStatus::Posted, FinalSettlementStatus::Settled])
+                                        ->where('balance_direction', $get('../../type') === TreasuryTransactionType::Receipt->value ? 'receivable' : 'payable')
+                                        ->get()->filter(fn (FinalSettlement $settlement): bool => bccomp($settlement->postedOpenAmount(), '0', 4) === 1)
+                                        ->mapWithKeys(fn (FinalSettlement $settlement): array => [
+                                            $settlement->getKey() => "{$settlement->reference_number} — PKR {$settlement->postedOpenAmount()}",
+                                        ])->all(),
                                     $get('../../type') === TreasuryTransactionType::Receipt->value => CustomerInvoice::query()->whereBelongsTo(Filament::getTenant())
                                         ->where('customer_id', $get('../../party_id'))
                                         ->where('type', CustomerInvoiceType::Invoice)

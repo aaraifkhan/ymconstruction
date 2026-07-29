@@ -3,7 +3,11 @@
 namespace App\Actions\Treasury;
 
 use App\Actions\Accounting\ReverseJournalEntryAction;
+use App\Actions\HR\ReverseEmployeeFinancingTreasuryAction;
+use App\Enums\FinalSettlementStatus;
+use App\Enums\TreasuryAllocationType;
 use App\Enums\TreasuryStatus;
+use App\Models\FinalSettlement;
 use App\Models\TreasuryTransaction;
 use App\Models\User;
 use Carbon\CarbonInterface;
@@ -13,7 +17,10 @@ use Illuminate\Validation\ValidationException;
 
 class ReverseTreasuryTransactionAction
 {
-    public function __construct(private ReverseJournalEntryAction $reverseJournalEntry) {}
+    public function __construct(
+        private ReverseJournalEntryAction $reverseJournalEntry,
+        private ReverseEmployeeFinancingTreasuryAction $reverseEmployeeFinancing,
+    ) {}
 
     public function handle(
         TreasuryTransaction $transaction,
@@ -47,6 +54,14 @@ class ReverseTreasuryTransactionAction
                 'reversed_by_id' => $actor->getKey(),
                 'reversed_at' => now(),
             ]);
+            $this->reverseEmployeeFinancing->handle($transaction, $actor, $reason);
+            FinalSettlement::query()->whereIn(
+                'id',
+                $transaction->allocations()
+                    ->where('allocation_type', TreasuryAllocationType::FinalSettlement)
+                    ->pluck('allocatable_id'),
+            )->where('status', FinalSettlementStatus::Settled)
+                ->update(['status' => FinalSettlementStatus::Posted->value, 'updated_at' => now()]);
             activity('treasury_transactions')->causedBy($actor)->performedOn($transaction)->event('reversed')
                 ->withProperties([
                     'company_id' => $transaction->company_id,
