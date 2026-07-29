@@ -25,7 +25,10 @@ return new class extends Migration
             $table->softDeletes();
 
             $table->unique(['company_id', 'code']);
-            $table->index(['company_id', 'is_active', 'area', 'sort_order']);
+            $table->index(
+                ['company_id', 'is_active', 'area', 'sort_order'],
+                'clearance_template_company_area_index',
+            );
         });
     }
 

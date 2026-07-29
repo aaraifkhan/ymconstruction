@@ -24,7 +24,10 @@ return new class extends Migration
             $table->foreignId('actor_id')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
 
-            $table->index(['company_id', 'employment_id', 'effective_on']);
+            $table->index(
+                ['company_id', 'employment_id', 'effective_on'],
+                'asset_custody_event_company_effective_index',
+            );
             $table->index(['fixed_asset_id', 'effective_on']);
         });
     }

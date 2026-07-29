@@ -33,9 +33,12 @@ return new class extends Migration
             $table->foreignId('created_by_id')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
 
-            $table->unique(['company_id', 'idempotency_key']);
-            $table->index(['company_id', 'employee_financing_id', 'effective_date']);
-            $table->index(['treasury_transaction_id', 'type']);
+            $table->unique(['company_id', 'idempotency_key'], 'employee_financing_tx_idempotency_unique');
+            $table->index(
+                ['company_id', 'employee_financing_id', 'effective_date'],
+                'employee_financing_tx_company_date_index',
+            );
+            $table->index(['treasury_transaction_id', 'type'], 'employee_financing_tx_treasury_type_index');
             $table->index(['payroll_entry_id', 'type']);
         });
     }

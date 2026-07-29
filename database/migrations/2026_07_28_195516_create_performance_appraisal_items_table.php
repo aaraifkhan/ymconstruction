@@ -21,7 +21,10 @@ return new class extends Migration
             $table->text('score')->nullable();
             $table->text('reviewer_comments')->nullable();
             $table->timestamps();
-            $table->unique(['performance_appraisal_id', 'performance_kpi_id']);
+            $table->unique(
+                ['performance_appraisal_id', 'performance_kpi_id'],
+                'appraisal_item_appraisal_kpi_unique',
+            );
             $table->index(['company_id', 'performance_kpi_id']);
         });
     }

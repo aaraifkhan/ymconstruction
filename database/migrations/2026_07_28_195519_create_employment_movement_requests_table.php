@@ -41,7 +41,10 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
             $table->unique(['company_id', 'reference_number']);
-            $table->index(['company_id', 'status', 'effective_on']);
+            $table->index(
+                ['company_id', 'status', 'effective_on'],
+                'employment_movement_company_effective_index',
+            );
             $table->index(['employment_id', 'status']);
         });
     }

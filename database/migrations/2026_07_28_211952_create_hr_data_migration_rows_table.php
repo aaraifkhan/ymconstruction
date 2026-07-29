@@ -26,7 +26,10 @@ return new class extends Migration
             $table->string('imported_record_checksum', 64)->nullable();
             $table->timestamps();
 
-            $table->unique(['hr_data_migration_id', 'source_row_number']);
+            $table->unique(
+                ['hr_data_migration_id', 'source_row_number'],
+                'hr_migration_row_number_unique',
+            );
             $table->unique(['hr_data_migration_id', 'source_key']);
             $table->index(['company_id', 'imported_record_type', 'imported_record_id'], 'hr_migration_rows_imported_record_index');
         });

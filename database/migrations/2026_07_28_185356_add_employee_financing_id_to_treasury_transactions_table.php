@@ -16,7 +16,10 @@ return new class extends Migration
                 ->after('employment_id')
                 ->constrained()
                 ->restrictOnDelete();
-            $table->index(['company_id', 'employee_financing_id', 'status']);
+            $table->index(
+                ['company_id', 'employee_financing_id', 'status'],
+                'treasury_tx_company_financing_status_index',
+            );
         });
     }
 

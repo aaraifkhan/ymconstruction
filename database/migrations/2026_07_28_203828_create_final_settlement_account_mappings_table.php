@@ -19,7 +19,7 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->timestamps();
 
-            $table->unique(['company_id', 'component_type']);
+            $table->unique(['company_id', 'component_type'], 'settlement_mapping_component_unique');
             $table->index(['company_id', 'is_active']);
         });
     }

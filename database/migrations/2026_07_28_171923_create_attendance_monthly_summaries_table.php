@@ -30,8 +30,14 @@ return new class extends Migration
             $table->foreignId('finalized_by_id')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('finalized_at')->nullable();
             $table->timestamps();
-            $table->unique(['company_id', 'employment_id', 'period_start', 'period_end']);
-            $table->index(['company_id', 'period_start', 'status']);
+            $table->unique(
+                ['company_id', 'employment_id', 'period_start', 'period_end'],
+                'attendance_summary_company_employment_period_unique',
+            );
+            $table->index(
+                ['company_id', 'period_start', 'status'],
+                'attendance_summary_company_period_status_index',
+            );
         });
     }
 

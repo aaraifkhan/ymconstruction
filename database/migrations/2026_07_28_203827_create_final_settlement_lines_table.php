@@ -32,7 +32,10 @@ return new class extends Migration
             $table->timestamps();
 
             $table->unique(['final_settlement_id', 'line_number']);
-            $table->unique(['final_settlement_id', 'idempotency_key']);
+            $table->unique(
+                ['final_settlement_id', 'idempotency_key'],
+                'settlement_line_idempotency_unique',
+            );
             $table->index(['company_id', 'component_type']);
         });
     }
