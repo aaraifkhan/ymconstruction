@@ -25,7 +25,7 @@ class EmployeeFinancingResource extends Resource
 {
     protected static ?string $model = EmployeeFinancing::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBanknotes;
 
     protected static ?string $tenantRelationshipName = 'employeeFinancings';
 

@@ -22,7 +22,7 @@ class PayrollVariableComponentResource extends Resource
 {
     protected static ?string $model = PayrollVariableComponent::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedPlusCircle;
 
     protected static ?string $tenantRelationshipName = 'payrollVariableComponents';
 

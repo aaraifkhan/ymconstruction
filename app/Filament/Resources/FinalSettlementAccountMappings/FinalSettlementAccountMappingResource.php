@@ -20,7 +20,7 @@ class FinalSettlementAccountMappingResource extends Resource
 {
     protected static ?string $model = FinalSettlementAccountMapping::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArrowsRightLeft;
 
     protected static ?string $tenantRelationshipName = 'finalSettlementAccountMappings';
 

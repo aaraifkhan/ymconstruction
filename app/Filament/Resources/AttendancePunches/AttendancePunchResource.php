@@ -20,7 +20,7 @@ class AttendancePunchResource extends Resource
 {
     protected static ?string $model = AttendancePunch::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedFingerPrint;
 
     protected static ?string $tenantRelationshipName = 'attendancePunches';
 

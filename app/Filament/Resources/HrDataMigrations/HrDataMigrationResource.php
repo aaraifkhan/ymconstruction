@@ -18,7 +18,7 @@ class HrDataMigrationResource extends Resource
 {
     protected static ?string $model = HrDataMigration::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArrowPathRoundedSquare;
 
     protected static ?string $tenantRelationshipName = 'hrDataMigrations';
 

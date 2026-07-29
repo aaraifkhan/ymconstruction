@@ -22,7 +22,7 @@ class EmploymentMovementRequestResource extends Resource
 {
     protected static ?string $model = EmploymentMovementRequest::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArrowsRightLeft;
 
     protected static ?string $recordTitleAttribute = 'reference_number';
 

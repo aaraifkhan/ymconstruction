@@ -23,7 +23,7 @@ class EmploymentSeparationResource extends Resource
 {
     protected static ?string $model = EmploymentSeparation::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUserMinus;
 
     protected static ?string $recordTitleAttribute = 'reference_number';
 

@@ -22,7 +22,7 @@ class AttendanceRuleResource extends Resource
 {
     protected static ?string $model = AttendanceRule::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedAdjustmentsHorizontal;
 
     protected static ?string $tenantRelationshipName = 'attendanceRules';
 

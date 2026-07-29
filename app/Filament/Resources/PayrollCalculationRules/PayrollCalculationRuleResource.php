@@ -22,7 +22,7 @@ class PayrollCalculationRuleResource extends Resource
 {
     protected static ?string $model = PayrollCalculationRule::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCalculator;
 
     protected static ?string $tenantRelationshipName = 'payrollCalculationRules';
 

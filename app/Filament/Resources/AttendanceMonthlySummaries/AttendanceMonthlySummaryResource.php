@@ -20,7 +20,7 @@ class AttendanceMonthlySummaryResource extends Resource
 {
     protected static ?string $model = AttendanceMonthlySummary::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedChartBarSquare;
 
     protected static ?string $tenantRelationshipName = 'attendanceMonthlySummaries';
 

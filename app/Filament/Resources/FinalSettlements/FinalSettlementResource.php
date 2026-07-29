@@ -20,7 +20,7 @@ class FinalSettlementResource extends Resource
 {
     protected static ?string $model = FinalSettlement::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedScale;
 
     protected static ?string $tenantRelationshipName = 'finalSettlements';
 

@@ -22,7 +22,7 @@ class HrDocumentTypeResource extends Resource
 {
     protected static ?string $model = HrDocumentType::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocumentText;
 
     protected static ?string $recordTitleAttribute = 'name';
 

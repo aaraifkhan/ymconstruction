@@ -22,7 +22,7 @@ class WorkCalendarResource extends Resource
 {
     protected static ?string $model = WorkCalendar::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCalendar;
 
     protected static ?string $tenantRelationshipName = 'workCalendars';
 

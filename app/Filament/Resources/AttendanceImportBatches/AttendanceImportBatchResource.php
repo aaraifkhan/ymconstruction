@@ -18,7 +18,7 @@ class AttendanceImportBatchResource extends Resource
 {
     protected static ?string $model = AttendanceImportBatch::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArrowUpTray;
 
     protected static ?string $tenantRelationshipName = 'attendanceImportBatches';
 

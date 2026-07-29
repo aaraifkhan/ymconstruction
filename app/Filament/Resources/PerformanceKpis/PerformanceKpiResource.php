@@ -22,7 +22,7 @@ class PerformanceKpiResource extends Resource
 {
     protected static ?string $model = PerformanceKpi::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedChartBarSquare;
 
     protected static ?string $recordTitleAttribute = 'name';
 

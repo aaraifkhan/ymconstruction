@@ -18,7 +18,7 @@ class AttendanceRawEventResource extends Resource
 {
     protected static ?string $model = AttendanceRawEvent::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedSignal;
 
     protected static ?string $tenantRelationshipName = 'attendanceRawEvents';
 

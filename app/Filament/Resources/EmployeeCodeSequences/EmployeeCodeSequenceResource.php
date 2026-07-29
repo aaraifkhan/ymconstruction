@@ -20,7 +20,7 @@ class EmployeeCodeSequenceResource extends Resource
 {
     protected static ?string $model = EmployeeCodeSequence::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedHashtag;
 
     protected static ?string $recordTitleAttribute = 'prefix';
 

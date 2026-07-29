@@ -20,7 +20,7 @@ class AttendanceRecordResource extends Resource
 {
     protected static ?string $model = AttendanceRecord::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedClipboardDocumentCheck;
 
     protected static ?string $tenantRelationshipName = 'attendanceRecords';
 
