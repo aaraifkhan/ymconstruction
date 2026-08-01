@@ -3,7 +3,6 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Pages\MyProfile;
-use App\Filament\Pages\Tenancy\RegisterCompany;
 use App\Models\Company;
 use App\Settings\GeneralSettings;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
@@ -13,7 +12,6 @@ use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
-use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Assets\Css;
@@ -33,7 +31,7 @@ class AdminPanelProvider extends PanelProvider
     public function panel(Panel $panel): Panel
     {
         $primaryColor = Color::Amber;
-        $brandName = 'YM Construction';
+        $brandName = 'YMC Group Management';
         $brandLogo = null;
         $favicon = asset('images/favicon.svg');
 
@@ -61,16 +59,14 @@ class AdminPanelProvider extends PanelProvider
             ->login()
             ->tenant(Company::class, slugAttribute: 'slug')
             ->tenantRoutePrefix('company')
-            ->tenantRegistration(RegisterCompany::class)
             ->searchableTenantMenu()
+            ->homeUrl(fn (): string => route('portal'))
             ->colors([
                 'primary' => $primaryColor,
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
-            ->pages([
-                Dashboard::class,
-            ])
+            ->pages([])
             ->assets([
                 Css::make('profile-page', resource_path('css/filament/admin/profile-page.css')),
                 Css::make('sidebar-user-menu', resource_path('css/filament/admin/sidebar-user-menu.css')),

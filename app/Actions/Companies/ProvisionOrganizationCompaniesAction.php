@@ -13,19 +13,13 @@ use LogicException;
 class ProvisionOrganizationCompaniesAction
 {
     /**
-     * @var array<int, array{name: string, slug: string, parent_slug: string|null}>
+     * @var array<int, array{name: string, slug: string, logo_path: string}>
      */
     private const COMPANY_DEFINITIONS = [
-        ['name' => '7-Orbit', 'slug' => '7-orbit', 'parent_slug' => null],
-        ['name' => 'YM Construction', 'slug' => 'ym-construction', 'parent_slug' => null],
-        ['name' => 'BMC', 'slug' => 'bmc', 'parent_slug' => null],
-        ['name' => 'BMC Trading', 'slug' => 'bmc-trading', 'parent_slug' => null],
-        ['name' => '7-Orbit IT', 'slug' => '7-orbit-it', 'parent_slug' => '7-orbit'],
-        [
-            'name' => '7-Orbit Medical Billing',
-            'slug' => '7-orbit-medical-billing',
-            'parent_slug' => '7-orbit',
-        ],
+        ['name' => 'BMC Construction', 'slug' => 'bmc-construction', 'logo_path' => 'images/company-logos/bmc-construction.png'],
+        ['name' => 'YMC Construction', 'slug' => 'ymc-construction', 'logo_path' => 'images/company-logos/ymc-construction.png'],
+        ['name' => '7 Orbit', 'slug' => '7-orbit', 'logo_path' => 'images/company-logos/7-orbit.png'],
+        ['name' => '7 Orbit Medical Billing', 'slug' => '7-orbit-medical-billing', 'logo_path' => 'images/company-logos/7-orbit-medical-billing.png'],
     ];
 
     /**
@@ -62,23 +56,11 @@ class ProvisionOrganizationCompaniesAction
             $companies = collect();
 
             foreach (self::COMPANY_DEFINITIONS as $definition) {
-                $parentCompany = $definition['parent_slug'] === null
-                    ? null
-                    : $companies->get($definition['parent_slug']);
-
-                if ($definition['parent_slug'] !== null && $parentCompany === null) {
-                    throw new LogicException("Parent company [{$definition['parent_slug']}] must be provisioned first.");
-                }
-
-                $company = $this->provisionCompany($definition, $parentCompany);
+                $company = $this->provisionCompany($definition);
                 $companies->put($definition['slug'], $company);
             }
 
             foreach ($companies as $company) {
-                $defaultState = $company->parent_company_id === null
-                    ? CompanyModuleState::Enabled
-                    : CompanyModuleState::Inherit;
-
                 foreach ($modules as $module) {
                     CompanyModule::query()->firstOrCreate(
                         [
@@ -86,7 +68,7 @@ class ProvisionOrganizationCompaniesAction
                             'module_id' => $module->getKey(),
                         ],
                         [
-                            'state' => $defaultState,
+                            'state' => CompanyModuleState::Enabled,
                             'variant' => null,
                             'settings' => null,
                         ],
@@ -99,9 +81,9 @@ class ProvisionOrganizationCompaniesAction
     }
 
     /**
-     * @param  array{name: string, slug: string, parent_slug: string|null}  $definition
+     * @param  array{name: string, slug: string, logo_path: string}  $definition
      */
-    private function provisionCompany(array $definition, ?Company $parentCompany): Company
+    private function provisionCompany(array $definition): Company
     {
         $companyBySlug = Company::withTrashed()
             ->where('slug', $definition['slug'])
@@ -123,13 +105,14 @@ class ProvisionOrganizationCompaniesAction
         }
 
         $company->fill([
-            'parent_company_id' => $parentCompany?->getKey(),
+            'parent_company_id' => null,
             'name' => $definition['name'],
             'slug' => $definition['slug'],
             'legal_name' => filled($company->legal_name) ? $company->legal_name : $definition['name'],
             'country_code' => filled($company->country_code) ? $company->country_code : 'PK',
             'currency_code' => filled($company->currency_code) ? $company->currency_code : 'PKR',
             'timezone' => filled($company->timezone) ? $company->timezone : 'Asia/Karachi',
+            'logo_path' => $definition['logo_path'],
             'is_active' => true,
         ]);
         $company->save();

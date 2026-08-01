@@ -18,7 +18,7 @@ use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
 
 #[Fillable([
-    'company_id', 'employment_id', 'reference_number', 'type', 'status', 'request_date',
+    'company_id', 'employment_id', 'reference_number', 'type', 'sub_category', 'status', 'request_date',
     'purpose', 'principal_amount', 'finance_charge', 'total_repayable', 'installment_count',
     'first_due_date', 'installment_frequency', 'currency_code', 'notes', 'requested_by_id',
     'submitted_by_id', 'submitted_at', 'approved_by_id', 'approved_at', 'rejected_by_id',

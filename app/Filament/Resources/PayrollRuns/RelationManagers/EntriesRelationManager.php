@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\PayrollRuns\RelationManagers;
 
+use App\Actions\Payroll\GenerateSalarySlipAction;
 use App\Enums\AccountType;
 use App\Models\Account;
 use App\Models\CostCenter;
@@ -17,6 +18,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
+use Filament\Tables\Actions\Action;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
@@ -103,7 +105,14 @@ class EntriesRelationManager extends RelationManager
                 TextColumn::make('payment_mode')->state(fn (PayrollEntry $record): string => $record->paymentMode()),
             ])
             ->defaultGroup('employment_category')
-            ->recordActions([EditAction::make()])
+            ->recordActions([
+                EditAction::make(),
+                Action::make('downloadSalarySlip')
+                    ->label('Salary Slip')
+                    ->icon('heroicon-o-document-arrow-down')
+                    ->color('success')
+                    ->action(fn (PayrollEntry $record) => app(GenerateSalarySlipAction::class)->download($record)),
+            ])
             ->toolbarActions([]);
     }
 }

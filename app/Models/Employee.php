@@ -24,6 +24,7 @@ use Spatie\Activitylog\Support\LogOptions;
     'full_name',
     'father_or_husband_name',
     'cnic',
+    'photograph_path',
     'date_of_birth',
     'gender',
     'marital_status',

@@ -6,6 +6,8 @@ use App\Models\CompanyBankAccount;
 use App\Observers\CompanyBankAccountObserver;
 use App\Policies\ActivityPolicy;
 use App\Policies\RolePolicy;
+use App\PortalLoginResponse;
+use Filament\Auth\Http\Responses\Contracts\LoginResponse as LoginResponseContract;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Spatie\Activitylog\Models\Activity;
@@ -18,7 +20,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(LoginResponseContract::class, PortalLoginResponse::class);
     }
 
     /**

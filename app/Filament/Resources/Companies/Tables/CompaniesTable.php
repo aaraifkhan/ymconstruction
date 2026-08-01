@@ -9,7 +9,6 @@ use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
@@ -28,18 +27,9 @@ class CompaniesTable
                     ->label('Legal name')
                     ->searchable()
                     ->toggleable(),
-                TextColumn::make('parentCompany.name')
-                    ->label('Parent company')
-                    ->placeholder('—')
-                    ->sortable(),
                 TextColumn::make('city')
                     ->searchable()
                     ->toggleable(),
-                TextColumn::make('child_companies_count')
-                    ->label('Sub-companies')
-                    ->counts('childCompanies')
-                    ->badge()
-                    ->sortable(),
                 TextColumn::make('members_count')
                     ->label('Users')
                     ->counts('members')
@@ -55,11 +45,6 @@ class CompaniesTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                SelectFilter::make('parent_company_id')
-                    ->label('Parent company')
-                    ->relationship('parentCompany', 'name')
-                    ->searchable()
-                    ->preload(),
                 TernaryFilter::make('is_active')
                     ->label('Status')
                     ->trueLabel('Active companies')

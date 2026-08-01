@@ -78,14 +78,10 @@ class ConsolidatedFinancialReport
     /** @return Collection<int, Company> */
     private function groupCompanies(Company $root): Collection
     {
-        $all = Company::query()->active()->get();
-        $ids = [$root->getKey()];
-        do {
-            $before = count($ids);
-            $ids = array_values(array_unique([...$ids, ...$all->whereIn('parent_company_id', $ids)->modelKeys()]));
-        } while (count($ids) > $before);
-
-        return $all->whereIn('id', $ids)->sortBy('name')->values();
+        return Company::query()
+            ->active()
+            ->orderBy('name')
+            ->get();
     }
 
     /** @return Collection<string, array{debit:string,credit:string}> */

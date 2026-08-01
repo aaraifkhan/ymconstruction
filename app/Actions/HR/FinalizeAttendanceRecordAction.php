@@ -120,6 +120,8 @@ class FinalizeAttendanceRecordAction
                     $dayStatus = AttendanceDayStatus::Absent;
                 } elseif ($lateMinutes >= $rule->half_day_after_minutes) {
                     $dayStatus = AttendanceDayStatus::HalfDay;
+                } elseif ($lateMinutes > 0) {
+                    $dayStatus = AttendanceDayStatus::Late;
                 } else {
                     $dayStatus = AttendanceDayStatus::Present;
                 }

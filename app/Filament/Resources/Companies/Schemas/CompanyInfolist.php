@@ -22,9 +22,6 @@ class CompanyInfolist
                         TextEntry::make('slug')
                             ->label('URL key')
                             ->copyable(),
-                        TextEntry::make('parentCompany.name')
-                            ->label('Parent company')
-                            ->placeholder('No parent company'),
                         TextEntry::make('registration_number')
                             ->label('Registration number')
                             ->placeholder('Not provided'),

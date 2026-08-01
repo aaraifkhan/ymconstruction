@@ -38,6 +38,9 @@ use Spatie\Activitylog\Support\LogOptions;
     'confirmation_date',
     'notice_period_days',
     'work_location_id',
+    'cost_center_id',
+    'default_project_id',
+    'payment_method',
     'work_start_time',
     'work_end_time',
     'working_days_per_week',
@@ -166,6 +169,16 @@ class Employment extends Model
     public function workLocation(): BelongsTo
     {
         return $this->belongsTo(WorkLocation::class);
+    }
+
+    public function costCenter(): BelongsTo
+    {
+        return $this->belongsTo(CostCenter::class);
+    }
+
+    public function defaultProject(): BelongsTo
+    {
+        return $this->belongsTo(Project::class, 'default_project_id');
     }
 
     public function changes(): HasMany

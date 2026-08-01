@@ -75,52 +75,11 @@ class User extends Authenticatable implements HasTenants
                 ->get();
         }
 
-        $directCompanies = $this->companies()
+        return $this->companies()
             ->where('companies.is_active', true)
             ->wherePivot('is_active', true)
             ->orderBy('companies.name')
             ->get();
-
-        $descendantRootIds = $directCompanies
-            ->filter(fn (Company $company): bool => (bool) $company->pivot->can_access_descendants)
-            ->modelKeys();
-
-        if ($descendantRootIds === []) {
-            return $directCompanies;
-        }
-
-        $allActiveCompanies = Company::query()
-            ->active()
-            ->get()
-            ->keyBy(fn (Company $company): int => $company->getKey());
-
-        $descendantCompanies = $allActiveCompanies->filter(
-            function (Company $company) use ($allActiveCompanies, $descendantRootIds): bool {
-                $parentCompanyId = $company->parent_company_id;
-                $visitedCompanyIds = [];
-
-                while ($parentCompanyId !== null) {
-                    if (in_array($parentCompanyId, $descendantRootIds, true)) {
-                        return true;
-                    }
-
-                    if (in_array($parentCompanyId, $visitedCompanyIds, true)) {
-                        return false;
-                    }
-
-                    $visitedCompanyIds[] = $parentCompanyId;
-                    $parentCompanyId = $allActiveCompanies->get($parentCompanyId)?->parent_company_id;
-                }
-
-                return false;
-            }
-        );
-
-        return $directCompanies
-            ->concat($descendantCompanies)
-            ->unique(fn (Company $company): int => $company->getKey())
-            ->sortBy('name')
-            ->values();
     }
 
     /**

@@ -74,11 +74,11 @@ class HrReportingTest extends TestCase
         $this->assertFalse($report['employees']->contains('employee_code', 'OTHER-001'));
     }
 
-    public function test_group_report_uses_hierarchy_full_access_and_explicit_people_vs_employment_semantics(): void
+    public function test_collective_report_uses_all_authorized_companies_and_explicit_people_vs_employment_semantics(): void
     {
-        $root = Company::factory()->create(['name' => '7-Orbit']);
-        $child = Company::factory()->create(['name' => '7-Orbit IT', 'parent_company_id' => $root]);
-        $unrelated = Company::factory()->create(['name' => 'YM Construction']);
+        $root = Company::factory()->create(['name' => '7 Orbit']);
+        $child = Company::factory()->create(['name' => '7 Orbit Medical Billing']);
+        $unrelated = Company::factory()->create(['name' => 'YMC Construction']);
         $employee = Employee::factory()->create();
         Employment::factory()->forCompany($root)->create([
             'employee_id' => $employee,
@@ -93,7 +93,11 @@ class HrReportingTest extends TestCase
         Employment::factory()->forCompany($unrelated)->create(['employee_code' => 'OTHER-001']);
 
         $user = User::factory()->create();
-        $user->companies()->attach($root, ['is_active' => true, 'can_access_descendants' => true]);
+        $user->companies()->attach([
+            $root->getKey() => ['is_active' => true, 'can_access_descendants' => false],
+            $child->getKey() => ['is_active' => true, 'can_access_descendants' => false],
+            $unrelated->getKey() => ['is_active' => true, 'can_access_descendants' => false],
+        ]);
         $this->grant($user, ['View:GroupHrReports']);
 
         $report = app(GroupHrReport::class)->forGroup(
@@ -103,10 +107,10 @@ class HrReportingTest extends TestCase
             CarbonImmutable::parse('2026-12-31'),
         );
 
-        $this->assertSame(1, $report['unique_people']);
-        $this->assertSame(2, $report['employment_count']);
-        $this->assertCount(2, $report['rows']);
-        $this->assertFalse($report['rows']->contains('company', 'YM Construction'));
+        $this->assertSame(2, $report['unique_people']);
+        $this->assertSame(3, $report['employment_count']);
+        $this->assertCount(3, $report['rows']);
+        $this->assertTrue($report['rows']->contains('company', 'YMC Construction'));
 
         $restricted = User::factory()->create();
         $restricted->companies()->attach($root, ['is_active' => true, 'can_access_descendants' => false]);

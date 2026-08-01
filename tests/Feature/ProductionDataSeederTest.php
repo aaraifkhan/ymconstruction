@@ -32,7 +32,7 @@ class ProductionDataSeederTest extends TestCase
         $this->seed(ProductionDataSeeder::class);
         $this->seed(ProductionDataSeeder::class);
 
-        $this->assertSame(6, Company::query()->count());
+        $this->assertSame(4, Company::query()->count());
         $this->assertSame(2, User::query()->count());
         $this->assertSame(2, Role::query()->count());
 
@@ -51,16 +51,16 @@ class ProductionDataSeederTest extends TestCase
         $this->assertFalse(Hash::check('password', $manager->password));
 
         $membership = $superAdmin->companies()
-            ->where('companies.slug', 'ym-construction')
+            ->where('companies.slug', 'ymc-construction')
             ->firstOrFail()
             ->pivot;
 
         $this->assertTrue((bool) $membership->is_active);
-        $this->assertTrue((bool) $membership->can_access_descendants);
+        $this->assertFalse((bool) $membership->can_access_descendants);
 
         $settings = app(GeneralSettings::class);
 
-        $this->assertSame('YM Construction', $settings->brand_name);
+        $this->assertSame('YMC Group Management', $settings->brand_name);
         $this->assertSame('#14bf97', $settings->primary_color);
         $this->assertSame('Production Company Name', $settings->company_name);
         $this->assertSame('UTC', $settings->timezone);
@@ -79,5 +79,18 @@ class ProductionDataSeederTest extends TestCase
         $this->assertDatabaseCount('customer_invoices', 0);
         $this->assertDatabaseCount('payroll_runs', 0);
         $this->assertDatabaseCount('fixed_assets', 0);
+    }
+
+    public function test_new_baseline_users_receive_the_configured_seed_password_without_overwriting_existing_users(): void
+    {
+        config()->set('baseline.initial_user_password', 'seeded-password');
+
+        $this->seed(ProductionDataSeeder::class);
+
+        $superAdmin = User::query()->where('email', 'superadmin@gmail.com')->firstOrFail();
+        $manager = User::query()->where('email', 'manager@gmail.com')->firstOrFail();
+
+        $this->assertTrue(Hash::check('seeded-password', $superAdmin->password));
+        $this->assertTrue(Hash::check('seeded-password', $manager->password));
     }
 }

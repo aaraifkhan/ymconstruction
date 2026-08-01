@@ -45,7 +45,12 @@ class BuildPayrollEntryComponentsAction
         $payableBasic = $this->multiplyAndDivide($basicSalary, $payableDays, $periodDays);
         $allowanceFactor = $rule?->prorate_allowances ? bcdiv($payableDays, $periodDays, 8) : '1.00000000';
         $houseTravel = $this->money(bcmul((string) ($compensation->house_travel_allowance ?? 0), $allowanceFactor, 8));
+        $fuel = $this->money(bcmul((string) ($compensation->fuel_allowance ?? 0), $allowanceFactor, 8));
+        $mobile = $this->money(bcmul((string) ($compensation->mobile_allowance ?? 0), $allowanceFactor, 8));
+        $internet = $this->money(bcmul((string) ($compensation->internet_allowance ?? 0), $allowanceFactor, 8));
         $food = $this->money(bcmul((string) ($compensation->food_allowance ?? 0), $allowanceFactor, 8));
+        $site = $this->money(bcmul((string) ($compensation->site_allowance ?? 0), $allowanceFactor, 8));
+        $project = $this->money(bcmul((string) ($compensation->project_allowance ?? 0), $allowanceFactor, 8));
         $otherAllowance = $this->money(bcmul((string) ($compensation->other_allowance ?? 0), $allowanceFactor, 8));
         $compensationChecksum = hash('sha256', json_encode([
             'id' => $compensation->getKey(),
@@ -53,7 +58,12 @@ class BuildPayrollEntryComponentsAction
             'effective_to' => $compensation->effective_to?->toDateString(),
             'basic' => $basicSalary,
             'house_travel' => $houseTravel,
+            'fuel' => $fuel,
+            'mobile' => $mobile,
+            'internet' => $internet,
             'food' => $food,
+            'site' => $site,
+            'project' => $project,
             'other' => $otherAllowance,
         ], JSON_THROW_ON_ERROR));
 
@@ -65,10 +75,30 @@ class BuildPayrollEntryComponentsAction
             '1', $houseTravel, $houseTravel, $compensation, $compensationChecksum,
             ['compensation_id' => $compensation->getKey(), 'prorated' => (bool) $rule?->prorate_allowances],
             PayrollAccountComponent::HouseTravelAllowance);
+        $this->create($entry, PayrollComponentType::FuelAllowance, PayrollComponentNature::Earning,
+            '1', $fuel, $fuel, $compensation, $compensationChecksum,
+            ['compensation_id' => $compensation->getKey(), 'prorated' => (bool) $rule?->prorate_allowances],
+            PayrollAccountComponent::FuelAllowance);
+        $this->create($entry, PayrollComponentType::MobileAllowance, PayrollComponentNature::Earning,
+            '1', $mobile, $mobile, $compensation, $compensationChecksum,
+            ['compensation_id' => $compensation->getKey(), 'prorated' => (bool) $rule?->prorate_allowances],
+            PayrollAccountComponent::MobileAllowance);
+        $this->create($entry, PayrollComponentType::InternetAllowance, PayrollComponentNature::Earning,
+            '1', $internet, $internet, $compensation, $compensationChecksum,
+            ['compensation_id' => $compensation->getKey(), 'prorated' => (bool) $rule?->prorate_allowances],
+            PayrollAccountComponent::InternetAllowance);
         $this->create($entry, PayrollComponentType::FoodAllowance, PayrollComponentNature::Earning,
             '1', $food, $food, $compensation, $compensationChecksum,
             ['compensation_id' => $compensation->getKey(), 'prorated' => (bool) $rule?->prorate_allowances],
             PayrollAccountComponent::FoodAllowance);
+        $this->create($entry, PayrollComponentType::SiteAllowance, PayrollComponentNature::Earning,
+            '1', $site, $site, $compensation, $compensationChecksum,
+            ['compensation_id' => $compensation->getKey(), 'prorated' => (bool) $rule?->prorate_allowances],
+            PayrollAccountComponent::SiteAllowance);
+        $this->create($entry, PayrollComponentType::ProjectAllowance, PayrollComponentNature::Earning,
+            '1', $project, $project, $compensation, $compensationChecksum,
+            ['compensation_id' => $compensation->getKey(), 'prorated' => (bool) $rule?->prorate_allowances],
+            PayrollAccountComponent::ProjectAllowance);
         $this->create($entry, PayrollComponentType::OtherAllowance, PayrollComponentNature::Earning,
             '1', $otherAllowance, $otherAllowance, $compensation, $compensationChecksum,
             ['compensation_id' => $compensation->getKey(), 'prorated' => (bool) $rule?->prorate_allowances],
@@ -139,7 +169,7 @@ class BuildPayrollEntryComponentsAction
             }
         }
 
-        $gross = collect([$payableBasic, $houseTravel, $food, $otherAllowance, $bonus, $incentive])
+        $gross = collect([$payableBasic, $houseTravel, $fuel, $mobile, $internet, $food, $site, $project, $otherAllowance, $bonus, $incentive])
             ->reduce(fn (string $total, string $amount): string => bcadd($total, $amount, 4), '0.0000');
         $attendanceDeductions = collect([$absence, $unpaidLeave, $late, $halfDay])
             ->reduce(fn (string $total, string $amount): string => bcadd($total, $amount, 4), '0.0000');
@@ -183,7 +213,12 @@ class BuildPayrollEntryComponentsAction
         $entry->update([
             'payable_basic' => $payableBasic,
             'house_travel_allowance' => $houseTravel,
+            'fuel_allowance' => $fuel,
+            'mobile_allowance' => $mobile,
+            'internet_allowance' => $internet,
             'food_allowance' => $food,
+            'site_allowance' => $site,
+            'project_allowance' => $project,
             'other_allowance' => $otherAllowance,
             'bonus_amount' => $bonus,
             'incentive_amount' => $incentive,

@@ -56,8 +56,33 @@ class EmploymentCompensationForm
                         ->numeric()
                         ->minValue(0)
                         ->default(0),
+                    TextInput::make('fuel_allowance')
+                        ->label('Fuel allowance')
+                        ->numeric()
+                        ->minValue(0)
+                        ->default(0),
+                    TextInput::make('mobile_allowance')
+                        ->label('Mobile allowance')
+                        ->numeric()
+                        ->minValue(0)
+                        ->default(0),
+                    TextInput::make('internet_allowance')
+                        ->label('Internet allowance')
+                        ->numeric()
+                        ->minValue(0)
+                        ->default(0),
                     TextInput::make('food_allowance')
                         ->label('Food allowance')
+                        ->numeric()
+                        ->minValue(0)
+                        ->default(0),
+                    TextInput::make('site_allowance')
+                        ->label('Site allowance')
+                        ->numeric()
+                        ->minValue(0)
+                        ->default(0),
+                    TextInput::make('project_allowance')
+                        ->label('Project allowance')
                         ->numeric()
                         ->minValue(0)
                         ->default(0),

@@ -14,10 +14,10 @@ class AccountingFoundationSeeder extends Seeder
     {
         $templates->handle();
         $profiles = [
-            'ym-construction' => AccountingProfile::Construction,
-            '7-orbit-it' => AccountingProfile::ItServices,
+            'bmc-construction' => AccountingProfile::Construction,
+            'ymc-construction' => AccountingProfile::Construction,
+            '7-orbit' => AccountingProfile::ItServices,
             '7-orbit-medical-billing' => AccountingProfile::MedicalBilling,
-            'bmc-trading' => AccountingProfile::Trading,
         ];
         Company::query()->each(fn (Company $company) => $companies->handle($company, $profiles[$company->slug] ?? AccountingProfile::Generic));
     }

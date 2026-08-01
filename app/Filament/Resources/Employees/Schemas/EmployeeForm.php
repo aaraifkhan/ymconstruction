@@ -11,6 +11,7 @@ use App\Models\Employee;
 use App\Models\Employment;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -29,6 +30,17 @@ class EmployeeForm
                 ->schema([
                     TextInput::make('full_name')->label('Full name')->required()->maxLength(255),
                     Toggle::make('is_active')->label('Active profile')->default(true)->required(),
+                    FileUpload::make('photograph_path')
+                        ->label('Photograph')
+                        ->image()
+                        ->imageEditor()
+                        ->disk('public')
+                        ->directory('employees/photos')
+                        ->maxSize(2048)
+                        ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
+                        ->helperText('Max 2 MB. JPEG, PNG, or WebP.')
+                        ->columnSpanFull()
+                        ->visible(fn (string $operation, ?Employee $record): bool => self::canManageSensitive($operation, $record)),
                 ])
                 ->columns(2)
                 ->columnSpanFull(),

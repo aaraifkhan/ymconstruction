@@ -25,7 +25,7 @@ use Spatie\Activitylog\Support\LogOptions;
     'is_active',
     'notes',
 ])]
-#[Hidden(['account_number', 'iban'])]
+#[Hidden(['account_number', 'iban', 'iban_hash'])]
 class EmployeeBankAccount extends Model
 {
     /** @use HasFactory<EmployeeBankAccountFactory> */
@@ -38,6 +38,17 @@ class EmployeeBankAccount extends Model
 
     protected static function booted(): void
     {
+        static::saving(function (EmployeeBankAccount $bankAccount): void {
+            if (! $bankAccount->isDirty('iban')) {
+                return;
+            }
+
+            $iban = $bankAccount->iban;
+            $bankAccount->iban_hash = $iban === null
+                ? null
+                : hash_hmac('sha256', strtoupper(str_replace(' ', '', $iban)), config('app.key'));
+        });
+
         static::saved(function (EmployeeBankAccount $bankAccount): void {
             if (! $bankAccount->is_primary_for_payroll) {
                 return;

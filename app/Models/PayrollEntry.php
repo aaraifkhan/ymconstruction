@@ -21,13 +21,16 @@ use Spatie\Activitylog\Support\LogOptions;
 #[Fillable([
     'payroll_run_id', 'company_id', 'employment_id', 'employment_compensation_id', 'employee_name', 'employee_code',
     'designation', 'employment_category', 'period_days', 'payable_days', 'basic_salary', 'payable_basic',
-    'house_travel_allowance', 'food_allowance', 'other_allowance', 'bonus_amount', 'incentive_amount',
+    'house_travel_allowance', 'fuel_allowance', 'mobile_allowance', 'internet_allowance',
+    'food_allowance', 'site_allowance', 'project_allowance', 'other_allowance',
+    'bonus_amount', 'incentive_amount',
     'gross_salary', 'absence_deduction', 'unpaid_leave_deduction', 'late_deduction',
     'half_day_deduction', 'loan_advance_deduction', 'other_deduction', 'net_salary',
     'bank_amount', 'cash_amount', 'currency_code', 'remarks',
 ])]
 #[Hidden([
-    'basic_salary', 'payable_basic', 'house_travel_allowance', 'food_allowance', 'other_allowance',
+    'basic_salary', 'payable_basic', 'house_travel_allowance', 'fuel_allowance', 'mobile_allowance', 'internet_allowance',
+    'food_allowance', 'site_allowance', 'project_allowance', 'other_allowance',
     'bonus_amount', 'incentive_amount', 'gross_salary', 'absence_deduction', 'unpaid_leave_deduction',
     'late_deduction', 'half_day_deduction', 'loan_advance_deduction', 'other_deduction',
     'net_salary', 'bank_amount', 'cash_amount', 'remarks',
@@ -73,7 +76,11 @@ class PayrollEntry extends Model
             $entry->payable_basic = round((float) $entry->basic_salary * (float) $entry->payable_days / $entry->period_days, 2);
             $entry->gross_salary = round(
                 (float) $entry->payable_basic + (float) $entry->house_travel_allowance
-                + (float) $entry->food_allowance + (float) $entry->other_allowance
+                + (float) ($entry->fuel_allowance ?? 0) + (float) ($entry->mobile_allowance ?? 0)
+                + (float) ($entry->internet_allowance ?? 0)
+                + (float) $entry->food_allowance
+                + (float) ($entry->site_allowance ?? 0) + (float) ($entry->project_allowance ?? 0)
+                + (float) $entry->other_allowance
                 + (float) ($entry->bonus_amount ?? 0) + (float) ($entry->incentive_amount ?? 0),
                 2,
             );
@@ -222,7 +229,9 @@ class PayrollEntry extends Model
         return [
             'payable_days' => 'decimal:2',
             'basic_salary' => 'encrypted', 'payable_basic' => 'encrypted', 'house_travel_allowance' => 'encrypted',
-            'food_allowance' => 'encrypted', 'other_allowance' => 'encrypted', 'bonus_amount' => 'encrypted',
+            'fuel_allowance' => 'encrypted', 'mobile_allowance' => 'encrypted', 'internet_allowance' => 'encrypted',
+            'food_allowance' => 'encrypted', 'site_allowance' => 'encrypted', 'project_allowance' => 'encrypted',
+            'other_allowance' => 'encrypted', 'bonus_amount' => 'encrypted',
             'incentive_amount' => 'encrypted', 'gross_salary' => 'encrypted',
             'absence_deduction' => 'encrypted', 'unpaid_leave_deduction' => 'encrypted',
             'late_deduction' => 'encrypted', 'half_day_deduction' => 'encrypted',

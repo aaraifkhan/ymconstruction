@@ -2,6 +2,9 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Widgets\AttendanceTrendChart;
+use App\Filament\Widgets\DepartmentPerformanceChart;
+use App\Filament\Widgets\KpiAchievementChart;
 use App\Reports\CompanyHrReport;
 use App\Reports\HrReportCsvExporter;
 use BackedEnum;
@@ -109,6 +112,15 @@ class HrReports extends Page
         };
 
         return $exporter->download($user, Filament::getTenant(), $report, collect($rows), $columns, format: $format);
+    }
+
+    protected function getHeaderWidgets(): array
+    {
+        return [
+            DepartmentPerformanceChart::class,
+            KpiAchievementChart::class,
+            AttendanceTrendChart::class,
+        ];
     }
 
     protected function getHeaderActions(): array

@@ -1,6 +1,6 @@
 # Multi-Company Access, Company-Scoped Authorization, and Group Admin Implementation Plan
 
-Last updated: 2026-07-29
+Last updated: 2026-07-30
 
 Overall status: **Planned**
 
@@ -10,7 +10,7 @@ This is the controlling implementation and handoff plan for:
 
 - the post-login company selection experience;
 - separate company operations and group administration surfaces;
-- user access to one, several, descendant, or all companies;
+- direct user access to one, several, or all companies;
 - company-specific roles and role assignments;
 - company-specific module enablement, variants, rules, and settings;
 - super-admin consolidated records, statistics, and reporting;
@@ -36,9 +36,9 @@ After successful login:
 After successful login:
 
 1. Show large cards for every active company.
-2. Show a separate **Admin Panel** card.
+2. Show a separate fifth **Super Admin** card.
 3. Clicking a company card opens that company's operational panel with the selected company as the active tenant.
-4. Clicking **Admin Panel** opens a non-transactional group-administration panel.
+4. Clicking **Super Admin** opens a non-transactional group-administration panel.
 5. The group-administration panel shows consolidated records and statistics across authorized companies while preserving each legal company's separate books and operational records.
 
 ### No-company user
@@ -48,6 +48,8 @@ A non-super-admin user with no active company access must not enter an arbitrary
 ## Non-negotiable boundaries
 
 - One application and one shared database remain the approved architecture.
+- The only initial legal companies are BMC Construction, YMC Construction, 7 Orbit, and 7 Orbit Medical Billing.
+- The four companies are independent; this plan does not use parent/child relationships, descendant access, or inherited company configuration.
 - Every operational record remains owned by one legal company.
 - Company membership determines data scope.
 - A role assignment determines capability within a specific company.
@@ -68,9 +70,9 @@ The following already exists and should be extended rather than replaced:
 - One Filament panel with ID `admin`, path `/admin`, and `Company` tenancy.
 - Tenant URLs using the `company/{company-slug}` prefix.
 - Searchable Filament tenant switcher.
-- Six provisioned company records and the confirmed 7-Orbit hierarchy.
+- Four provisioned independent company records with their approved card logos.
 - Active/inactive direct company membership through `company_user`.
-- Optional descendant access through `company_user.can_access_descendants`.
+- Direct active company membership through `company_user`.
 - Super-admin access to every active company through `User::getAccessibleCompanies()`.
 - A shared module catalog and per-company `company_modules` state, variant, and JSON settings.
 - Tenant-scoped operational resources, policies, reports, and tests across Finance, Projects, HR, Payroll, Documents, and Operations.
@@ -81,7 +83,7 @@ The following already exists and should be extended rather than replaced:
 The main gaps are:
 
 - there is no dedicated post-login large-card company chooser;
-- company operations and platform/group administration currently share one Filament panel;
+- the new Access Portal and restricted Super Admin landing are implemented on the existing authenticated panel session; full panel separation remains planned;
 - Spatie Permission teams are disabled;
 - roles and direct user permissions are currently global rather than company-scoped;
 - Filament Shield is configured with `scopeToTenant(false)` and no tenant model;
@@ -99,8 +101,8 @@ Purpose:
 
 - login;
 - post-login destination;
-- large company cards;
-- Admin Panel card for super admins;
+- large branded company cards;
+- Super Admin fifth card for super admins;
 - access-pending state;
 - profile and logout.
 
@@ -192,7 +194,7 @@ Maintain two explicit authorization scopes.
 #### Platform scope
 
 - no company context;
-- global `super_admin` role;
+- global `super_admin` role and fifth Super Admin card;
 - Admin Panel access;
 - global module catalog and platform settings;
 - company topology and consolidated system views;
@@ -273,10 +275,7 @@ Membership and role assignment are separate records with separate effects.
 - Active membership without a company role: company card may be visible, but operational access is limited to a safe “no company role assigned” state unless an approved baseline role exists.
 - Company role without active membership: no company access.
 - Inactive membership: no company card and no tenant access.
-- Descendant access: grants data-scope eligibility only. It does not automatically copy a parent-company role into descendants.
-- To use a descendant company, the user must have an explicit role assignment in that descendant or an approved inherited-role rule introduced by a later decision.
-
-Recommended initial rule: require explicit role assignments per company, including descendants. This is easier to audit and prevents parent roles from becoming unexpectedly powerful in child companies.
+- Access is based on a direct active membership only. A membership in one company has no effect in any other company.
 
 ## Company-specific role management
 
@@ -338,7 +337,7 @@ Continue using `company_modules` as the company assignment and configuration rec
 company_modules
 - company_id
 - module_id
-- state: inherit | enabled | disabled
+- state: enabled | disabled
 - variant: nullable named workflow strategy
 - settings: typed/versioned module configuration
 ```
@@ -356,13 +355,10 @@ Add or verify:
 Use one resolver with deterministic precedence:
 
 1. explicit company state/settings;
-2. nearest active parent setting when state is `inherit`;
-3. safe module default when no parent setting exists.
+2. safe module default when no company setting exists.
 
 The resolver must:
 
-- prevent hierarchy loops;
-- expose the source of the effective setting;
 - cache results per company with explicit invalidation;
 - return typed configuration, not unvalidated arbitrary arrays;
 - resolve named variants through a strategy registry;
@@ -441,7 +437,7 @@ Each card should show only approved high-level information:
 
 - logo or generated initials;
 - company name and legal name where configured;
-- parent/root relationship;
+- independent-company status;
 - active/inactive state;
 - enabled module count;
 - user/member count;
@@ -472,7 +468,7 @@ Every consolidated query must:
 - use an explicit authorized company-ID set;
 - preserve company columns and drill-down traceability;
 - use posted/reversed accounting sources where applicable;
-- use existing hierarchy rules for parent/group views;
+- use the explicit active-company set for collective views;
 - distinguish “not authorized,” “module disabled,” “not configured,” and true zero;
 - support bounded date/period filters;
 - avoid N+1 queries and select only required columns;
@@ -486,10 +482,10 @@ At minimum, log:
 
 - login success/failure through existing authentication facilities;
 - company selection/entry where approved;
-- membership activation, deactivation, and descendant-scope changes;
+- membership activation and deactivation;
 - company role creation, update, archive, and permission changes;
 - role assignment and removal;
-- module enable, disable, inherit, variant, and settings changes;
+- module enable, disable, variant, and settings changes;
 - Admin Panel consolidated export/download events;
 - company-context and platform-context changes for sensitive administrative actions.
 
@@ -514,7 +510,7 @@ Audit metadata should include actor, company or platform scope, affected user/ro
 
 | Phase | Name | Status | Depends on |
 | --- | --- | --- | --- |
-| MCA-0 | Decisions, inventory, and migration evidence | Planned | Current verified project |
+| MCA-0 | Decisions, inventory, and migration evidence | In Progress | Current verified project |
 | MCA-1 | Company-scoped role and permission data model | Planned | MCA-0 |
 | MCA-2 | Company authorization context and policy hardening | Planned | MCA-1 |
 | MCA-3 | Access Portal and panel separation | Planned | MCA-2 |
@@ -535,7 +531,7 @@ Freeze the exact access, role, module, route, and dashboard rules before changin
 
 - inventory every panel, resource, page, widget, report, export, custom action, job, and scheduled command;
 - map every permission to platform scope or one module;
-- inventory global roles, direct permissions, role assignments, company memberships, inactive access, and descendant access;
+- inventory global roles, direct permissions, role assignments, direct company memberships, and inactive access;
 - identify all `hasRole()`, `can()`, `Gate`, policy, and custom authorization call sites that must become company-context aware;
 - define the initial module taxonomy and dependencies;
 - approve the initial consolidated KPI catalog;
@@ -547,7 +543,7 @@ Freeze the exact access, role, module, route, and dashboard rules before changin
 ### Required decisions
 
 - Keep the recommended three surfaces and target paths.
-- Confirm explicit descendant role assignment versus inherited roles. Recommended: explicit assignments.
+- Confirm direct company membership and role assignment for every operating user; never infer cross-company access.
 - Confirm that company creation/registration is super-admin-only. Recommended: remove tenant self-registration from normal users.
 - Confirm whether inactive companies appear in the Admin Panel. Recommended: visible to super admins with an inactive badge, never selectable for operations.
 - Confirm whether company role templates are global blueprints. Recommended: yes, clone-only.
@@ -681,7 +677,7 @@ Make company modules control actual system capability, not only configuration re
 
 - define the module registry and permission mapping;
 - expand module catalog granularity only where approved;
-- implement effective module resolution with inheritance;
+- implement direct per-company module resolution;
 - validate named workflow variants;
 - introduce typed/versioned settings schemas;
 - register module-aware navigation/resources/pages/widgets;
@@ -692,7 +688,7 @@ Make company modules control actual system capability, not only configuration re
 
 ### Acceptance criteria
 
-- enabled/disabled/inherited state resolves deterministically;
+- enabled/disabled state resolves deterministically;
 - direct URLs cannot bypass a disabled module;
 - company variants change only approved workflow behavior;
 - invalid settings and dependency conflicts are rejected;
@@ -713,7 +709,7 @@ Allow authorized company administrators to manage their own members, roles, perm
 
 - current-company membership list and invitations/account linking as approved;
 - activate/deactivate membership;
-- explicit descendant-scope management by platform/suitably authorized administrators;
+- direct membership management by platform/suitably authorized administrators;
 - current-company role CRUD and clone-from-template;
 - assign/remove current-company roles;
 - filter permission choices by enabled modules;
@@ -783,7 +779,7 @@ Prove the new access model end to end and roll it out without silent authorizati
 - test module differences and settings variants across companies;
 - test super-admin portal and Admin Panel;
 - test inactive users, companies, memberships, modules, and roles;
-- test descendant access without role inheritance;
+- test that a membership or role in one company grants no access to another;
 - test every sensitive report/export and direct URL;
 - test Livewire, queues, scheduled jobs, caching, and concurrent role/module changes;
 - run realistic consolidated dashboard volumes and query-plan review;
@@ -793,9 +789,9 @@ Prove the new access model end to end and roll it out without silent authorizati
 
 ### Minimum UAT scenarios
 
-1. User A has only YM Construction: sees one card and only YM data.
-2. User B has YM Construction and BMC Trading: sees two cards and different roles/navigation in each.
-3. User C has a parent membership with descendant access but no child role: sees/enters only according to the approved explicit-role rule.
+1. User A has only YMC Construction: sees one card and only YMC data.
+2. User B has YMC Construction and BMC Construction: sees two cards and different roles/navigation in each.
+3. User C has BMC Construction membership only: cannot see or enter 7 Orbit Medical Billing.
 4. Company Admin A edits a YM role: the same-named BMC role remains unchanged.
 5. A module enabled in YM and disabled in BMC is available only in YM, including direct URLs and actions.
 6. Two companies use the same module with different validated variants/settings and each workflow follows its own configuration.
@@ -842,8 +838,7 @@ Prove the new access model end to end and roll it out without silent authorizati
 
 ### Modules
 
-- enabled, disabled, and inherited states;
-- parent-setting changes and child resolution;
+- enabled and disabled states;
 - dependency failure;
 - invalid variant/settings;
 - navigation and direct route denial;
@@ -854,7 +849,7 @@ Prove the new access model end to end and roll it out without silent authorizati
 ### Consolidation
 
 - authorized company set;
-- hierarchy inclusion;
+- explicit all-active-company inclusion;
 - Finance and HR reconciliation;
 - module-disabled versus zero semantics;
 - sensitive amount masking;
@@ -918,13 +913,13 @@ Documentation synchronization:
 | ID | Decision | Status | Blocks | Current direction |
 | --- | --- | --- | --- | --- |
 | MCA-D001 | Post-login company cards | Confirmed by client 2026-07-29 | None | Always show only accessible company cards; one access means one visible card |
-| MCA-D002 | Super-admin landing | Confirmed by client 2026-07-29 | None | Show all active company cards plus separate Admin Panel card |
+| MCA-D002 | Super-admin landing | Confirmed by client 2026-07-30 | None | Show four active company cards plus a fifth Super Admin card |
 | MCA-D003 | Company-specific roles | Confirmed by client 2026-07-29 | MCA-1 | Roles and assignments must be scoped by company |
 | MCA-D004 | Company-specific modules | Confirmed by client 2026-07-29 | MCA-4 | Same shared code; modules may differ by company |
 | MCA-D005 | Same module, different rules/settings | Confirmed by client 2026-07-29 | MCA-4 | Typed company settings and named variants |
 | MCA-D006 | Consolidated Admin Panel | Confirmed by client 2026-07-29 | MCA-6 | Read-only group reporting/administration scope; no fake tenant |
 | MCA-D007 | Panel route structure | Recommended; approval required in MCA-0 | MCA-3 | `/portal`, `/app/company/{slug}`, and `/admin` |
-| MCA-D008 | Descendant role behavior | Recommended; approval required in MCA-0 | MCA-1–MCA-2 | Descendant access does not inherit roles; assign roles explicitly per company |
+| MCA-D008 | Cross-company role behavior | Confirmed by client 2026-07-30 | MCA-1–MCA-2 | Companies are independent; direct membership and role assignment are required per company |
 | MCA-D009 | Tenant self-registration | Recommended; approval required in MCA-0 | MCA-3 | Super-admin/company-provisioning only; remove normal self-registration |
 | MCA-D010 | Global role templates | Recommended; approval required in MCA-0 | MCA-1/MCA-5 | Optional clone-only blueprints; company copies do not auto-sync |
 | MCA-D011 | Users with roles but no memberships | Evidence required in MCA-0 | MCA-1/MCA-7 | Never infer company; map explicitly or leave access pending |
@@ -935,6 +930,7 @@ Documentation synchronization:
 | Date | Phase | Status change | Summary | Verification / blocker |
 | --- | --- | --- | --- | --- |
 | 2026-07-29 | Plan | Created | Recorded the client-confirmed company-card login flow, separate super-admin Admin Panel, company-scoped roles, per-company module variants/settings, consolidated reporting boundaries, and phased migration/verification plan | Documentation-only; no feature implementation, schema change, role migration, or data mutation performed |
+| 2026-07-30 | MCA-0 | Planned → In Progress | Rebased the organization to four independent companies, added approved logo assets, direct-membership access, the branded Access Portal, and the Super Admin entry route | Focused provisioning, portal, production-seeding, and collective-report tests in progress; legacy hierarchy schema is retained temporarily but no longer used by the baseline or access logic |
 
 ## Whole-plan completion rule
 

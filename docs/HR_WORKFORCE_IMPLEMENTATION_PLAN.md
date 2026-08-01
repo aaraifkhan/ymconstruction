@@ -102,7 +102,7 @@ This section is the historical pre-plan baseline; completed phase records and th
 
 ### Implemented and reusable
 
-- Six-company tenancy with explicit membership and optional descendant access.
+- Four independent companies with explicit direct membership.
 - Global Employee identity separated from company-specific Employment.
 - Company-scoped Departments, Designations, Employments, compensation, joining letters, and Payroll Runs.
 - Employee code stored on Employment and unique within a company.
@@ -282,7 +282,7 @@ Add custody issuance, acknowledgement, transfer, return, condition, loss/damage,
 
 Each Employment and operational HR record belongs to one legal company.
 
-Group HR reporting is an authorized parent/descendant reporting scope, not a synthetic “All Companies” tenant. A user must have explicit access to every included company or a separately approved group-report capability that enforces the confirmed hierarchy.
+Group HR reporting is an authorized explicit active-company reporting scope, not a synthetic “All Companies” tenant. A user must have access to every included company or be a Super Admin.
 
 Employee identity may be de-duplicated for group headcount only with clear report semantics; company Employment counts must remain independently visible.
 
@@ -381,7 +381,7 @@ The user authorized HR-0 implementation on 2026-07-28. Because live workforce ru
 | Separation and clearance | Resignation and Termination are distinct workflows. Approved last working date drives later Attendance/Payroll eligibility. Clearance checks Assets, Loans, Advances, Leave/handover, and configurable departmental obligations. |
 | Final Settlement | Source-backed components only. Salary, notice, leave encashment, gratuity/benefits, Bonus/Incentive, Loan/Advance, and asset recovery require explicit approved rules or amounts. GL posting and Treasury settlement reuse existing engines. |
 | Asset custody | Reuse Fixed Assets for capital items. Non-capital/consumable employee issuance remains a later business boundary and must not be forced into the Fixed Asset register. |
-| Group HR reporting | Show both unique-person headcount and company-Employment count with explicit labels. Group scope follows confirmed parent/descendant hierarchy and requires authorized access; no fake All Companies tenant. |
+| Group HR reporting | Show both unique-person headcount and company-Employment count with explicit labels. Group scope uses the authorized active-company set; no fake All Companies tenant. |
 | Exports | CSV/XLSX are the default data-export targets. PDF is reserved for approved formal letters, Payroll approval sheets, clearance, and Final Settlement documents. Export/download permissions and audit remain mandatory. |
 
 ### Production configuration gates
@@ -965,48 +965,69 @@ Cross-plan update:
 
 ## HR-5 — Device-specific fingerprint-machine connector
 
-Status: **Blocked**
+Status: **Blocked** (partially unblocked — device identity confirmed 2026-07-30)
 
 Requested: 2026-07-28
 
 Blocked: 2026-07-28
 
+Partially unblocked: 2026-07-30
+
 Depends on: HR-4 and actual machine evidence.
 
-### Current blocker
+### Confirmed device evidence (2026-07-30)
 
-The user explicitly requested HR-5, but the actual-device dependency is not available. Repository, configuration, and live database inspection found:
+The user confirmed the attendance device on 2026-07-30:
 
-- zero configured Attendance Devices;
-- no manufacturer, model, firmware, serial number, vendor documentation, SDK, protocol, or export specification;
-- no network/deployment topology or direct-versus-agent connectivity decision;
-- no redacted device-user or raw-punch fixture;
-- no confirmed timezone, clock-drift, punch-direction, or source-event behavior;
-- no credential/security/licensing model or secure secret-provider configuration.
+- **Manufacturer and model:** ZKTeco K50 fingerprint attendance terminal.
+- **Biometric methods:** Optical fingerprint, Password/PIN, optional RFID/ID card. Biometric enrollment and matching happen entirely on the device; the application receives only punch events (user ID, timestamp, direction) — no fingerprint templates are transmitted or stored.
+- **Capacity:** 1,000–3,000 fingerprint templates; 80,000–100,000 transaction log records.
+- **Communication:** TCP/IP (Ethernet, default port `4370`) and WiFi. USB-Host for manual flash-drive export.
+- **ADMS/Cloud Server:** The user physically inspected the device menu (M/OK → Comm.) on 2026-07-30 and confirmed that the K50 unit does **not** have the Cloud Server Setting or ADMS option. Push mode is not available on this device.
+- **Supported integration mode:** Direct TCP Pull only — the Laravel server (or a scheduled command) connects to the device IP on port `4370` and requests attendance logs. Requires same LAN, VPN, or port forwarding.
+- **No built-in REST API.** The device uses ZKTeco's proprietary binary TCP protocol on port `4370`.
+- **SDK:** ZKTeco Standalone SDK (`zkemkeeper.dll` for Windows/C#). For PHP/Laravel, community Packagist libraries exist: `jmrashed/zkteco` (PHP 8.1+, Laravel 11+), `0mithun/php-zkteco` (TCP/UDP with TCPMUX), `rats/zkteco` (older).
+- **Data format (ATTLOG):** Each punch contains `dwEnrollNumber` (numeric user ID), timestamp (Y-m-d H:i:s), verification mode (fingerprint/password/card), and In/Out State (0=Check-in, 1=Check-out, 2=Break-out, 3=Break-in, 4=OT-in, 5=OT-out).
+- **Time sync:** In TCP Pull mode, the connecting client can push server time to the device.
+- **Credential model:** Optional 4-digit connection password on the device; must be stored encrypted in `AttendanceDevice` config and never logged.
 
-No vendor was inferred from the generic fingerprint-machine description. Implementing a ZKTeco, Hikvision, Anviz, Suprema, or other connector without evidence would create an untestable integration, risk missing/duplicating events, and violate the approved credential and biometric privacy boundaries. HR-4 already contains every safe vendor-neutral prerequisite; no speculative connector code or dependency was added.
+### Field mapping to HR-4 ingestion contract
 
-### Evidence required to resume
+| ZKTeco K50 field | HR-4 `AttendanceEventData` field | Notes |
+| --- | --- | --- |
+| `dwEnrollNumber` | `external_user_id` | Numeric user ID enrolled on device |
+| Device identifier | `device_code` | From `AttendanceDevice.device_identifier` |
+| Timestamp (Y-m-d H:i:s) | `punched_at_local` | Device-local time |
+| Device timezone | `timezone` | From `AttendanceDevice.timezone` |
+| In/Out State 0 | `direction` = `In` | Check-in |
+| In/Out State 1 | `direction` = `Out` | Check-out |
+| In/Out State 2 | `direction` = `BreakOut` | Break start |
+| In/Out State 3 | `direction` = `BreakIn` | Break end |
+| Hash(device+user+timestamp) | `source_event_id` | Deterministic deduplication key |
 
-Provide the machine label/manual or the following equivalent evidence:
+The existing `AttendancePunchDirection` enum (`In`, `Out`, `BreakOut`, `BreakIn`) and `AttendanceDeviceTransport::TcpPull` value align with the K50 data model. No schema changes are required.
 
-1. manufacturer, exact model, firmware, and serial number;
-2. API/SDK/protocol/export documentation and any licensing requirement;
-3. network diagram showing whether Laravel can reach it directly or needs a local agent;
-4. one redacted device-user sample and a redacted raw punch/export containing normal, duplicate, and—if supported—in/out events;
-5. configured device timezone plus observed clock behavior;
-6. credential mechanism and approved secret-storage/rotation location.
+### Remaining blockers before moving to In Progress
 
-After this evidence is supplied, change HR-D006 to confirmed, move HR-5 from **Blocked** to **In Progress**, implement only the supported adapter, and complete recorded-fixture tests plus actual-device reconciliation/UAT.
+The device identity and protocol are confirmed. The following operational evidence is still required:
 
-### Required external evidence
+1. **PHP library approval:** A ZKTeco PHP library (e.g., `jmrashed/zkteco` or `0mithun/php-zkteco`) must be approved as a new Composer dependency before implementation.
+2. **Physical connectivity verification:** Connect the K50 to the development network and confirm its IP address, successful TCP connection on port `4370`, and basic SDK operations (read device info, read users, read attendance logs).
+3. **Sample raw punch capture:** Capture one real pull from the connected device to verify exact field formats, In/Out State codes, timestamp precision, and any device-specific quirks.
+4. **Device timezone confirmation:** Confirm the K50 is set to `Asia/Karachi` (UTC+5) and measure any observable clock drift.
+5. **Device connection password:** Note the configured connection password (if any) and approve its encrypted storage location.
+6. **Production network topology decision:** Determine whether the production Laravel server will be on the same LAN as devices, require VPN, or require port forwarding (UDP `4370`).
 
-- Manufacturer, model, firmware, and serial number.
-- Vendor documentation and supported API/SDK/protocol/export formats.
-- Network/deployment diagram and whether the application can reach the machine directly.
-- Sample device users and redacted raw punch data.
-- Clock/timezone behavior and punch-direction codes.
-- Credential/security model and vendor licensing.
+Once items 1–5 are resolved, change HR-D006 to confirmed, move HR-5 from **Blocked** to **In Progress**, and implement only the ZKTeco K50 TCP Pull adapter against the HR-4 `AttendanceDeviceAdapter` contract.
+
+### Required external evidence (updated 2026-07-30)
+
+- ~~Manufacturer, model, firmware, and serial number.~~ ✅ Confirmed: ZKTeco K50.
+- ~~Vendor documentation and supported API/SDK/protocol/export formats.~~ ✅ Confirmed: TCP/IP port 4370, PHP Packagist libraries, ATTLOG format.
+- Network/deployment diagram: LAN confirmed for development; production topology pending.
+- Sample device users and redacted raw punch data: pending physical connectivity.
+- Clock/timezone behavior: assumed Asia/Karachi, pending device confirmation.
+- Credential/security model: device connection password to be confirmed.
 
 ### Scope
 
@@ -1482,7 +1503,7 @@ Update decisions in place. Do not delete history; mark superseded entries and re
 | HR-D003 | Work Location model | Confirmed default 2026-07-28 | None | Controlled company Work Location with optional same-company Project Site |
 | HR-D004 | Department hierarchy | Confirmed 2026-07-28 | None | Add optional same-company Parent Department and prevent cycles |
 | HR-D005 | HR document types | Confirmed 2026-07-28 | None | Reuse private Documents with controlled HR type metadata |
-| HR-D006 | Attendance-machine make/model/protocol | Blocking evidence unavailable; verified 2026-07-28 after HR-5 request | HR-5 | HR-4 vendor-neutral ingestion is complete; resume HR-5 only with exact device, protocol, topology, safe sample, timezone, and credential evidence |
+| HR-D006 | Attendance-machine make/model/protocol | Partially confirmed 2026-07-30; device identity and protocol established, operational evidence pending | HR-5 | ZKTeco K50 confirmed; TCP Pull on port 4370 (no ADMS/push); PHP library approval, physical connectivity test, sample punch capture, timezone/password confirmation, and production topology decision remain before moving HR-5 to In Progress |
 | HR-D007 | Biometric template storage | Confirmed default 2026-07-28 | Production exception only | Do not store templates; store device user mapping and punch evidence. Any exception requires explicit privacy/security approval |
 | HR-D008 | Attendance, late, half-day, and overtime rules | Architecture confirmed; live configuration deferred 2026-07-28 | Attendance finalization and HR-7 live calculation | Effective-dated company configuration; no numeric production defaults |
 | HR-D009 | Leave types and accrual rules | Architecture confirmed; live configuration deferred 2026-07-28 | Live Leave and affected Payroll/settlement | Effective-dated company policies; no statutory/business values invented |
@@ -1491,7 +1512,7 @@ Update decisions in place. Do not delete history; mark superseded entries and re
 | HR-D012 | Appraisal and warning workflows | Architecture confirmed; live configuration deferred 2026-07-28 | Live HR-8 cycles | Shared configurable workflows; scoring scales and levels require setup |
 | HR-D013 | Separation and Final Settlement formulas | Architecture confirmed; live configuration deferred 2026-07-28 | Live HR-8/HR-10 processing | Source-backed configurable components, clearance, maker-checker, GL and Treasury reconciliation |
 | HR-D014 | Non-capital employee-issued items | Boundary confirmed; detailed workflow deferred 2026-07-28 | Non-capital part of HR-9 | Fixed Assets reused for capital items; consumable issuance requires a later approved inventory boundary |
-| HR-D015 | Group HR reporting access and semantics | Confirmed default 2026-07-28 | None | Authorized hierarchy; report both unique-person and Employment counts; no fake all-company tenant |
+| HR-D015 | Group HR reporting access and semantics | Updated 2026-07-30 | None | Authorized explicit active-company scope; report both unique-person and Employment counts; no fake all-company tenant |
 | HR-D016 | Pre-production migration and seeding policy | Confirmed 2026-07-28 | None | Active development with no production deployment/data: reset/reseed and unreleased migration revision are allowed; establish a production migration baseline before first deployment |
 
 ## Phase Completion Record Template
@@ -1574,6 +1595,7 @@ Append entries; do not rewrite history except to correct a factual error with an
 | 2026-07-29 | HR-11 | In Progress → Implemented and Verified | Delivered the company HR report catalog/dashboard, existing Payroll and Final Settlement report exports, private audited CSV/XLSX, indexed aggregates, and authorized hierarchy-only group comparisons with protected monetary sections | Focused 4 tests/33 assertions and broader affected 72 tests/434 assertions passed; Pint, 361 routes, migration/index/query-plan checks, repeated seed, 893 unique permissions, private export headers/audit, and zero fabricated operational data verified |
 | 2026-07-29 | HR-12 | Planned → In Progress | Began controlled HR source migration, independent validation/import/rollback, recovery/readiness evidence, security and reconciliation hardening, realistic-volume performance checks, and pilot UAT verification | HR-1–HR-4 and HR-6–HR-11 are Implemented and Verified; HR-5 remains an explicitly external device-evidence blocker and its historical machine backfill will not be represented as available |
 | 2026-07-29 | HR-12 | In Progress → Implemented and Verified | Delivered seven controlled HR source adapters, independent dry-run/validation/import/rollback, private immutable evidence, recovery manifest, operational-readiness/security/performance gates, and pilot Attendance-to-Treasury reconciliation | Full suite passed 263 tests/1,429 assertions; routes, Pint, diff, fresh migration/repeated seed, 901 permissions, empty operational baseline, recovery mismatch detection, and 250-Employment query budget passed. HR-5 remains explicitly external-blocked |
+| 2026-07-30 | HR-5 | Blocked (partial unblock) | User confirmed device identity: ZKTeco K50 fingerprint terminal; physical device menu inspection confirmed no ADMS/Cloud Server capability; integration mode is TCP Pull on port 4370 only; PHP Packagist libraries available; ATTLOG data format and field mapping to HR-4 AttendanceEventData documented; biometric privacy boundary satisfied (device-side matching, no template storage) | HR-D006 partially confirmed; remaining blockers: PHP library approval as new Composer dependency, physical LAN connectivity test, sample raw punch capture, timezone/password confirmation, and production network topology decision |
 
 ## Whole-plan completion rule
 

@@ -73,8 +73,7 @@ class CompanyResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         $query = parent::getEloquentQuery()
-            ->with(['parentCompany'])
-            ->withCount(['childCompanies', 'members']);
+            ->withCount(['members']);
         $user = auth()->user();
 
         if ($user === null) {

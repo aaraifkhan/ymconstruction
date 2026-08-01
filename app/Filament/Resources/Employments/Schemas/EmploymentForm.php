@@ -5,8 +5,10 @@ namespace App\Filament\Resources\Employments\Schemas;
 use App\Enums\EmploymentCategory;
 use App\Enums\EmploymentStatus;
 use App\Enums\EmploymentType;
+use App\Models\CostCenter;
 use App\Models\Employee;
 use App\Models\Employment;
+use App\Models\Project;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
@@ -147,6 +149,36 @@ class EmploymentForm
                         )
                         ->searchable()
                         ->preload(),
+                    Select::make('cost_center_id')
+                        ->label('Cost center')
+                        ->options(fn (): array => CostCenter::query()
+                            ->whereBelongsTo(Filament::getTenant())
+                            ->where('is_active', true)
+                            ->orderBy('name')
+                            ->pluck('name', 'id')
+                            ->all())
+                        ->searchable()
+                        ->preload()
+                        ->helperText('Default cost center for payroll journal lines.'),
+                    Select::make('default_project_id')
+                        ->label('Default project')
+                        ->options(fn (): array => Project::query()
+                            ->whereBelongsTo(Filament::getTenant())
+                            ->orderBy('name')
+                            ->pluck('name', 'id')
+                            ->all())
+                        ->searchable()
+                        ->preload()
+                        ->helperText('Applicable for project-staff employees.'),
+                    Select::make('payment_method')
+                        ->label('Payment method')
+                        ->options([
+                            'bank_transfer' => 'Bank Transfer',
+                            'cash' => 'Cash',
+                            'cheque' => 'Cheque',
+                        ])
+                        ->default('bank_transfer')
+                        ->required(),
                 ])
                 ->columns(2)
                 ->columnSpanFull(),

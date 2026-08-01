@@ -2,14 +2,11 @@
 
 namespace App\Filament\Resources\Companies\Schemas;
 
-use App\Models\Company;
-use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
-use Illuminate\Database\Eloquent\Builder;
 
 class CompanyForm
 {
@@ -32,18 +29,6 @@ class CompanyForm
                             ->alphaDash()
                             ->unique(ignoreRecord: true)
                             ->maxLength(100),
-                        Select::make('parent_company_id')
-                            ->label('Parent company')
-                            ->relationship(
-                                name: 'parentCompany',
-                                titleAttribute: 'name',
-                                modifyQueryUsing: fn (Builder $query, ?Company $record): Builder => $query
-                                    ->when($record, fn (Builder $query): Builder => $query->whereKeyNot($record))
-                                    ->orderBy('name'),
-                            )
-                            ->searchable()
-                            ->preload()
-                            ->placeholder('No parent company'),
                         TextInput::make('registration_number')
                             ->label('Registration number')
                             ->maxLength(255),

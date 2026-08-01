@@ -1,6 +1,6 @@
 # YM Construction Management System — Project State
 
-Last updated: 2026-07-29
+Last updated: 2026-08-01
 
 ## Purpose of this document
 
@@ -17,23 +17,16 @@ Future developers and AI agents must:
 
 ## Product direction
 
-The application manages multiple related companies in one Laravel and Filament system. The confirmed initial organization has six company records, and the design supports additional companies and nested sub-companies.
-
-The confirmed hierarchy is:
+The application manages four independent legal companies in one Laravel and Filament system:
 
 ```text
-7-Orbit
-├── 7-Orbit IT
-└── 7-Orbit Medical Billing
-
-YM Construction
-BMC
-BMC Trading
+BMC Construction
+YMC Construction
+7 Orbit
+7 Orbit Medical Billing
 ```
 
-`7-Orbit` is the confirmed parent of `7-Orbit IT` and `7-Orbit Medical Billing`. No parent is yet confirmed for `YM Construction`, `BMC`, or `BMC Trading`; they remain independent roots until the business explicitly decides otherwise. In particular, do not infer that `BMC Trading` is a child of `BMC` merely from its name.
-
-The local database contains all six confirmed companies. YM Construction's existing record and ID were preserved when the remaining companies and hierarchy were provisioned.
+None is a parent or subsidiary inside this system. They have separate memberships, operational records, modules, roles, and reports; collective reporting is an explicit Super Admin scope, never a hierarchy or synthetic tenant.
 
 Most company operations are expected to be similar. Shared functionality must use one implementation with company-specific configuration or workflow variants instead of duplicated modules or company-specific code branches.
 
@@ -47,7 +40,7 @@ Development is intentionally workflow-led and incremental:
 
 HR foundations are implemented. The remaining HR and workforce scope is governed by `docs/HR_WORKFORCE_IMPLEMENTATION_PLAN.md`, which includes a vendor-neutral attendance-ingestion foundation so the eventual fingerprint-machine connector can be added after its make, model, protocol, and deployment details are available. Accounts, Projects, Procurement, Inventory, Banking, Sales, Assets, and related reporting remain governed by `docs/FINANCE_PROJECTS_OPERATIONS_IMPLEMENTATION_PLAN.md`.
 
-HR plan Phases HR-0 through HR-4 and HR-6 through HR-12 are implemented and verified. HR-0 approved configuration-first architecture, safe synthetic evidence, approval boundaries, and production configuration gates. HR-1 delivered Department hierarchy, atomic company Employee codes, Employment lifecycle/type/location fields, Work Locations, and immutable Employment change evidence. HR-2 delivered controlled/configurable private HR document types, legacy mapping, separate identity/medical access, and required-document compliance status. HR-3 delivered effective-dated Attendance and Leave foundations, maker-checker evidence, immutable monthly Payroll inputs, and tenant workflow UI. HR-4 delivered the vendor-neutral Attendance Device registry, effective device-user mappings, immutable ingestion evidence, deterministic deduplication, quarantine/replay, normalized private CSV import, and a future-adapter boundary. HR-5 was explicitly requested on 2026-07-28 and is blocked because the actual machine identity, protocol, topology, safe event samples, clock behavior, and credential model are unavailable. HR-6 delivered Employee Loans and Advances with maker-checker, schedules, immutable subledger, Treasury/GL integration, recovery/rescheduling/waiver/reversal, documents, and Payroll/Final-Settlement balance boundaries. HR-7 delivered effective Payroll calculation rules, approved Bonus/Incentive sources, finalized Attendance/Leave deductions, due Loan/Advance recovery, immutable source components, deterministic regeneration, extended GL/reversal integration, and company Payroll report foundations. HR-8 delivered configurable appraisals and warnings, effective Promotion/Transfer, Resignation/Termination, immutable Employment evidence, private attachments, and explicit access review. HR-9 delivered Fixed Asset custody issuance, acknowledgement, immutable movement/return/exception evidence, and approved-separation departmental clearance. HR-10 delivered source-reconciled Final Settlement, independent review/approval/posting, reversible GL and financing recovery, bounded Treasury payment/receipt, printable letter, documents, and tenant reconciliation reporting. HR-11 delivered the complete company report catalog/dashboard, private audited CSV/XLSX exports, sensitive-section gates, indexed aggregates, and authorized hierarchy-only Group HR reporting. HR-12 delivered controlled migration/rollback, private source reconciliation, recovery/readiness evidence, security/performance hardening, and pilot Attendance-to-Treasury UAT.
+HR plan Phases HR-0 through HR-4 and HR-6 through HR-12, along with Employee Master, Payroll, Attendance, and PDF enhancements (photograph upload, cost center, project, payment method, IBAN hashing, 5 expanded allowances, financing sub-categories, late attendance status, statutory leave types seeder, performance chart widgets, and A4 Salary Slip PDF generation), are implemented and verified with 49 tests. HR-0 approved configuration-first architecture, safe synthetic evidence, approval boundaries, and production configuration gates. HR-1 delivered Department hierarchy, atomic company Employee codes, Employment lifecycle/type/location fields, Work Locations, and immutable Employment change evidence. HR-2 delivered controlled/configurable private HR document types, legacy mapping, separate identity/medical access, and required-document compliance status. HR-3 delivered effective-dated Attendance and Leave foundations, maker-checker evidence, immutable monthly Payroll inputs, and tenant workflow UI. HR-4 delivered the vendor-neutral Attendance Device registry, effective device-user mappings, immutable ingestion evidence, deterministic deduplication, quarantine/replay, normalized private CSV import, and a future-adapter boundary. HR-5 was explicitly requested on 2026-07-28 and is blocked because the actual machine identity, protocol, topology, safe event samples, clock behavior, and credential model are unavailable. HR-6 delivered Employee Loans and Advances with maker-checker, schedules, immutable subledger, Treasury/GL integration, recovery/rescheduling/waiver/reversal, documents, and Payroll/Final-Settlement balance boundaries. HR-7 delivered effective Payroll calculation rules, approved Bonus/Incentive sources, finalized Attendance/Leave deductions, due Loan/Advance recovery, immutable source components, deterministic regeneration, extended GL/reversal integration, and company Payroll report foundations. HR-8 delivered configurable appraisals and warnings, effective Promotion/Transfer, Resignation/Termination, immutable Employment evidence, private attachments, and explicit access review. HR-9 delivered Fixed Asset custody issuance, acknowledgement, immutable movement/return/exception evidence, and approved-separation departmental clearance. HR-10 delivered source-reconciled Final Settlement, independent review/approval/posting, reversible GL and financing recovery, bounded Treasury payment/receipt, printable letter, documents, and tenant reconciliation reporting. HR-11 delivered the complete company report catalog/dashboard, private audited CSV/XLSX exports, sensitive-section gates, indexed aggregates, and authorized hierarchy-only Group HR reporting. HR-12 delivered controlled migration/rollback, private source reconciliation, recovery/readiness evidence, security/performance hardening, and pilot Attendance-to-Treasury UAT.
 
 The user confirmed on 2026-07-28 that the application is in active development with no production deployment or production HR data. Until the first production baseline, unreleased migrations may be revised and the local database may be reset/reseeded when useful. This does not relax company isolation, authorization, private-document handling, immutable evidence, audit, accounting integrity, or test requirements. A production-safe migration baseline and rollout controls must be established before first deployment.
 
@@ -82,20 +75,18 @@ The original multi-company foundation, document platform, HR foundation, joining
 
 ### Multi-company foundation
 
-- Six deterministic company records are provisioned idempotently
-- 7-Orbit is the parent of 7-Orbit IT and 7-Orbit Medical Billing
-- YM Construction, BMC, and BMC Trading are independent roots
-- Existing YM Construction identity and supplied legal/tax data are preserved during provisioning
+- Four deterministic independent company records are provisioned idempotently: BMC Construction, YMC Construction, 7 Orbit, and 7 Orbit Medical Billing
+- Each provisioned company has its approved card logo at `public/images/company-logos`
 - Companies with optional parent companies and soft deletion
 - Circular company-hierarchy prevention
 - User-to-company membership with active/inactive access
-- Optional descendant-company access per membership
+- Company access is direct active membership only; legacy descendant-access metadata is not used
 - Filament company tenancy, searchable company switcher, and company registration
 - Super-admin access to every active company
 - Shared module catalog for Documents, HR, Accounts, and Projects
-- Per-company module state (`inherit`, `enabled`, or `disabled`), workflow variant, and settings
-- Root companies have Documents, HR, Accounts, and Projects enabled; 7-Orbit children inherit these states
-- Provisioning does not create memberships or implicitly grant descendant-company access
+- Per-company module state (`enabled` or `disabled`), workflow variant, and settings
+- Each company starts with Documents, HR, Accounts, and Projects enabled independently
+- Provisioning does not create memberships or implicitly grant access to another company
 - Company bank-account management
 - Encrypted account numbers and IBANs with masked display unless the user has the sensitive-data permission
 - One default payroll bank account per company
@@ -455,7 +446,7 @@ The original multi-company foundation, document platform, HR foundation, joining
 - Compensation, Payroll, Financing, Attendance, Leave, and Final Settlement sections retain their existing separate view/amount permissions in addition to report access
 - Every report supports CSV and XLSX through private/no-store streamed responses; XLSX request-temporary files are deleted after streaming
 - Every export records actor, company/root, report, format, row count, and company/group scope in Activitylog
-- Group HR starts from a real parent/root company, recursively includes only its active hierarchy, and requires access to every included company
+- Group HR uses the authorized active-company set and requires access to every included company
 - Group reports explicitly distinguish unique people from company Employment counts and compare status, Attendance, Leave, Payroll cost, Loans/Advances, joiners, and exits
 - Group Payroll and Financing amounts remain hidden/null without their existing sensitive permissions
 - HR reporting creates no synthetic “All Companies” tenant, consolidated transaction company, snapshot ledger, Payroll, Journal, or Treasury data
@@ -513,7 +504,7 @@ The original multi-company foundation, document platform, HR foundation, joining
 - Inter-company transactions create one due-from/due-to pair across two separate books in one database transaction; the preparer cannot approve or post, each company requires a different approver, and both periods/mappings must be valid before either journal posts
 - Related-company Journal Line dimensions support counterparty reconciliation and internal eliminations while keeping each legal-company ledger independent
 - Paired posting and reversal are idempotent, row-locked, fully linked, and rejected atomically when either company side is invalid or out of balance
-- Authorized consolidation starts from a real parent company and active descendants, requires access to every included company, maps accounts by the controlled template/reporting keys, and never creates a synthetic consolidation ledger
+- Authorized consolidation uses the explicit active-company set, requires access to every included company, maps accounts by the controlled template/reporting keys, and never creates a synthetic consolidation ledger
 - Consolidated Trial Balance, Balance Sheet, and P&L include internal due-from/due-to eliminations and explicit mismatch indicators
 - Year-end closing snapshots Revenue/Expense balances with a SHA-256 checksum, requires an independent approver/poster, rechecks the books before posting, transfers the annual result to mapped Retained Earnings, and closes the final period
 - A posted close is immutable; reversal requires an explicitly reasoned authorized period reopen and creates the normal linked reversal instead of editing history
@@ -526,7 +517,7 @@ The original multi-company foundation, document platform, HR foundation, joining
 ### Tests
 
 - PHPUnit tests exist for user/role widgets, profile/settings pages, and activity-resource authorization
-- PHPUnit tests cover company hierarchy, descendant access, inactive access, bank encryption/default selection, module settings, tenant isolation, sensitive-data authorization, and Filament foundation pages
+- PHPUnit tests cover independent company access, inactive access, bank encryption/default selection, module settings, tenant isolation, sensitive-data authorization, and Filament foundation pages
 - PHPUnit tests cover private document creation, checksums, version history, immutable versions, workflow transitions, company isolation, confidential-document filtering, category protection, Filament uploads, and action-level authorization
 - PHPUnit tests cover HR encryption, audit redaction, multi-company Employment, reporting cycles, company isolation, sensitive permissions, Filament creation flows, and Employee/Employment document links
 - PHPUnit tests cover repeatable employee details, primary-contact/account enforcement, encrypted employee bank data, relation-manager permissions, cross-company denial, document visibility, and private HR document uploads
@@ -577,23 +568,11 @@ Use one application and shared database unless a future regulatory, performance,
 
 Company-owned operational data must still be explicitly scoped and authorized. A shared database must never imply shared access.
 
-### Company hierarchy
+### Independent company access
 
-The Company model supports a nullable parent company relationship:
+The confirmed four-company baseline does not expose or use parent/child relationships. Access requires an active direct membership for the selected company; legacy hierarchy fields are retained temporarily for a controlled future schema cleanup only.
 
-```text
-Parent Company
-├── Company A
-│   └── Sub-company A1
-├── Company B
-└── Company C
-```
-
-The hierarchy must prevent circular parent relationships.
-
-Parent access to child-company data is controlled through the user's `can_access_descendants` membership setting. A direct membership alone does not grant descendant access.
-
-Consolidated group reporting is an authorized reporting scope. Do not create a fake "All Companies" database record.
+Consolidated reporting uses the explicit authorized active-company set. Do not create a fake "All Companies" database record.
 
 ### Company context in Filament
 
@@ -611,7 +590,7 @@ Use:
 
 - A shared module catalog
 - Per-company enabled/disabled state
-- Parent-setting inheritance where appropriate
+- Independent per-company configuration
 - Per-company configuration
 - Named workflow variants only when business requirements genuinely differ
 
@@ -846,7 +825,7 @@ For each Filament resource or custom action, record:
 
 - Machine permission key
 - Business-facing label
-- Scope: global, company, descendant companies, or own record
+- Scope: global, company, or own record
 - Whether it exposes sensitive data
 - Roles receiving it by default
 - Whether it requires fresh MFA or a second approver
@@ -1105,7 +1084,7 @@ The plan contains:
 
 The next planning session should confirm:
 
-- Official legal and tax details for the six confirmed companies
+- Official legal and tax details for the four confirmed companies
 - Which admin users may access which companies
 - Live statutory tax/retention/mobilization rules, approval amount limits, opening balances, and production migration cutoff
 - Official customer/vendor/contractor/consultant, Project, Item, UOM, Site, Cost Center, and tax-code master data

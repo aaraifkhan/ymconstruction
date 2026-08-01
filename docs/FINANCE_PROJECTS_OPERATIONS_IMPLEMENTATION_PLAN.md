@@ -81,7 +81,7 @@ As of 2026-07-27:
 
 - Laravel 13, Filament 5, Livewire 4, PHP 8.4, and PHPUnit 12 are in use.
 - The local database is SQLite.
-- Multi-company tenancy, descendant access, module configuration, policies, audit logging, and company bank accounts are implemented.
+- Multi-company tenancy, direct company access, module configuration, policies, audit logging, and company bank accounts are implemented.
 - Private documents with immutable versions, verification, approval, and rejection are implemented.
 - HR, joining letters, effective-dated compensation, and payroll-run workflows are implemented.
 - Existing workflow actions use policies, database transactions, row locks, actor/timestamp evidence, and activity events.
@@ -115,7 +115,7 @@ Not yet confirmed:
 - Whether `BMC Trading` is legally or operationally a child of `BMC`.
 - Whether `7-Orbit` posts its own operational transactions or is a holding/reporting parent only.
 
-Until confirmed, `YM Construction`, `BMC`, and `BMC Trading` must remain independent root companies. Names must never be used to infer parentage.
+The confirmed legal-company baseline is BMC Construction, YMC Construction, 7 Orbit, and 7 Orbit Medical Billing. All four are independent; names must never be used to infer parentage.
 
 Each legal company has its own:
 
@@ -126,7 +126,7 @@ Each legal company has its own:
 - customers, vendors, projects, inventory, payroll postings, and assets;
 - permissions and tenant-isolated operational data.
 
-Parent/descendant access does not merge ledgers. Consolidated reporting is an authorized reporting scope, not a fake “All Companies” transaction tenant.
+Company access never merges ledgers. Consolidated reporting uses the explicit authorized active-company set and is not a fake “All Companies” transaction tenant.
 
 ## Architecture decisions
 
@@ -469,9 +469,7 @@ Turn assumptions into approved accounting and operational rules before schema de
 
 ### Required inputs
 
-- legal names, registration/tax identifiers, currencies, timezones, and hierarchy for all six companies;
-- confirmation whether 7-Orbit parent is transactional or holding/reporting only;
-- confirmation of BMC and BMC Trading relationship;
+- legal names, registration/tax identifiers, currencies, and timezones for the four independent companies;
 - fiscal year and period-closing rules;
 - current Chart of Accounts and opening trial balance per active company;
 - real samples of journal, receipt, payment, contra, purchase, vendor bill, customer bill/running bill, payroll, bank statement, and project-cost reports;
@@ -519,8 +517,8 @@ The business owner approved the recommended configuration-first approach on 2026
 
 | Area | Approved default |
 | --- | --- |
-| Company roots | 7-Orbit is parent only of its two confirmed children; YM Construction, BMC, and BMC Trading remain roots |
-| Transaction capability | All six companies, including 7-Orbit, may post their own transactions |
+| Company topology | BMC Construction, YMC Construction, 7 Orbit, and 7 Orbit Medical Billing are independent companies |
+| Transaction capability | All four companies may post their own transactions |
 | Temporary legal data | Use the confirmed display names as legal names until official details are supplied; registration/tax fields remain null |
 | Currency/timezone | PKR and Asia/Karachi for all six companies unless legal books require otherwise |
 | Monetary precision | Store amounts/quantities with `decimal(19,4)`; display PKR at 2 decimals |

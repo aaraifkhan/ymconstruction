@@ -7,7 +7,6 @@ use App\Models\User;
 use App\Settings\GeneralSettings;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
@@ -54,6 +53,7 @@ class ProductionDataSeeder extends Seeder
             CompanySeeder::class,
             AccountingFoundationSeeder::class,
             FoundationPermissionSeeder::class,
+            DefaultLeaveTypesSeeder::class,
         ]);
 
         $this->seedApplicationSettings();
@@ -63,7 +63,7 @@ class ProductionDataSeeder extends Seeder
     private function seedApplicationSettings(): void
     {
         $settings = app(GeneralSettings::class);
-        $settings->brand_name = 'YM Construction';
+        $settings->brand_name = 'YMC Group Management';
         $settings->primary_color = '#14bf97';
         $settings->save();
     }
@@ -94,7 +94,7 @@ class ProductionDataSeeder extends Seeder
                 [
                     'name' => $definition['name'],
                     'email_verified_at' => $existingUser?->email_verified_at ?? now(),
-                    'password' => $existingUser?->password ?? Hash::make(Str::random(64)),
+                    'password' => $existingUser?->password ?? Hash::make(config('baseline.initial_user_password')),
                 ],
             );
 
@@ -109,13 +109,13 @@ class ProductionDataSeeder extends Seeder
             ->where('email', 'superadmin@gmail.com')
             ->firstOrFail();
         $ymConstruction = Company::query()
-            ->where('slug', 'ym-construction')
+            ->where('slug', 'ymc-construction')
             ->firstOrFail();
 
         $superAdmin->companies()->syncWithoutDetaching([
             $ymConstruction->getKey() => [
                 'is_active' => true,
-                'can_access_descendants' => true,
+                'can_access_descendants' => false,
             ],
         ]);
 

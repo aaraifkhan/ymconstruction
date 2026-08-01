@@ -139,7 +139,12 @@ class PostPayrollRunAction
 
         $lineNumber = $this->componentLine($journal, $entry, $lineNumber, PayrollAccountComponent::BasicSalary, (string) $entry->payable_basic);
         $lineNumber = $this->componentLine($journal, $entry, $lineNumber, PayrollAccountComponent::HouseTravelAllowance, (string) $entry->house_travel_allowance);
+        $lineNumber = $this->componentLine($journal, $entry, $lineNumber, PayrollAccountComponent::FuelAllowance, (string) ($entry->fuel_allowance ?? 0));
+        $lineNumber = $this->componentLine($journal, $entry, $lineNumber, PayrollAccountComponent::MobileAllowance, (string) ($entry->mobile_allowance ?? 0));
+        $lineNumber = $this->componentLine($journal, $entry, $lineNumber, PayrollAccountComponent::InternetAllowance, (string) ($entry->internet_allowance ?? 0));
         $lineNumber = $this->componentLine($journal, $entry, $lineNumber, PayrollAccountComponent::FoodAllowance, (string) $entry->food_allowance);
+        $lineNumber = $this->componentLine($journal, $entry, $lineNumber, PayrollAccountComponent::SiteAllowance, (string) ($entry->site_allowance ?? 0));
+        $lineNumber = $this->componentLine($journal, $entry, $lineNumber, PayrollAccountComponent::ProjectAllowance, (string) ($entry->project_allowance ?? 0));
         $lineNumber = $this->componentLine($journal, $entry, $lineNumber, PayrollAccountComponent::OtherAllowance, (string) $entry->other_allowance);
         $lineNumber = $this->componentLine($journal, $entry, $lineNumber, PayrollAccountComponent::Bonus, (string) ($entry->bonus_amount ?? 0));
         $lineNumber = $this->componentLine($journal, $entry, $lineNumber, PayrollAccountComponent::Incentive, (string) ($entry->incentive_amount ?? 0));

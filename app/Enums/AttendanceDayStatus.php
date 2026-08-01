@@ -6,6 +6,7 @@ enum AttendanceDayStatus: string
 {
     case Present = 'present';
     case Absent = 'absent';
+    case Late = 'late';
     case HalfDay = 'half_day';
     case PaidLeave = 'paid_leave';
     case UnpaidLeave = 'unpaid_leave';

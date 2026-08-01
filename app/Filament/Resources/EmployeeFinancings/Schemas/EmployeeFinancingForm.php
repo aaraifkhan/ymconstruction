@@ -24,7 +24,27 @@ class EmployeeFinancingForm
                             $employment->getKey() => "{$employment->employee_code} — {$employment->employee->full_name}",
                         ])->all())
                     ->searchable()->required(),
-                Select::make('type')->options(EmployeeFinancingType::class)->required(),
+                Select::make('type')->options(EmployeeFinancingType::class)->required()
+                    ->live(),
+                Select::make('sub_category')
+                    ->label('Sub-category')
+                    ->options(fn (callable $get): array => match (EmployeeFinancingType::tryFrom($get('type'))) {
+                        EmployeeFinancingType::Loan => [
+                            'vehicle_loan' => 'Vehicle Loan',
+                            'personal_loan' => 'Personal Loan',
+                            'home_loan' => 'Home Loan',
+                            'business_loan' => 'Business Loan',
+                        ],
+                        EmployeeFinancingType::Advance => [
+                            'salary_advance' => 'Salary Advance',
+                            'medical_advance' => 'Medical Advance',
+                            'education_advance' => 'Education Advance',
+                            'travel_advance' => 'Travel Advance',
+                        ],
+                        default => [],
+                    })
+                    ->helperText('Specific category within the selected type.')
+                    ->searchable(),
                 DatePicker::make('request_date')->default(now())->required(),
                 Textarea::make('purpose')->required()->columnSpanFull(),
                 TextInput::make('principal_amount')->numeric()->minValue(0.0001)->required(),
