@@ -105,4 +105,22 @@ class PortalAccessTest extends TestCase
             ->assertSee('BMC Construction')
             ->assertSee('7 Orbit Medical Billing');
     }
+
+    public function test_unauthenticated_guests_redirect_to_login_when_accessing_admin(): void
+    {
+        $this->get('/admin')
+            ->assertRedirect(route('filament.admin.auth.login'));
+    }
+
+    public function test_unauthenticated_guests_redirect_to_login_when_accessing_portal(): void
+    {
+        $this->get('/portal')
+            ->assertRedirect(route('filament.admin.auth.login'));
+    }
+
+    public function test_login_route_redirects_to_filament_login(): void
+    {
+        $this->get(route('login'))
+            ->assertRedirect(route('filament.admin.auth.login'));
+    }
 }
