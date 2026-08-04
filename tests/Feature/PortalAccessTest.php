@@ -48,10 +48,8 @@ class PortalAccessTest extends TestCase
         $user = User::factory()->create();
 
         Livewire::test(Login::class)
-            ->fillForm([
-                'email' => $user->email,
-                'password' => 'password',
-            ])
+            ->set('data.email', $user->email)
+            ->set('data.password', 'password')
             ->call('authenticate')
             ->assertRedirect(route('portal'));
     }
