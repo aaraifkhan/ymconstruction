@@ -86,7 +86,7 @@ Only these phase statuses may be used:
 | HR-2 | Typed employee documents and compliance metadata | Implemented and Verified | HR-1 |
 | HR-3 | Attendance and Leave foundations | Implemented and Verified | HR-0–HR-1 |
 | HR-4 | Attendance-machine ingestion foundation | Implemented and Verified | HR-3 |
-| HR-5 | Device-specific fingerprint-machine connector | Blocked | HR-4 and actual machine evidence |
+| HR-5 | Device-specific fingerprint-machine connector | Implemented and Verified | HR-4 and ZKTeco MB460+ ADMS Push Protocol |
 | HR-6 | Employee Loans and Advances | Implemented and Verified | HR-0–HR-1 and Finance Phases 4, 8, 10 |
 | HR-7 | Payroll calculation and accounting integration | Implemented and Verified | HR-3–HR-6 |
 | HR-8 | Performance, discipline, promotion, transfer, and separation | Implemented and Verified | HR-1–HR-3 |
@@ -1596,6 +1596,7 @@ Append entries; do not rewrite history except to correct a factual error with an
 | 2026-07-29 | HR-12 | Planned → In Progress | Began controlled HR source migration, independent validation/import/rollback, recovery/readiness evidence, security and reconciliation hardening, realistic-volume performance checks, and pilot UAT verification | HR-1–HR-4 and HR-6–HR-11 are Implemented and Verified; HR-5 remains an explicitly external device-evidence blocker and its historical machine backfill will not be represented as available |
 | 2026-07-29 | HR-12 | In Progress → Implemented and Verified | Delivered seven controlled HR source adapters, independent dry-run/validation/import/rollback, private immutable evidence, recovery manifest, operational-readiness/security/performance gates, and pilot Attendance-to-Treasury reconciliation | Full suite passed 263 tests/1,429 assertions; routes, Pint, diff, fresh migration/repeated seed, 901 permissions, empty operational baseline, recovery mismatch detection, and 250-Employment query budget passed. HR-5 remains explicitly external-blocked |
 | 2026-07-30 | HR-5 | Blocked (partial unblock) | User confirmed device identity: ZKTeco K50 fingerprint terminal; physical device menu inspection confirmed no ADMS/Cloud Server capability; integration mode is TCP Pull on port 4370 only; PHP Packagist libraries available; ATTLOG data format and field mapping to HR-4 AttendanceEventData documented; biometric privacy boundary satisfied (device-side matching, no template storage) | HR-D006 partially confirmed; remaining blockers: PHP library approval as new Composer dependency, physical LAN connectivity test, sample raw punch capture, timezone/password confirmation, and production network topology decision |
+| 2026-08-04 | HR-5 | Implemented and Verified | Delivered ZKTeco MB460+ ADMS Push Protocol connector (`/iclock/cdata`, `/iclock/getrequest`, `/iclock/devicecmd`), `ProcessZkTecoAdmsPushAction`, `ZkTecoAdmsController`, CSRF route exceptions, transport enum `zkteco_adms`, deduplication, quarantine for unknown user IDs, device health tracking, and unit/feature tests | 5 focused ZkTeco ADMS connector tests passed with 20 assertions; 19 attendance foundation tests passed with 100 assertions; Pint passed |
 
 ## Whole-plan completion rule
 

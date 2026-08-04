@@ -11,4 +11,5 @@ enum AttendanceDeviceTransport: string
     case PushWebhook = 'push_webhook';
     case TcpPull = 'tcp_pull';
     case Sftp = 'sftp';
+    case ZkTecoAdms = 'zkteco_adms';
 }
