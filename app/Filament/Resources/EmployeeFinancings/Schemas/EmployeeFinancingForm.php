@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\EmployeeFinancings\Schemas;
 
 use App\Enums\EmployeeFinancingType;
+use App\Filament\Support\CompanyContextField;
 use App\Models\Employment;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
@@ -17,7 +18,7 @@ class EmployeeFinancingForm
     {
         return $schema
             ->components([
-                Select::make('company_id')->relationship('company', 'name')->disabled()->dehydrated(false),
+                CompanyContextField::make(),
                 Select::make('employment_id')
                     ->options(fn (): array => Employment::query()->whereBelongsTo(Filament::getTenant())
                         ->with('employee')->get()->mapWithKeys(fn (Employment $employment): array => [

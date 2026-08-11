@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\AttendanceRules\Schemas;
 
 use App\Enums\MissingPunchTreatment;
+use App\Filament\Support\CompanyContextField;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -15,10 +16,7 @@ class AttendanceRuleForm
     {
         return $schema
             ->components([
-                Select::make('company_id')
-                    ->relationship('company', 'name')
-                    ->disabled()
-                    ->dehydrated(false),
+                CompanyContextField::make(),
                 TextInput::make('name')
                     ->required(),
                 DatePicker::make('effective_from')

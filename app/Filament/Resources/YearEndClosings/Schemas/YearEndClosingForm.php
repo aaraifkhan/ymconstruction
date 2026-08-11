@@ -3,11 +3,14 @@
 namespace App\Filament\Resources\YearEndClosings\Schemas;
 
 use App\Enums\YearEndClosingStatus;
+use App\Filament\Support\CompanyContextField;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
+use Illuminate\Database\Eloquent\Builder;
 
 class YearEndClosingForm
 {
@@ -15,11 +18,9 @@ class YearEndClosingForm
     {
         return $schema
             ->components([
-                Select::make('company_id')
-                    ->relationship('company', 'name')
-                    ->required(),
+                CompanyContextField::make(),
                 Select::make('financial_year_id')
-                    ->relationship('financialYear', 'name')
+                    ->relationship('financialYear', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->whereBelongsTo(Filament::getTenant()))
                     ->required(),
                 TextInput::make('idempotency_key')
                     ->required(),
@@ -35,7 +36,7 @@ class YearEndClosingForm
                 Textarea::make('calculation_snapshot')
                     ->columnSpanFull(),
                 Select::make('retained_earnings_account_id')
-                    ->relationship('retainedEarningsAccount', 'name')
+                    ->relationship('retainedEarningsAccount', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->whereBelongsTo(Filament::getTenant()))
                     ->required(),
                 TextInput::make('prepared_by_id')
                     ->required()

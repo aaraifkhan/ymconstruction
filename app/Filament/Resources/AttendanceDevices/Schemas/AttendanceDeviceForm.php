@@ -4,6 +4,7 @@ namespace App\Filament\Resources\AttendanceDevices\Schemas;
 
 use App\Enums\AttendanceDeviceHealthStatus;
 use App\Enums\AttendanceDeviceTransport;
+use App\Filament\Support\CompanyContextField;
 use App\Models\WorkLocation;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DateTimePicker;
@@ -19,10 +20,7 @@ class AttendanceDeviceForm
     {
         return $schema
             ->components([
-                Select::make('company_id')
-                    ->relationship('company', 'name')
-                    ->disabled()
-                    ->dehydrated(false),
+                CompanyContextField::make(),
                 Select::make('work_location_id')
                     ->options(fn (): array => WorkLocation::query()
                         ->whereBelongsTo(Filament::getTenant())

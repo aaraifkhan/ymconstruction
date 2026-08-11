@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\AttendanceImportRowErrors\Schemas;
 
-use Filament\Forms\Components\Select;
+use App\Filament\Support\CompanyContextField;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
@@ -13,9 +13,7 @@ class AttendanceImportRowErrorForm
     {
         return $schema
             ->components([
-                Select::make('company_id')
-                    ->relationship('company', 'name')
-                    ->required(),
+                CompanyContextField::make(),
                 TextInput::make('attendance_import_batch_id')
                     ->required()
                     ->numeric(),

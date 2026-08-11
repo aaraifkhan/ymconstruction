@@ -4,6 +4,9 @@ namespace App\Filament\Resources\LeaveRequests\Schemas;
 
 use App\Enums\LeavePayrollImpact;
 use App\Enums\LeaveRequestStatus;
+use App\Filament\Support\CompanyContextField;
+use App\Models\Employment;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
@@ -11,6 +14,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Schema;
+use Illuminate\Database\Eloquent\Builder;
 
 class LeaveRequestForm
 {
@@ -18,18 +22,24 @@ class LeaveRequestForm
     {
         return $schema
             ->components([
-                Select::make('company_id')
-                    ->relationship('company', 'name')
-                    ->disabled()
-                    ->dehydrated(false),
+                CompanyContextField::make(),
                 Select::make('employment_id')
-                    ->relationship('employment', 'id')
+                    ->label('Employment')
+                    ->options(fn (): array => Employment::query()
+                        ->whereBelongsTo(Filament::getTenant())
+                        ->with('employee')
+                        ->get()
+                        ->mapWithKeys(fn (Employment $employment): array => [
+                            $employment->getKey() => "{$employment->employee_code} — {$employment->employee?->full_name}",
+                        ])
+                        ->all())
+                    ->searchable()
                     ->required(),
                 Select::make('leave_type_id')
-                    ->relationship('leaveType', 'name')
+                    ->relationship('leaveType', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->whereBelongsTo(Filament::getTenant()))
                     ->required(),
                 Select::make('leave_policy_id')
-                    ->relationship('leavePolicy', 'name')
+                    ->relationship('leavePolicy', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->whereBelongsTo(Filament::getTenant()))
                     ->disabled(),
                 DatePicker::make('starts_on')
                     ->required(),

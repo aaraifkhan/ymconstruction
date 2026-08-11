@@ -3,12 +3,15 @@
 namespace App\Filament\Resources\OpeningBalanceMigrations\Schemas;
 
 use App\Enums\OpeningBalanceMigrationStatus;
+use App\Filament\Support\CompanyContextField;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
+use Illuminate\Database\Eloquent\Builder;
 
 class OpeningBalanceMigrationForm
 {
@@ -16,14 +19,12 @@ class OpeningBalanceMigrationForm
     {
         return $schema
             ->components([
-                Select::make('company_id')
-                    ->relationship('company', 'name')
-                    ->required(),
+                CompanyContextField::make(),
                 Select::make('financial_year_id')
-                    ->relationship('financialYear', 'name')
+                    ->relationship('financialYear', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->whereBelongsTo(Filament::getTenant()))
                     ->required(),
                 Select::make('financial_period_id')
-                    ->relationship('financialPeriod', 'name')
+                    ->relationship('financialPeriod', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->whereBelongsTo(Filament::getTenant()))
                     ->required(),
                 DatePicker::make('opening_date')
                     ->required(),

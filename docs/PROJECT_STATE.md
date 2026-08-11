@@ -91,6 +91,7 @@ The original multi-company foundation, document platform, HR foundation, joining
 - Encrypted account numbers and IBANs with masked display unless the user has the sensitive-data permission
 - One default payroll bank account per company
 - Company membership management from the company resource
+- `CompanyContextField` support helper across all Filament resource form schemas to ensure the Company field is always automatically selected from active tenant context, locked/read-only to prevent cross-company error, and query-isolated, with dependent dropdowns scoped to the active tenant
 - Activity logging for the new foundation records and membership changes
 
 ### Shared operational master data and Projects foundation

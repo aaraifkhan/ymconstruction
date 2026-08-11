@@ -2,8 +2,8 @@
 
 namespace App\Filament\Resources\WorkCalendars\Schemas;
 
+use App\Filament\Support\CompanyContextField;
 use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -15,10 +15,7 @@ class WorkCalendarForm
     {
         return $schema
             ->components([
-                Select::make('company_id')
-                    ->relationship('company', 'name')
-                    ->disabled()
-                    ->dehydrated(false),
+                CompanyContextField::make(),
                 TextInput::make('code')
                     ->required(),
                 TextInput::make('name')

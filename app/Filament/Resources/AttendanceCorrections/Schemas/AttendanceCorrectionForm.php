@@ -3,6 +3,9 @@
 namespace App\Filament\Resources\AttendanceCorrections\Schemas;
 
 use App\Enums\AttendanceCorrectionStatus;
+use App\Filament\Support\CompanyContextField;
+use App\Models\AttendanceRecord;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Select;
@@ -15,12 +18,19 @@ class AttendanceCorrectionForm
     {
         return $schema
             ->components([
-                Select::make('company_id')
-                    ->relationship('company', 'name')
-                    ->disabled()
-                    ->dehydrated(false),
+                CompanyContextField::make(),
                 Select::make('attendance_record_id')
-                    ->relationship('attendanceRecord', 'id')
+                    ->label('Attendance record')
+                    ->options(fn (): array => AttendanceRecord::query()
+                        ->whereBelongsTo(Filament::getTenant())
+                        ->with(['employment.employee'])
+                        ->latest('attendance_date')
+                        ->get()
+                        ->mapWithKeys(fn (AttendanceRecord $record): array => [
+                            $record->getKey() => "{$record->attendance_date?->toDateString()} — {$record->employment?->employee?->full_name} ({$record->employment?->employee_code})",
+                        ])
+                        ->all())
+                    ->searchable()
                     ->required(),
                 Select::make('status')
                     ->options(AttendanceCorrectionStatus::class)

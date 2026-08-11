@@ -4,6 +4,7 @@ namespace App\Filament\Resources\LeaveTypes\Schemas;
 
 use App\Enums\LeavePayrollImpact;
 use App\Enums\LeaveUnit;
+use App\Filament\Support\CompanyContextField;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -15,10 +16,7 @@ class LeaveTypeForm
     {
         return $schema
             ->components([
-                Select::make('company_id')
-                    ->relationship('company', 'name')
-                    ->disabled()
-                    ->dehydrated(false),
+                CompanyContextField::make(),
                 TextInput::make('code')
                     ->required(),
                 TextInput::make('name')

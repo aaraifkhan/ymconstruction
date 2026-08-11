@@ -4,6 +4,10 @@ namespace App\Filament\Resources\AttendanceRawEvents\Schemas;
 
 use App\Enums\AttendancePunchDirection;
 use App\Enums\AttendanceRawEventStatus;
+use App\Filament\Support\CompanyContextField;
+use App\Models\AttendanceDevice;
+use App\Models\Employment;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -16,18 +20,30 @@ class AttendanceRawEventForm
     {
         return $schema
             ->components([
-                Select::make('company_id')
-                    ->relationship('company', 'name')
-                    ->required(),
+                CompanyContextField::make(),
                 Select::make('attendance_device_id')
-                    ->relationship('attendanceDevice', 'name')
+                    ->options(fn (): array => AttendanceDevice::query()
+                        ->whereBelongsTo(Filament::getTenant())
+                        ->orderBy('name')
+                        ->pluck('name', 'id')
+                        ->all())
+                    ->searchable()
                     ->required(),
                 TextInput::make('attendance_import_batch_id')
                     ->numeric(),
                 TextInput::make('attendance_device_user_mapping_id')
                     ->numeric(),
                 Select::make('employment_id')
-                    ->relationship('employment', 'id'),
+                    ->label('Employment')
+                    ->options(fn (): array => Employment::query()
+                        ->whereBelongsTo(Filament::getTenant())
+                        ->with('employee')
+                        ->get()
+                        ->mapWithKeys(fn (Employment $employment): array => [
+                            $employment->getKey() => "{$employment->employee_code} — {$employment->employee?->full_name}",
+                        ])
+                        ->all())
+                    ->searchable(),
                 TextInput::make('external_user_id')
                     ->required(),
                 TextInput::make('original_punched_at_local')

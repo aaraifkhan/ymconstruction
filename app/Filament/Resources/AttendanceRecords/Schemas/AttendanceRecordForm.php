@@ -4,12 +4,16 @@ namespace App\Filament\Resources\AttendanceRecords\Schemas;
 
 use App\Enums\AttendanceDayStatus;
 use App\Enums\AttendanceRecordState;
+use App\Filament\Support\CompanyContextField;
+use App\Models\Employment;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
+use Illuminate\Database\Eloquent\Builder;
 
 class AttendanceRecordForm
 {
@@ -17,18 +21,24 @@ class AttendanceRecordForm
     {
         return $schema
             ->components([
-                Select::make('company_id')
-                    ->relationship('company', 'name')
-                    ->disabled()
-                    ->dehydrated(false),
+                CompanyContextField::make(),
                 Select::make('employment_id')
-                    ->relationship('employment', 'id')
+                    ->label('Employment')
+                    ->options(fn (): array => Employment::query()
+                        ->whereBelongsTo(Filament::getTenant())
+                        ->with('employee')
+                        ->get()
+                        ->mapWithKeys(fn (Employment $employment): array => [
+                            $employment->getKey() => "{$employment->employee_code} — {$employment->employee?->full_name}",
+                        ])
+                        ->all())
+                    ->searchable()
                     ->required(),
                 Select::make('shift_assignment_id')
-                    ->relationship('shiftAssignment', 'id')
+                    ->relationship('shiftAssignment', 'id', modifyQueryUsing: fn (Builder $query): Builder => $query->whereBelongsTo(Filament::getTenant()))
                     ->disabled(),
                 Select::make('attendance_rule_id')
-                    ->relationship('attendanceRule', 'name')
+                    ->relationship('attendanceRule', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->whereBelongsTo(Filament::getTenant()))
                     ->disabled(),
                 DatePicker::make('attendance_date')
                     ->required(),

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\AttendanceDeviceUserMappings\Schemas;
 
+use App\Filament\Support\CompanyContextField;
 use App\Models\AttendanceDevice;
 use App\Models\Employment;
 use Filament\Facades\Filament;
@@ -17,10 +18,7 @@ class AttendanceDeviceUserMappingForm
     {
         return $schema
             ->components([
-                Select::make('company_id')
-                    ->relationship('company', 'name')
-                    ->disabled()
-                    ->dehydrated(false),
+                CompanyContextField::make(),
                 Select::make('attendance_device_id')
                     ->options(fn (): array => AttendanceDevice::query()
                         ->whereBelongsTo(Filament::getTenant())

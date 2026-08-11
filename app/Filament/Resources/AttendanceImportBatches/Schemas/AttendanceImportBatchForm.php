@@ -4,11 +4,14 @@ namespace App\Filament\Resources\AttendanceImportBatches\Schemas;
 
 use App\Enums\AttendanceImportBatchStatus;
 use App\Enums\AttendanceImportSource;
+use App\Filament\Support\CompanyContextField;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
+use Illuminate\Database\Eloquent\Builder;
 
 class AttendanceImportBatchForm
 {
@@ -16,11 +19,9 @@ class AttendanceImportBatchForm
     {
         return $schema
             ->components([
-                Select::make('company_id')
-                    ->relationship('company', 'name')
-                    ->required(),
+                CompanyContextField::make(),
                 Select::make('attendance_device_id')
-                    ->relationship('attendanceDevice', 'name'),
+                    ->relationship('attendanceDevice', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->whereBelongsTo(Filament::getTenant())),
                 Select::make('source')
                     ->options(AttendanceImportSource::class)
                     ->required(),

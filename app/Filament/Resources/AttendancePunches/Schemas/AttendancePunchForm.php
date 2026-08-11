@@ -4,6 +4,9 @@ namespace App\Filament\Resources\AttendancePunches\Schemas;
 
 use App\Enums\AttendancePunchDirection;
 use App\Enums\AttendancePunchStatus;
+use App\Filament\Support\CompanyContextField;
+use App\Models\Employment;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -15,12 +18,18 @@ class AttendancePunchForm
     {
         return $schema
             ->components([
-                Select::make('company_id')
-                    ->relationship('company', 'name')
-                    ->disabled()
-                    ->dehydrated(false),
+                CompanyContextField::make(),
                 Select::make('employment_id')
-                    ->relationship('employment', 'id')
+                    ->label('Employment')
+                    ->options(fn (): array => Employment::query()
+                        ->whereBelongsTo(Filament::getTenant())
+                        ->with('employee')
+                        ->get()
+                        ->mapWithKeys(fn (Employment $employment): array => [
+                            $employment->getKey() => "{$employment->employee_code} — {$employment->employee?->full_name}",
+                        ])
+                        ->all())
+                    ->searchable()
                     ->required(),
                 DateTimePicker::make('punched_at')
                     ->required(),

@@ -2,10 +2,10 @@
 
 namespace App\Filament\Resources\Users\Schemas;
 
-use Filament\Schemas\Schema;
-use Filament\Schemas\Components\Section;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
 
 class UserInfolist
 {
@@ -32,7 +32,7 @@ class UserInfolist
                                     ->icon('heroicon-m-check-badge'),
                             ]),
                     ])
-                    ->columnSpanFull()
+                    ->columnSpanFull(),
             ]);
     }
 }

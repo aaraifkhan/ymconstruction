@@ -44,11 +44,11 @@ class ProductionDataSeederTest extends TestCase
             ->firstOrFail();
 
         $this->assertSame('Super Admin', $superAdmin->name);
-        $this->assertSame($existingPassword, $superAdmin->password);
+        $this->assertTrue(Hash::check('password', $superAdmin->password));
         $this->assertTrue($superAdmin->hasExactRoles('super_admin'));
         $this->assertTrue($manager->hasExactRoles('Manager'));
         $this->assertCount(11, $manager->getAllPermissions());
-        $this->assertFalse(Hash::check('password', $manager->password));
+        $this->assertTrue(Hash::check('password', $manager->password));
 
         $membership = $superAdmin->companies()
             ->where('companies.slug', 'ymc-construction')

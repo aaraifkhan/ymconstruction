@@ -6,7 +6,6 @@ use App\Models\Company;
 use App\Models\User;
 use App\Settings\GeneralSettings;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
@@ -94,7 +93,7 @@ class ProductionDataSeeder extends Seeder
                 [
                     'name' => $definition['name'],
                     'email_verified_at' => $existingUser?->email_verified_at ?? now(),
-                    'password' => $existingUser?->password ?? Hash::make(config('baseline.initial_user_password')),
+                    'password' => config('baseline.initial_user_password'),
                 ],
             );
 

@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\WorkShifts\Schemas;
 
-use Filament\Forms\Components\Select;
+use App\Filament\Support\CompanyContextField;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\TimePicker;
 use Filament\Forms\Components\Toggle;
@@ -14,10 +14,7 @@ class WorkShiftForm
     {
         return $schema
             ->components([
-                Select::make('company_id')
-                    ->relationship('company', 'name')
-                    ->disabled()
-                    ->dehydrated(false),
+                CompanyContextField::make(),
                 TextInput::make('code')
                     ->required(),
                 TextInput::make('name')
