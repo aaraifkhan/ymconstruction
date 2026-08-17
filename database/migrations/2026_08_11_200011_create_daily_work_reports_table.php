@@ -38,7 +38,7 @@ return new class extends Migration
             $table->softDeletes();
 
             $table->unique(['employment_id', 'report_date']);
-            $table->index(['company_id', 'report_date', 'submission_status']);
+            $table->index(['company_id', 'report_date', 'submission_status'], 'dwr_company_date_status_idx');
             $table->index(['department_team_id', 'report_date']);
         });
     }
