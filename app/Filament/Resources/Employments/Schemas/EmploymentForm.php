@@ -17,6 +17,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\TimePicker;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Gate;
@@ -63,6 +64,8 @@ class EmploymentForm
                         ->dehydrated(false),
                     DatePicker::make('joining_date')
                         ->label('Date of joining')
+                        ->minDate('2000-01-01')
+                        ->maxDate(now()->addYear())
                         ->required(),
                     DatePicker::make('ending_date')
                         ->label('Ending date')
@@ -76,21 +79,44 @@ class EmploymentForm
                                 ->where('is_active', true),
                         )
                         ->searchable()
-                        ->preload(),
+                        ->preload()
+                        ->live(),
                     Select::make('designation_id')
-                        ->relationship(
-                            name: 'designation',
-                            titleAttribute: 'name',
-                            modifyQueryUsing: fn (Builder $query): Builder => $query
-                                ->whereBelongsTo(Filament::getTenant())
-                                ->where('is_active', true),
-                        )
+                        ->label('Designation')
+                        ->options(function (Get $get): array {
+                            $tenant = Filament::getTenant();
+
+                            if ($tenant === null) {
+                                return [];
+                            }
+
+                            $departmentId = $get('department_id');
+
+                            return $tenant->designations()
+                                ->where('is_active', true)
+                                ->when(
+                                    filled($departmentId),
+                                    fn (Builder $query): Builder => $query->where(
+                                        fn (Builder $subQuery): Builder => $subQuery
+                                            ->where('department_id', $departmentId)
+                                            ->orWhereNull('department_id'),
+                                    ),
+                                )
+                                ->orderBy('name')
+                                ->pluck('name', 'id')
+                                ->all();
+                        })
                         ->searchable()
                         ->preload(),
                     Select::make('reporting_to_employment_id')
                         ->label('Reporting to')
                         ->options(fn (?Employment $record): array => Employment::query()
                             ->whereBelongsTo(Filament::getTenant())
+                            ->whereNotIn('employment_status', [
+                                EmploymentStatus::Resigned->value,
+                                EmploymentStatus::Terminated->value,
+                                EmploymentStatus::Ended->value,
+                            ])
                             ->when($record !== null, fn (Builder $query): Builder => $query->whereKeyNot($record))
                             ->with('employee')
                             ->get()
@@ -99,7 +125,8 @@ class EmploymentForm
                             ])
                             ->all())
                         ->searchable()
-                        ->preload(),
+                        ->preload()
+                        ->placeholder('Select reporting manager (optional)'),
                     Select::make('employment_category')
                         ->label('Employee category')
                         ->options(collect(EmploymentCategory::cases())->mapWithKeys(

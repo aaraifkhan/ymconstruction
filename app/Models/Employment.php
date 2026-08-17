@@ -256,6 +256,21 @@ class Employment extends Model
         return $this->hasMany(FinalSettlement::class);
     }
 
+    public function teamMemberships(): HasMany
+    {
+        return $this->hasMany(DepartmentTeamMember::class);
+    }
+
+    public function assignedTasks(): HasMany
+    {
+        return $this->hasMany(Task::class, 'assigned_to_employment_id');
+    }
+
+    public function dailyReports(): HasMany
+    {
+        return $this->hasMany(DailyWorkReport::class);
+    }
+
     public function recordApprovedChangeContext(string $eventType, CarbonInterface $effectiveOn, User $actor): void
     {
         $this->approvedChangeEventType = $eventType;
@@ -403,6 +418,12 @@ class Employment extends Model
 
     private function validateLifecycle(): void
     {
+        if ($this->joining_date !== null && $this->joining_date->year < 2000) {
+            throw ValidationException::withMessages([
+                'joining_date' => 'The joining date cannot be earlier than the year 2000.',
+            ]);
+        }
+
         if ($this->probation_start_date !== null
             && $this->joining_date !== null
             && $this->probation_start_date->lt($this->joining_date)) {
@@ -415,6 +436,14 @@ class Employment extends Model
             && ($this->probation_start_date === null || $this->probation_end_date->lt($this->probation_start_date))) {
             throw ValidationException::withMessages([
                 'probation_end_date' => 'The probation end date requires a start date and must be on or after it.',
+            ]);
+        }
+
+        if ($this->ending_date !== null
+            && $this->probation_start_date !== null
+            && $this->ending_date->lt($this->probation_start_date)) {
+            throw ValidationException::withMessages([
+                'ending_date' => 'The ending date cannot be before the probation start date.',
             ]);
         }
 

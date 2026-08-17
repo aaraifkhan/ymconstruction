@@ -663,6 +663,30 @@ class FoundationPermissionSeeder extends Seeder
             'View:HrRecoveryManifest',
         );
 
+        // Department Teams, Tasks & Daily Work Reports permissions
+        foreach (['DepartmentTeam', 'Task', 'DailyWorkReport'] as $subject) {
+            foreach (['ViewAny', 'View', 'Create', 'Update', 'Delete', 'Restore', 'RestoreAny'] as $ability) {
+                $permissions[] = "{$ability}:{$subject}";
+            }
+        }
+        array_push(
+            $permissions,
+            'ViewAll:Task',
+            'ManageAll:Task',
+            'Submit:Task',
+            'Review:Task',
+            'ApproveFinal:Task',
+            'RequestRevision:Task',
+            'ViewAll:DailyWorkReport',
+            'Review:DailyWorkReport',
+            'Acknowledge:DailyWorkReport',
+            'ViewDashboard:DepartmentHead',
+            'ViewDashboard:TeamLead',
+            'ViewDashboard:Employee',
+            'ViewAnalytics:DepartmentWork',
+            'Export:WorkReports',
+        );
+
         foreach ($permissions as $permission) {
             Permission::findOrCreate($permission, 'web');
         }

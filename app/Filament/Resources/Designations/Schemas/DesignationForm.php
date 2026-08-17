@@ -8,6 +8,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Validation\Rules\Unique;
 
 class DesignationForm
@@ -39,6 +40,19 @@ class DesignationForm
                                     Filament::getTenant()?->getKey(),
                                 ),
                             ),
+                        Select::make('department_id')
+                            ->label('Department')
+                            ->relationship(
+                                name: 'department',
+                                titleAttribute: 'name',
+                                modifyQueryUsing: fn (Builder $query): Builder => $query
+                                    ->whereBelongsTo(Filament::getTenant())
+                                    ->where('is_active', true),
+                            )
+                            ->searchable()
+                            ->preload()
+                            ->nullable()
+                            ->helperText('Optional: Link to a specific department or leave blank for company-wide designation.'),
                         Textarea::make('description')
                             ->rows(3)
                             ->columnSpanFull(),

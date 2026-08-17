@@ -17,6 +17,7 @@ class DesignationInfolist
                     ->schema([
                         TextEntry::make('name'),
                         TextEntry::make('code')->badge(),
+                        TextEntry::make('department.name')->label('Department')->placeholder('Company-wide'),
                         IconEntry::make('is_active')->boolean(),
                         TextEntry::make('description')->placeholder('—')->columnSpanFull(),
                     ])

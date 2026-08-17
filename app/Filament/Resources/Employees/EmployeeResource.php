@@ -7,6 +7,7 @@ use App\Filament\Resources\Employees\Pages\EditEmployee;
 use App\Filament\Resources\Employees\Pages\ListEmployees;
 use App\Filament\Resources\Employees\Pages\ViewEmployee;
 use App\Filament\Resources\Employees\RelationManagers\BankAccountsRelationManager;
+use App\Filament\Resources\Employees\RelationManagers\CompensationsRelationManager;
 use App\Filament\Resources\Employees\RelationManagers\DocumentsRelationManager;
 use App\Filament\Resources\Employees\RelationManagers\EmergencyContactsRelationManager;
 use App\Filament\Resources\Employees\RelationManagers\ExperiencesRelationManager;
@@ -54,6 +55,7 @@ class EmployeeResource extends Resource
     public static function getRelations(): array
     {
         return [
+            CompensationsRelationManager::class,
             EmergencyContactsRelationManager::class,
             QualificationsRelationManager::class,
             ExperiencesRelationManager::class,

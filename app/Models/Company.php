@@ -232,6 +232,21 @@ class Company extends Model
         return $this->hasMany(FinalSettlement::class);
     }
 
+    public function departmentTeams(): HasMany
+    {
+        return $this->hasMany(DepartmentTeam::class);
+    }
+
+    public function tasks(): HasMany
+    {
+        return $this->hasMany(Task::class);
+    }
+
+    public function dailyWorkReports(): HasMany
+    {
+        return $this->hasMany(DailyWorkReport::class);
+    }
+
     public function finalSettlementLines(): HasMany
     {
         return $this->hasMany(FinalSettlementLine::class);

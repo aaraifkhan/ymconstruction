@@ -48,6 +48,11 @@ class Department extends Model
         return $this->hasMany(self::class, 'parent_department_id');
     }
 
+    public function teams(): HasMany
+    {
+        return $this->hasMany(DepartmentTeam::class);
+    }
+
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()

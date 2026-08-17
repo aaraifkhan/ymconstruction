@@ -18,7 +18,9 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\TimePicker;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Gate;
 
 class EmployeeForm
@@ -38,6 +40,7 @@ class EmployeeForm
                         ->directory('employees/photos')
                         ->maxSize(2048)
                         ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
+                        ->rules(['nullable', 'image', 'max:2048'])
                         ->helperText('Max 2 MB. JPEG, PNG, or WebP.')
                         ->columnSpanFull()
                         ->visible(fn (string $operation, ?Employee $record): bool => self::canManageSensitive($operation, $record)),
@@ -82,7 +85,11 @@ class EmployeeForm
                         ->placeholder('Assigned automatically')
                         ->disabled()
                         ->dehydrated(false),
-                    DatePicker::make('employment_joining_date')->label('Date of joining')->required(),
+                    DatePicker::make('employment_joining_date')
+                        ->label('Date of joining')
+                        ->minDate('2000-01-01')
+                        ->maxDate(now()->addYear())
+                        ->required(),
                     Select::make('employment_department_id')
                         ->label('Department')
                         ->options(fn (): array => Filament::getTenant()?->departments()
@@ -91,20 +98,44 @@ class EmployeeForm
                             ->pluck('name', 'id')
                             ->all() ?? [])
                         ->searchable()
-                        ->preload(),
+                        ->preload()
+                        ->live(),
                     Select::make('employment_designation_id')
                         ->label('Designation')
-                        ->options(fn (): array => Filament::getTenant()?->designations()
-                            ->where('is_active', true)
-                            ->orderBy('name')
-                            ->pluck('name', 'id')
-                            ->all() ?? [])
+                        ->options(function (Get $get): array {
+                            $tenant = Filament::getTenant();
+
+                            if ($tenant === null) {
+                                return [];
+                            }
+
+                            $departmentId = $get('employment_department_id');
+
+                            return $tenant->designations()
+                                ->where('is_active', true)
+                                ->when(
+                                    filled($departmentId),
+                                    fn (Builder $query): Builder => $query->where(
+                                        fn (Builder $subQuery): Builder => $subQuery
+                                            ->where('department_id', $departmentId)
+                                            ->orWhereNull('department_id'),
+                                    ),
+                                )
+                                ->orderBy('name')
+                                ->pluck('name', 'id')
+                                ->all();
+                        })
                         ->searchable()
                         ->preload(),
                     Select::make('employment_reporting_to_employment_id')
                         ->label('Reporting to')
                         ->options(fn (): array => Employment::query()
                             ->whereBelongsTo(Filament::getTenant())
+                            ->whereNotIn('employment_status', [
+                                EmploymentStatus::Resigned->value,
+                                EmploymentStatus::Terminated->value,
+                                EmploymentStatus::Ended->value,
+                            ])
                             ->with('employee')
                             ->get()
                             ->mapWithKeys(fn (Employment $employment): array => [
@@ -112,7 +143,8 @@ class EmployeeForm
                             ])
                             ->all())
                         ->searchable()
-                        ->preload(),
+                        ->preload()
+                        ->placeholder('Select reporting manager (optional)'),
                     Select::make('employment_employment_category')
                         ->label('Employee category')
                         ->options(collect(EmploymentCategory::cases())->mapWithKeys(
