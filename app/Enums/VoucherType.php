@@ -2,7 +2,9 @@
 
 namespace App\Enums;
 
-enum VoucherType: string
+use Filament\Support\Contracts\HasLabel;
+
+enum VoucherType: string implements HasLabel
 {
     case Journal = 'journal';
     case Payment = 'payment';
@@ -37,5 +39,30 @@ enum VoucherType: string
             self::Reversal => 'REV',
             self::InterCompany => 'IC',
         };
+    }
+
+    public function getLabel(): string
+    {
+        return match ($this) {
+            self::Journal => 'Journal Voucher',
+            self::Payment => 'Payment Voucher',
+            self::Receipt => 'Receipt Voucher',
+            self::Contra => 'Contra Voucher',
+            self::Purchase => 'Purchase Voucher',
+            self::Sales => 'Sales Invoice Voucher',
+            self::DebitNote => 'Debit Note',
+            self::CreditNote => 'Credit Note',
+            self::OpeningBalance => 'Opening Balance Voucher',
+            self::Payroll => 'Payroll Voucher',
+            self::Depreciation => 'Depreciation Voucher',
+            self::InventoryAdjustment => 'Inventory Adjustment',
+            self::Reversal => 'Reversal Voucher',
+            self::InterCompany => 'Inter-Company Voucher',
+        };
+    }
+
+    public function label(): string
+    {
+        return $this->getLabel();
     }
 }

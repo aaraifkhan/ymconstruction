@@ -247,6 +247,17 @@ The original multi-company foundation, document platform, HR foundation, joining
 - Verified with 9 focused tests/61 assertions, 26 focused-adjacent tests/137 assertions, and the complete 186-test/910-assertion suite
 - No Customer Invoice, line, adjustment, Sales sequence, or Customer receipt allocation exists locally because no approved live source data was supplied
 
+### Operational Expenses, Petty Cash, and Group Expense Management
+
+- **COA Operational Mapping & Templates (Phase A)**: Added standard operational categories (`ExpenseCategory`, `ExpensePaymentMethod`), mapped system keys for `SitePettyCash` (1112), `DirectorCashAdvance` (1113), `DirectorLoan` (2220), `StaffReimbursementPayable` (2145), `RentalPayable` (2180), and tender/bidding accounts `5050` through `5058`.
+- **Daily Cash & Bank Position Report (Phase B)**: Replicates the executive 5-fund statement from `Daily Income & Expense Statement.xlsx` showing opening balance, itemized cash/bank receipts, itemized operational payments, and closing balances across all company funds with print support.
+- **Quick Expense Entry (Phase C)**: Fast operational voucher creation with smart category defaults, automatic liability routing for director funding (`2220 Director Loan`) and staff out-of-pocket claims (`2145 Staff Payable`), shared company tagging, and mandatory project selection for direct site costs.
+- **Petty Cash Register & Reconciliation (Phase D)**: Chronological petty cash ledger matching `Petty Cash FY 26-27.xlsx` with running balances, top-up modal from director or bank transfer, quick disbursement, and independent physical cash count reconciliation recording expected system balance, on-account held cash, physical counted cash, and variance.
+- **Director Expense & Bidding Views (Phase E)**: Dedicated Director Current Account ledger tracking personal company funding vs repayments/reimbursements, and Bidding & Tender ledger tracking pre-award costs (`5050-5058`) with action to capitalize bidding expenses into awarded project direct costs (`7000` series).
+- **Project / Phase Expense Ledger (Phase F)**: Project-specific construction cost reporting grouping expenses into Materials (Cement, Steel, Sand, Crush, Bricks, etc.), Labor & Equipment (Wages, Machinery Rental, Excavation, Shuttering), and Site Overheads (Safety, Utilities, Security, Misc).
+- **Monthly/FY Expense Summary Book (Phase G)**: Executive roll-up replicating the 10-sheet structure of `Expense Book Aug-26.xlsx` summarizing Head Office Expenses, Bidding Expenses, Project Direct Costs, Shared Costs, and Funding Sources breakdown (Cash, Bank, Petty Cash, Director Loan, Staff Payables).
+- **Shared Cost Allocation Automation (Phase H)**: Balanced multi-company expense distribution where the paying company records its own share plus inter-company receivables (`1197 Due from Related Companies`), and recipient sister companies record their share plus reciprocal payables (`2195 Due to Related Companies`).
+
 ### Authentication and user management
 
 - Filament admin panel at the configured `/admin` path

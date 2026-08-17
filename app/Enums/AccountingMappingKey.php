@@ -25,4 +25,9 @@ enum AccountingMappingKey: string
     case DueToRelatedCompanies = 'due_to_related_companies';
     case RetainedEarnings = 'retained_earnings';
     case CurrentYearResult = 'current_year_result';
+    case SitePettyCash = 'site_petty_cash';
+    case DirectorCashAdvance = 'director_cash_advance';
+    case DirectorLoan = 'director_loan';
+    case StaffReimbursementPayable = 'staff_reimbursement_payable';
+    case RentalPayable = 'rental_payable';
 }
