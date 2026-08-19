@@ -5,6 +5,7 @@ namespace App\Filament\Pages;
 use App\Actions\Accounting\AllocateSharedOperatingExpenseAction;
 use App\Enums\ExpenseCategory;
 use App\Enums\ExpensePaymentMethod;
+use App\Enums\JournalStatus;
 use App\Models\Company;
 use App\Models\CompanyBankAccount;
 use App\Models\JournalEntry;
@@ -18,15 +19,25 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\Alignment;
+use Filament\Support\Enums\FontFamily;
+use Filament\Support\Enums\FontWeight;
 use Filament\Support\Icons\Heroicon;
-use Illuminate\Database\Eloquent\Collection;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Concerns\InteractsWithTable;
+use Filament\Tables\Contracts\HasTable;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Table;
 
-class SharedCostAllocationPage extends Page
+class SharedCostAllocationPage extends Page implements HasTable
 {
+    use InteractsWithTable;
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArrowsRightLeft;
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Accounting';
+    protected static \UnitEnum|string|null $navigationGroup = 'Accounts Management';
 
     protected static ?string $navigationLabel = 'Shared Cost Allocation';
 
@@ -66,44 +77,67 @@ class SharedCostAllocationPage extends Page
         return $form
             ->statePath('data')
             ->schema([
-                DatePicker::make('date')->label('Transaction Date')->default(today()->toDateString())->required(),
-                Select::make('category')
-                    ->label('Expense Head')
-                    ->options(collect(ExpenseCategory::cases())->mapWithKeys(fn (ExpenseCategory $c) => [$c->value => $c->getLabel()]))
-                    ->searchable()
-                    ->required(),
-                Select::make('payment_method')
-                    ->label('Paid Via (Fund Source)')
-                    ->options(collect(ExpensePaymentMethod::cases())->mapWithKeys(fn (ExpensePaymentMethod $m) => [$m->value => $m->getLabel()]))
-                    ->live()
-                    ->required(),
-                Select::make('company_bank_account_id')
-                    ->label('Company Bank Account')
-                    ->options(fn () => CompanyBankAccount::query()->where('company_id', Filament::getTenant()?->getKey())->pluck('bank_name', 'id'))
-                    ->visible(fn ($get) => $get('payment_method') === ExpensePaymentMethod::Bank->value)
-                    ->required(fn ($get) => $get('payment_method') === ExpensePaymentMethod::Bank->value),
-                TextInput::make('total_amount')->label('Total Bill / Invoice Amount (PKR)')->numeric()->minValue(0.01)->prefix('PKR')->required(),
-                Textarea::make('description')->label('Memo / Narration')->required()->columnSpanFull(),
-
-                Repeater::make('shares')
-                    ->label('Inter-company Cost Share Breakdown')
+                Section::make('Multi-Company Shared Expense Split')
+                    ->description('Enter head office or joint expenses (e.g. utility bills, rent, internet) and allocate cost percentages/amounts across group entities.')
+                    ->columns(3)
                     ->schema([
-                        Select::make('company_id')
-                            ->label('Entity')
-                            ->options(fn () => Company::query()->where('is_active', true)->pluck('name', 'id'))
-                            ->disabled()
+                        DatePicker::make('date')
+                            ->label('Transaction Date')
+                            ->default(today()->toDateString())
                             ->required(),
-                        TextInput::make('amount')
-                            ->label('Share Amount (PKR)')
+
+                        Select::make('category')
+                            ->label('Expense Head / Category')
+                            ->options(collect(ExpenseCategory::cases())->mapWithKeys(fn (ExpenseCategory $c) => [$c->value => $c->getLabel()]))
+                            ->searchable()
+                            ->required(),
+
+                        TextInput::make('total_amount')
+                            ->label('Total Invoice / Bill Amount (PKR)')
                             ->numeric()
-                            ->minValue(0)
+                            ->minValue(0.01)
                             ->prefix('PKR')
                             ->required(),
-                    ])
-                    ->columns(2)
-                    ->addable(false)
-                    ->deletable(false)
-                    ->columnSpanFull(),
+
+                        Select::make('payment_method')
+                            ->label('Paid Via (Fund Source)')
+                            ->options(collect(ExpensePaymentMethod::cases())->mapWithKeys(fn (ExpensePaymentMethod $m) => [$m->value => $m->getLabel()]))
+                            ->live()
+                            ->required(),
+
+                        Select::make('company_bank_account_id')
+                            ->label('Company Bank Account')
+                            ->options(fn () => CompanyBankAccount::query()->where('company_id', Filament::getTenant()?->getKey())->pluck('bank_name', 'id'))
+                            ->visible(fn ($get) => $get('payment_method') === ExpensePaymentMethod::Bank->value)
+                            ->required(fn ($get) => $get('payment_method') === ExpensePaymentMethod::Bank->value)
+                            ->searchable(),
+
+                        Textarea::make('description')
+                            ->label('Memo / Narration')
+                            ->placeholder('e.g. Head Office monthly electricity bill split for July')
+                            ->required()
+                            ->columnSpanFull(),
+
+                        Repeater::make('shares')
+                            ->label('Inter-company Cost Share Breakdown')
+                            ->schema([
+                                Select::make('company_id')
+                                    ->label('Entity')
+                                    ->options(fn () => Company::query()->where('is_active', true)->pluck('name', 'id'))
+                                    ->disabled()
+                                    ->required(),
+                                TextInput::make('amount')
+                                    ->label('Share Amount (PKR)')
+                                    ->numeric()
+                                    ->minValue(0)
+                                    ->prefix('PKR')
+                                    ->required(),
+                            ])
+                            ->columns(2)
+                            ->addable(false)
+                            ->deletable(false)
+                            ->columnSpanFull(),
+                    ]),
             ]);
     }
 
@@ -139,20 +173,76 @@ class SharedCostAllocationPage extends Page
         $this->mount();
     }
 
-    /** @return Collection<int, JournalEntry> */
-    public function getRecentAllocationsProperty()
+    public function table(Table $table): Table
     {
         $company = Filament::getTenant();
-        if ($company === null) {
-            return collect();
-        }
 
-        return JournalEntry::query()
-            ->where('company_id', $company->getKey())
-            ->where('description', 'LIKE', 'Shared % allocation%')
-            ->latest('transaction_date')
-            ->take(10)
-            ->with(['lines.account', 'lines.relatedCompany'])
-            ->get();
+        return $table
+            ->query(
+                JournalEntry::query()
+                    ->where('company_id', $company?->getKey())
+                    ->where(function ($q): void {
+                        $q->where('description', 'LIKE', 'Shared % allocation%')
+                            ->orWhere('description', 'LIKE', '%split%')
+                            ->orWhere('description', 'LIKE', '%shared%');
+                    })
+                    ->with(['lines.account', 'lines.relatedCompany', 'preparedBy'])
+                    ->latest('transaction_date')
+                    ->latest('id')
+            )
+            ->heading('Recent Shared Cost Allocation Entries')
+            ->description('Inter-company expense allocations posted from this workspace')
+            ->columns([
+                TextColumn::make('transaction_date')
+                    ->label('Date')
+                    ->date()
+                    ->sortable(),
+                TextColumn::make('voucher_number')
+                    ->label('Voucher #')
+                    ->placeholder('Draft')
+                    ->fontFamily(FontFamily::Mono)
+                    ->searchable()
+                    ->copyable(),
+                TextColumn::make('description')
+                    ->label('Description / Particulars')
+                    ->limit(45)
+                    ->tooltip(fn (JournalEntry $record): string => (string) $record->description)
+                    ->searchable(),
+                TextColumn::make('intercompany_splits')
+                    ->label('Entity Splits')
+                    ->state(function (JournalEntry $record): string {
+                        $debitLines = $record->lines->where('debit', '>', 0);
+                        if ($debitLines->isEmpty()) {
+                            return '-';
+                        }
+
+                        return $debitLines->map(function ($line) {
+                            $name = $line->relatedCompany?->name ?? 'Own';
+
+                            return "{$name}: PKR ".number_format((float) $line->debit, 2);
+                        })->join(', ');
+                    })
+                    ->wrap(),
+                TextColumn::make('debit_total')
+                    ->label('Total Bill (PKR)')
+                    ->money('PKR')
+                    ->alignment(Alignment::End)
+                    ->weight(FontWeight::Bold)
+                    ->sortable(),
+                TextColumn::make('status')
+                    ->label('Status')
+                    ->badge()
+                    ->color(fn (JournalStatus $state) => $state->color()),
+                TextColumn::make('preparedBy.name')
+                    ->label('Prepared By')
+                    ->placeholder('System')
+                    ->toggleable(),
+            ])
+            ->filters([
+                SelectFilter::make('status')
+                    ->options(JournalStatus::class),
+            ])
+            ->defaultPaginationPageOption(10)
+            ->paginationPageOptions([10, 25, 50]);
     }
 }

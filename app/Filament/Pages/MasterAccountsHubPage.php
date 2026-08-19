@@ -11,6 +11,7 @@ use App\Enums\FinancialPeriodStatus;
 use App\Enums\JournalStatus;
 use App\Enums\NormalBalance;
 use App\Enums\VoucherType;
+use App\Filament\Widgets\MasterAccountsOverviewWidget;
 use App\Models\Account;
 use App\Models\Company;
 use App\Models\CompanyBankAccount;
@@ -34,18 +35,27 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\Alignment;
+use Filament\Support\Enums\FontFamily;
+use Filament\Support\Enums\FontWeight;
 use Filament\Support\Icons\Heroicon;
-use Illuminate\Support\Collection;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Concerns\InteractsWithTable;
+use Filament\Tables\Contracts\HasTable;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Table;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
-class MasterAccountsHubPage extends Page
+class MasterAccountsHubPage extends Page implements HasTable
 {
+    use InteractsWithTable;
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBuildingOffice2;
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Accounting';
+    protected static \UnitEnum|string|null $navigationGroup = 'Accounts Management';
 
     protected static ?string $navigationLabel = 'Master Accounts Hub';
 
@@ -56,6 +66,13 @@ class MasterAccountsHubPage extends Page
     protected string $view = 'filament.pages.master-accounts-hub';
 
     public ?array $data = [];
+
+    protected function getHeaderWidgets(): array
+    {
+        return [
+            MasterAccountsOverviewWidget::class,
+        ];
+    }
 
     public static function canAccess(): bool
     {
@@ -578,23 +595,73 @@ class MasterAccountsHubPage extends Page
         return $summaries;
     }
 
-    /** @return Collection<int, JournalEntry> */
-    public function getRecentCrossCompanyEntriesProperty(): Collection
+    public function table(Table $table): Table
     {
         $user = Filament::auth()->user();
-        if ($user === null) {
-            return collect();
-        }
-
-        $companyIds = $user->hasRole('super_admin')
+        $accessibleCompanyIds = $user?->hasRole('super_admin')
             ? Company::withoutGlobalScopes()->where('is_active', true)->pluck('id')->all()
-            : $user->companies()->wherePivot('is_active', true)->pluck('companies.id')->all();
+            : $user?->companies()->wherePivot('is_active', true)->pluck('companies.id')->all() ?? [];
 
-        return JournalEntry::withoutGlobalScopes()
-            ->whereIn('company_id', $companyIds)
-            ->latest('id')
-            ->take(15)
-            ->with(['company', 'lines.account', 'lines.project', 'preparedBy'])
-            ->get();
+        return $table
+            ->query(
+                JournalEntry::withoutGlobalScopes()
+                    ->whereIn('company_id', $accessibleCompanyIds)
+                    ->with(['company', 'lines.account', 'lines.project', 'preparedBy'])
+                    ->latest('transaction_date')
+                    ->latest('id')
+            )
+            ->heading('Recent Cross-Company Accounting Entries')
+            ->description('Live audit trail of vouchers recorded across all group entities')
+            ->columns([
+                TextColumn::make('transaction_date')
+                    ->label('Date')
+                    ->date()
+                    ->sortable(),
+                TextColumn::make('company.name')
+                    ->label('Company')
+                    ->badge()
+                    ->color('info')
+                    ->searchable()
+                    ->sortable(),
+                TextColumn::make('voucher_number')
+                    ->label('Voucher #')
+                    ->placeholder('Draft')
+                    ->fontFamily(FontFamily::Mono)
+                    ->searchable()
+                    ->copyable(),
+                TextColumn::make('voucher_type')
+                    ->label('Type')
+                    ->badge(),
+                TextColumn::make('description')
+                    ->label('Description / Particulars')
+                    ->limit(45)
+                    ->tooltip(fn (JournalEntry $record): string => (string) $record->description)
+                    ->searchable(),
+                TextColumn::make('debit_total')
+                    ->label('Amount (PKR)')
+                    ->money('PKR')
+                    ->alignment(Alignment::End)
+                    ->weight(FontWeight::Bold)
+                    ->sortable(),
+                TextColumn::make('status')
+                    ->label('Status')
+                    ->badge()
+                    ->color(fn (JournalStatus $state) => $state->color()),
+                TextColumn::make('preparedBy.name')
+                    ->label('Prepared By')
+                    ->placeholder('System')
+                    ->toggleable(),
+            ])
+            ->filters([
+                SelectFilter::make('company_id')
+                    ->label('Company')
+                    ->options(fn () => Company::withoutGlobalScopes()->whereIn('id', $accessibleCompanyIds)->where('is_active', true)->pluck('name', 'id')),
+                SelectFilter::make('status')
+                    ->options(JournalStatus::class),
+                SelectFilter::make('voucher_type')
+                    ->options(VoucherType::class),
+            ])
+            ->defaultPaginationPageOption(10)
+            ->paginationPageOptions([10, 25, 50]);
     }
 }

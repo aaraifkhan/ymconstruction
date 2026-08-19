@@ -2,9 +2,13 @@
 
 namespace App\Filament\Pages;
 
+use App\Actions\Accounting\CheckAccountAvailableBalanceAction;
 use App\Actions\Accounting\RecordQuickExpenseAction;
 use App\Enums\ExpenseCategory;
 use App\Enums\ExpensePaymentMethod;
+use App\Enums\JournalStatus;
+use App\Filament\Widgets\QuickExpenseStatsWidget;
+use App\Models\Account;
 use App\Models\Company;
 use App\Models\CompanyBankAccount;
 use App\Models\JournalEntry;
@@ -21,14 +25,23 @@ use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\Alignment;
+use Filament\Support\Enums\FontFamily;
+use Filament\Support\Enums\FontWeight;
 use Filament\Support\Icons\Heroicon;
-use Illuminate\Database\Eloquent\Collection;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Concerns\InteractsWithTable;
+use Filament\Tables\Contracts\HasTable;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Table;
 
-class QuickExpenseEntryPage extends Page
+class QuickExpenseEntryPage extends Page implements HasTable
 {
+    use InteractsWithTable;
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedPlusCircle;
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Accounting';
+    protected static \UnitEnum|string|null $navigationGroup = 'Accounts Management';
 
     protected static ?string $navigationLabel = 'Quick Expense Entry';
 
@@ -37,6 +50,13 @@ class QuickExpenseEntryPage extends Page
     protected string $view = 'filament.pages.quick-expense-entry';
 
     public ?array $data = [];
+
+    protected function getHeaderWidgets(): array
+    {
+        return [
+            QuickExpenseStatsWidget::class,
+        ];
+    }
 
     public static function canAccess(): bool
     {
@@ -185,19 +205,163 @@ class QuickExpenseEntryPage extends Page
         }
     }
 
-    /** @return Collection<int, JournalEntry> */
-    public function getRecentExpensesProperty()
+    public function table(Table $table): Table
+    {
+        $company = Filament::getTenant();
+
+        return $table
+            ->query(
+                JournalEntry::query()
+                    ->where('company_id', $company?->getKey())
+                    ->with(['lines.account', 'lines.project', 'preparedBy'])
+                    ->latest('transaction_date')
+                    ->latest('id')
+            )
+            ->heading('Recently Recorded Expenses')
+            ->description('Real-time audit log of operational expenses posted into this workspace')
+            ->columns([
+                TextColumn::make('transaction_date')
+                    ->label('Date')
+                    ->date()
+                    ->sortable(),
+                TextColumn::make('voucher_number')
+                    ->label('Voucher #')
+                    ->placeholder('Draft')
+                    ->fontFamily(FontFamily::Mono)
+                    ->searchable()
+                    ->copyable(),
+                TextColumn::make('description')
+                    ->label('Description / Particulars')
+                    ->limit(45)
+                    ->tooltip(fn (JournalEntry $record): string => (string) $record->description)
+                    ->searchable(),
+                TextColumn::make('expense_account')
+                    ->label('Expense Head')
+                    ->state(function (JournalEntry $record): string {
+                        $debitLine = $record->lines->firstWhere('debit', '>', 0);
+
+                        return $debitLine?->account?->name ?? $debitLine?->account_name_snapshot ?? '-';
+                    })
+                    ->badge()
+                    ->color('gray'),
+                TextColumn::make('funded_by')
+                    ->label('Paid Via')
+                    ->state(function (JournalEntry $record): string {
+                        $creditLine = $record->lines->firstWhere('credit', '>', 0);
+
+                        return $creditLine?->account?->name ?? $creditLine?->account_name_snapshot ?? '-';
+                    })
+                    ->badge()
+                    ->color('info'),
+                TextColumn::make('project_name')
+                    ->label('Project')
+                    ->state(function (JournalEntry $record): string {
+                        $debitLine = $record->lines->firstWhere('debit', '>', 0);
+
+                        return $debitLine?->project?->name ?? '-';
+                    })
+                    ->placeholder('-'),
+                TextColumn::make('debit_total')
+                    ->label('Amount (PKR)')
+                    ->money('PKR')
+                    ->alignment(Alignment::End)
+                    ->weight(FontWeight::Bold)
+                    ->sortable(),
+                TextColumn::make('status')
+                    ->label('Status')
+                    ->badge()
+                    ->color(fn (JournalStatus $state) => $state->color()),
+                TextColumn::make('preparedBy.name')
+                    ->label('Recorded By')
+                    ->placeholder('System')
+                    ->toggleable(),
+            ])
+            ->filters([
+                SelectFilter::make('status')
+                    ->options(JournalStatus::class),
+                SelectFilter::make('project_id')
+                    ->label('Project')
+                    ->relationship('lines.project', 'name'),
+            ])
+            ->defaultPaginationPageOption(10)
+            ->paginationPageOptions([10, 25, 50]);
+    }
+
+    /** @return array<string, mixed> */
+    public function getFinancialSummaryProperty(): array
     {
         $company = Filament::getTenant();
         if ($company === null) {
-            return collect();
+            return [
+                'cash_balance' => 0.0,
+                'bank_balance' => 0.0,
+                'today_expenses' => 0.0,
+                'month_expenses' => 0.0,
+            ];
         }
 
-        return JournalEntry::query()
+        $balanceAction = app(CheckAccountAvailableBalanceAction::class);
+
+        // Cash in hand accounts
+        $cashAccounts = Account::withoutGlobalScopes()
             ->where('company_id', $company->getKey())
-            ->latest('id')
-            ->take(10)
-            ->with(['lines.account', 'lines.project'])
+            ->where(function ($q): void {
+                $q->where('code', 'LIKE', '1111%')
+                    ->orWhere('code', 'LIKE', '1112%')
+                    ->orWhere('name', 'LIKE', '%Cash in Hand%')
+                    ->orWhere('name', 'LIKE', '%Petty Cash%');
+            })
             ->get();
+
+        $cashBalance = '0.0000';
+        foreach ($cashAccounts as $acc) {
+            $cashBalance = bcadd($cashBalance, (string) $balanceAction->getAccountBalance($company, $acc), 4);
+        }
+
+        // Bank balance
+        $bankAccounts = CompanyBankAccount::query()
+            ->where('company_id', $company->getKey())
+            ->where('is_active', true)
+            ->get();
+
+        $bankBalance = '0.0000';
+        foreach ($bankAccounts as $bankAcc) {
+            $bankBalance = bcadd($bankBalance, (string) $balanceAction->getBankAccountBalance($company, $bankAcc), 4);
+        }
+
+        // Today's expenses
+        $todayExpenses = JournalEntry::withoutGlobalScopes()
+            ->join('journal_lines', 'journal_entries.id', '=', 'journal_lines.journal_entry_id')
+            ->join('accounts', 'journal_lines.account_id', '=', 'accounts.id')
+            ->where('journal_entries.company_id', $company->getKey())
+            ->where('journal_entries.status', JournalStatus::Posted->value)
+            ->whereDate('journal_entries.transaction_date', today())
+            ->where(function ($q): void {
+                $q->where('accounts.code', 'LIKE', '5%')
+                    ->orWhere('accounts.code', 'LIKE', '6%')
+                    ->orWhere('accounts.code', 'LIKE', '7%');
+            })
+            ->sum('journal_lines.debit') ?? '0.0000';
+
+        // Month-to-date expenses
+        $monthExpenses = JournalEntry::withoutGlobalScopes()
+            ->join('journal_lines', 'journal_entries.id', '=', 'journal_lines.journal_entry_id')
+            ->join('accounts', 'journal_lines.account_id', '=', 'accounts.id')
+            ->where('journal_entries.company_id', $company->getKey())
+            ->where('journal_entries.status', JournalStatus::Posted->value)
+            ->whereBetween('journal_entries.transaction_date', [today()->startOfMonth(), today()->endOfMonth()])
+            ->where(function ($q): void {
+                $q->where('accounts.code', 'LIKE', '5%')
+                    ->orWhere('accounts.code', 'LIKE', '6%')
+                    ->orWhere('accounts.code', 'LIKE', '7%');
+            })
+            ->sum('journal_lines.debit') ?? '0.0000';
+
+        return [
+            'cash_balance' => (float) $cashBalance,
+            'bank_balance' => (float) $bankBalance,
+            'today_expenses' => (float) $todayExpenses,
+            'month_expenses' => (float) $monthExpenses,
+        ];
     }
 }
