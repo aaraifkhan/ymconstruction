@@ -44,7 +44,6 @@ class MasterAccountsHubTest extends TestCase
         Filament::bootCurrentPanel();
 
         $this->assertFalse(MasterAccountsHubPage::canAccess());
-        $this->assertFalse(MasterAccountsHubPage::shouldRegisterNavigation());
 
         Livewire::test(MasterAccountsHubPage::class)
             ->assertForbidden();
@@ -65,7 +64,6 @@ class MasterAccountsHubTest extends TestCase
         Filament::bootCurrentPanel();
 
         $this->assertTrue(MasterAccountsHubPage::canAccess());
-        $this->assertTrue(MasterAccountsHubPage::shouldRegisterNavigation());
 
         $component = Livewire::test(MasterAccountsHubPage::class)
             ->assertOk();
@@ -164,6 +162,54 @@ class MasterAccountsHubTest extends TestCase
         $this->assertSame($companyB->getKey(), $entry->company_id);
         $this->assertSame(JournalStatus::Submitted, $entry->status);
         $this->assertSame('5000.0000', $entry->debit_total);
+    }
+
+    public function test_accounts_management_navigation_tree_renders_hub_and_fast_entry(): void
+    {
+        $company = $this->provisionCompany('Company Nav Test');
+        $user = User::factory()->create();
+        $user->companies()->attach($company, ['is_active' => true, 'can_access_descendants' => false]);
+        $user->givePermissionTo(Permission::findOrCreate('View:MasterAccountsHub'));
+        $user->givePermissionTo(Permission::findOrCreate('Create:JournalEntry'));
+
+        $this->actingAs($user);
+        Filament::setTenant($company);
+        Filament::bootCurrentPanel();
+
+        $panel = Filament::getCurrentPanel();
+        $navigation = $panel->getNavigation();
+        $accountsGroup = collect($navigation)->first(fn ($g) => $g->getLabel() === 'Accounts Management');
+        $this->assertNotNull($accountsGroup, 'Accounts Management navigation group must exist');
+
+        $parentLabels = collect($accountsGroup->getItems())->map(fn ($item) => $item->getLabel())->all();
+        $this->assertContains('Accounts Hub & Fast Entry', $parentLabels);
+        $this->assertContains('General Ledger & Vouchers', $parentLabels);
+        $this->assertContains('Sales & Purchases (Billing)', $parentLabels);
+        $this->assertContains('Banking & Treasury', $parentLabels);
+        $this->assertContains('Fixed Assets & Depreciation', $parentLabels);
+        $this->assertContains('Ledgers & Registers', $parentLabels);
+        $this->assertContains('Financial & Operational Reports', $parentLabels);
+        $this->assertContains('Accounting Setup & Rules', $parentLabels);
+
+        $hubParent = collect($accountsGroup->getItems())->first(fn ($item) => $item->getLabel() === 'Accounts Hub & Fast Entry');
+        $this->assertNotNull($hubParent, 'Accounts Hub & Fast Entry parent item must exist');
+
+        $hubChildLabels = collect($hubParent->getChildItems())->map(fn ($c) => $c->getLabel())->all();
+        $this->assertContains('Master Accounts Hub', $hubChildLabels);
+        $this->assertContains('Quick Expense Entry', $hubChildLabels);
+        $this->assertContains('Shared Cost Allocation', $hubChildLabels);
+
+        $billingParent = collect($accountsGroup->getItems())->first(fn ($item) => $item->getLabel() === 'Sales & Purchases (Billing)');
+        $this->assertNotNull($billingParent);
+        $billingChildLabels = collect($billingParent->getChildItems())->map(fn ($c) => $c->getLabel())->all();
+        $this->assertContains('Customer Invoices & Credit Notes', $billingChildLabels);
+        $this->assertContains('Vendor Bills & Credit Notes', $billingChildLabels);
+
+        $assetsParent = collect($accountsGroup->getItems())->first(fn ($item) => $item->getLabel() === 'Fixed Assets & Depreciation');
+        $this->assertNotNull($assetsParent);
+        $assetsChildLabels = collect($assetsParent->getChildItems())->map(fn ($c) => $c->getLabel())->all();
+        $this->assertContains('Fixed Assets', $assetsChildLabels);
+        $this->assertContains('Depreciation Runs', $assetsChildLabels);
     }
 
     private function provisionCompany(string $name): Company

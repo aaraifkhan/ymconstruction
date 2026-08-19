@@ -45,7 +45,7 @@ class MasterAccountsHubPage extends Page
 {
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBuildingOffice2;
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Accounts';
+    protected static \UnitEnum|string|null $navigationGroup = 'Accounting';
 
     protected static ?string $navigationLabel = 'Master Accounts Hub';
 
@@ -64,11 +64,6 @@ class MasterAccountsHubPage extends Page
         return Filament::getTenant() !== null
             && $user !== null
             && ($user->hasRole('super_admin') || $user->can('View:MasterAccountsHub'));
-    }
-
-    public static function shouldRegisterNavigation(): bool
-    {
-        return static::canAccess();
     }
 
     public function mount(): void

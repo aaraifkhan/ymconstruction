@@ -21,7 +21,7 @@ class BiddingExpenseLedgerPage extends Page
 {
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocumentMagnifyingGlass;
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Accounts';
+    protected static \UnitEnum|string|null $navigationGroup = 'Accounting';
 
     protected static ?string $navigationLabel = 'Bidding & Tender Expenses';
 

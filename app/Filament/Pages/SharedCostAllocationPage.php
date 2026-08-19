@@ -26,7 +26,7 @@ class SharedCostAllocationPage extends Page
 {
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArrowsRightLeft;
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Accounts';
+    protected static \UnitEnum|string|null $navigationGroup = 'Accounting';
 
     protected static ?string $navigationLabel = 'Shared Cost Allocation';
 

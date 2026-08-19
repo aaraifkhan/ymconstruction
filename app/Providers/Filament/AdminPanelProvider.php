@@ -80,18 +80,14 @@ class AdminPanelProvider extends PanelProvider
             )
             ->navigationGroups([
                 'Master Data',
-                'Accounting',
-                'Reports',
+                'Accounts Management',
+                'HR Management',
                 'Company Management',
                 'User Management',
                 'System',
                 'Settings',
                 'Administration',
-                'Assets',
-                'Transactions',
                 'Document Management',
-                'Approvals',
-                'HR Management',
             ])
             ->navigation(function () use ($panel): NavigationBuilder {
                 $builder = new NavigationBuilder;
@@ -124,6 +120,44 @@ class AdminPanelProvider extends PanelProvider
                 $hrGroupLabels = ['HR Management', 'Attendance & Leave', 'Payroll', 'Loans & Advances', 'HR Configuration', 'HR'];
                 $hrReportLabels = ['Group HR', 'HR Readiness', 'HR Reports & Dashboard', 'Payroll & Advances', 'Final Settlements'];
 
+                $accountsParents = [
+                    'Accounts Hub & Fast Entry' => NavigationItem::make('Accounts Hub & Fast Entry')
+                        ->icon('heroicon-o-bolt')
+                        ->group('Accounts Management'),
+                    'General Ledger & Vouchers' => NavigationItem::make('General Ledger & Vouchers')
+                        ->icon('heroicon-o-book-open')
+                        ->group('Accounts Management'),
+                    'Sales & Purchases (Billing)' => NavigationItem::make('Sales & Purchases (Billing)')
+                        ->icon('heroicon-o-shopping-bag')
+                        ->group('Accounts Management'),
+                    'Banking & Treasury' => NavigationItem::make('Banking & Treasury')
+                        ->icon('heroicon-o-building-library')
+                        ->group('Accounts Management'),
+                    'Fixed Assets & Depreciation' => NavigationItem::make('Fixed Assets & Depreciation')
+                        ->icon('heroicon-o-cube')
+                        ->group('Accounts Management'),
+                    'Ledgers & Registers' => NavigationItem::make('Ledgers & Registers')
+                        ->icon('heroicon-o-document-text')
+                        ->group('Accounts Management'),
+                    'Financial & Operational Reports' => NavigationItem::make('Financial & Operational Reports')
+                        ->icon('heroicon-o-chart-bar-square')
+                        ->group('Accounts Management'),
+                    'Accounting Setup & Rules' => NavigationItem::make('Accounting Setup & Rules')
+                        ->icon('heroicon-o-cog-6-tooth')
+                        ->group('Accounts Management'),
+                ];
+
+                $accountsHubLabels = ['Master Accounts Hub', 'Quick Expense Entry', 'Shared Cost Allocation'];
+                $accountsGLLabels = ['Vouchers / Journals', 'Opening Balances', 'Opening Migration', 'Chart of Accounts', 'Financial Periods', 'Financial Years', 'Voucher Sequences', 'Year-end Closings', 'Payroll Account Mappings'];
+                $accountsTransactionsLabels = ['Customer Invoices & Credit Notes', 'Vendor Bills & Credit Notes', 'Purchase Orders', 'Purchase Requisitions', 'Goods Receipts & Inspection', 'Inventory Transfers & Issues'];
+                $accountsBankingLabels = ['Bank Accounts', 'Company Bank Accounts', 'Bank Statements', 'Bank Reconciliation', 'Payments, Receipts & Transfers', 'Inter-company'];
+                $accountsAssetsLabels = ['Fixed Assets', 'Asset Categories', 'Depreciation Runs', 'Asset Disposals'];
+                $accountsLedgerLabels = ['Petty Cash Register', 'Director Expense Ledger', 'Bidding & Tender Expenses', 'Project Expense Ledger'];
+                $accountsReportLabels = ['Financial Statements', 'Daily Cash & Bank Statement', 'Monthly Expense Summary', 'Accounts Payable', 'Sales & Project Profitability', 'Group Consolidation', 'Treasury & Banking', 'Inventory Stock Ledger', 'Site Inventory Balances', 'Daily Reporting Matrix'];
+                $accountsSetupLabels = ['Accounting Mappings', 'Accounting Settings', 'Account Templates', 'AP Match Tolerances', 'Procurement Approval Rules'];
+
+                $accountsModuleGroups = ['Accounting', 'Accounts', 'Assets', 'Transactions', 'Reports', 'Approvals'];
+
                 $groupItems = [];
                 $parentChildren = [
                     'HR Management' => [],
@@ -132,6 +166,17 @@ class AdminPanelProvider extends PanelProvider
                     'Loans & Advances' => [],
                     'Reports' => [],
                     'HR System & Migration' => [],
+                ];
+
+                $accountsParentChildren = [
+                    'Accounts Hub & Fast Entry' => [],
+                    'General Ledger & Vouchers' => [],
+                    'Sales & Purchases (Billing)' => [],
+                    'Banking & Treasury' => [],
+                    'Fixed Assets & Depreciation' => [],
+                    'Ledgers & Registers' => [],
+                    'Financial & Operational Reports' => [],
+                    'Accounting Setup & Rules' => [],
                 ];
 
                 foreach ($panel->getResources() as $resource) {
@@ -149,6 +194,7 @@ class AdminPanelProvider extends PanelProvider
                         }
 
                         $group = $item->getGroup() ?? 'Other';
+                        $label = $item->getLabel();
 
                         if (in_array($group, $hrGroupLabels)) {
                             if ($group === 'Attendance & Leave') {
@@ -165,6 +211,29 @@ class AdminPanelProvider extends PanelProvider
 
                             $item->parentItem($targetParent)->group('HR Management');
                             $parentChildren[$targetParent][] = $item;
+                        } elseif (in_array($group, $accountsModuleGroups) || $label === 'Company Bank Accounts' || in_array($label, $accountsHubLabels) || in_array($label, $accountsGLLabels) || in_array($label, $accountsTransactionsLabels) || in_array($label, $accountsBankingLabels) || in_array($label, $accountsAssetsLabels) || in_array($label, $accountsLedgerLabels) || in_array($label, $accountsReportLabels) || in_array($label, $accountsSetupLabels)) {
+                            if (in_array($label, $accountsHubLabels)) {
+                                $targetAccountsParent = 'Accounts Hub & Fast Entry';
+                            } elseif (in_array($label, $accountsTransactionsLabels) || $group === 'Transactions') {
+                                $targetAccountsParent = 'Sales & Purchases (Billing)';
+                            } elseif (in_array($label, $accountsBankingLabels)) {
+                                $targetAccountsParent = 'Banking & Treasury';
+                            } elseif (in_array($label, $accountsAssetsLabels) || $group === 'Assets') {
+                                $targetAccountsParent = 'Fixed Assets & Depreciation';
+                            } elseif (in_array($label, $accountsLedgerLabels)) {
+                                $targetAccountsParent = 'Ledgers & Registers';
+                            } elseif (in_array($label, $accountsReportLabels) || $group === 'Reports') {
+                                $targetAccountsParent = 'Financial & Operational Reports';
+                            } elseif (in_array($label, $accountsSetupLabels) || $group === 'Approvals') {
+                                $targetAccountsParent = 'Accounting Setup & Rules';
+                            } elseif (in_array($label, $accountsGLLabels) || $group === 'Accounting' || $group === 'Accounts') {
+                                $targetAccountsParent = 'General Ledger & Vouchers';
+                            } else {
+                                $targetAccountsParent = 'General Ledger & Vouchers';
+                            }
+
+                            $item->parentItem($targetAccountsParent)->group('Accounts Management');
+                            $accountsParentChildren[$targetAccountsParent][] = $item;
                         } else {
                             $groupItems[$group][] = $item;
                         }
@@ -207,6 +276,29 @@ class AdminPanelProvider extends PanelProvider
 
                             $item->parentItem($targetParent)->group('HR Management');
                             $parentChildren[$targetParent][] = $item;
+                        } elseif (in_array($group, $accountsModuleGroups) || $label === 'Company Bank Accounts' || in_array($label, $accountsHubLabels) || in_array($label, $accountsGLLabels) || in_array($label, $accountsTransactionsLabels) || in_array($label, $accountsBankingLabels) || in_array($label, $accountsAssetsLabels) || in_array($label, $accountsLedgerLabels) || in_array($label, $accountsReportLabels) || in_array($label, $accountsSetupLabels)) {
+                            if (in_array($label, $accountsHubLabels)) {
+                                $targetAccountsParent = 'Accounts Hub & Fast Entry';
+                            } elseif (in_array($label, $accountsTransactionsLabels) || $group === 'Transactions') {
+                                $targetAccountsParent = 'Sales & Purchases (Billing)';
+                            } elseif (in_array($label, $accountsBankingLabels)) {
+                                $targetAccountsParent = 'Banking & Treasury';
+                            } elseif (in_array($label, $accountsAssetsLabels) || $group === 'Assets') {
+                                $targetAccountsParent = 'Fixed Assets & Depreciation';
+                            } elseif (in_array($label, $accountsLedgerLabels)) {
+                                $targetAccountsParent = 'Ledgers & Registers';
+                            } elseif (in_array($label, $accountsReportLabels) || ($group === 'Reports' && $label === 'Fixed Assets')) {
+                                $targetAccountsParent = 'Financial & Operational Reports';
+                            } elseif (in_array($label, $accountsSetupLabels) || $group === 'Approvals') {
+                                $targetAccountsParent = 'Accounting Setup & Rules';
+                            } elseif (in_array($label, $accountsGLLabels) || $group === 'Accounting' || $group === 'Accounts') {
+                                $targetAccountsParent = 'General Ledger & Vouchers';
+                            } else {
+                                $targetAccountsParent = 'General Ledger & Vouchers';
+                            }
+
+                            $item->parentItem($targetAccountsParent)->group('Accounts Management');
+                            $accountsParentChildren[$targetAccountsParent][] = $item;
                         } else {
                             $groupItems[$group][] = $item;
                         }
@@ -223,25 +315,47 @@ class AdminPanelProvider extends PanelProvider
                     }
                 }
 
+                $activeAccountsParents = [];
+                foreach ($accountsParents as $parentName => $parentItem) {
+                    $children = $accountsParentChildren[$parentName] ?? [];
+                    if (count($children)) {
+                        if ($parentName === 'Accounts Hub & Fast Entry') {
+                            // Keep Master Accounts Hub at the top
+                            usort($children, function ($a, $b) {
+                                if ($a->getLabel() === 'Master Accounts Hub') {
+                                    return -1;
+                                }
+                                if ($b->getLabel() === 'Master Accounts Hub') {
+                                    return 1;
+                                }
+
+                                return strcmp($a->getLabel(), $b->getLabel());
+                            });
+                        } else {
+                            usort($children, fn ($a, $b) => strcmp($a->getLabel(), $b->getLabel()));
+                        }
+                        $parentItem->childItems($children);
+                        $activeAccountsParents[] = $parentItem;
+                    }
+                }
+
                 $navGroups = [];
                 $orderedGroupNames = [
                     'Master Data',
+                    'Accounts Management',
                     'HR Management',
-                    'Accounting',
-                    'Reports',
                     'Company Management',
                     'User Management',
                     'System',
                     'Settings',
                     'Administration',
-                    'Assets',
-                    'Transactions',
                     'Document Management',
-                    'Approvals',
                 ];
 
                 foreach ($orderedGroupNames as $gName) {
-                    if ($gName === 'HR Management') {
+                    if ($gName === 'Accounts Management') {
+                        $navGroups[] = NavigationGroup::make('Accounts Management')->items($activeAccountsParents);
+                    } elseif ($gName === 'HR Management') {
                         $navGroups[] = NavigationGroup::make('HR Management')->items($activeHrParents);
                     } elseif (isset($groupItems[$gName])) {
                         $items = $groupItems[$gName];
