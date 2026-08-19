@@ -20,7 +20,6 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
-use Illuminate\Support\Facades\Hash;
 
 class UsersTable
 {
@@ -92,7 +91,7 @@ class UsersTable
                         ])
                         ->action(function ($record, array $data): void {
                             $record->update([
-                                'password' => Hash::make($data['password']),
+                                'password' => $data['password'],
                             ]);
 
                             Notification::make()

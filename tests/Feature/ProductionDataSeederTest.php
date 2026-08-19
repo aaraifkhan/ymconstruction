@@ -17,7 +17,6 @@ class ProductionDataSeederTest extends TestCase
 
     public function test_production_data_seeding_is_idempotent_and_preserves_existing_passwords(): void
     {
-        $existingPassword = Hash::make('existing-secure-password');
         $existingSettings = app(GeneralSettings::class);
         $existingSettings->company_name = 'Production Company Name';
         $existingSettings->save();
@@ -25,7 +24,7 @@ class ProductionDataSeederTest extends TestCase
         User::factory()->create([
             'name' => 'Old Admin Name',
             'email' => 'superadmin@gmail.com',
-            'password' => $existingPassword,
+            'password' => 'existing-secure-password',
             'email_verified_at' => null,
         ]);
 
@@ -44,7 +43,7 @@ class ProductionDataSeederTest extends TestCase
             ->firstOrFail();
 
         $this->assertSame('Super Admin', $superAdmin->name);
-        $this->assertTrue(Hash::check('password', $superAdmin->password));
+        $this->assertTrue(Hash::check('existing-secure-password', $superAdmin->password));
         $this->assertTrue($superAdmin->hasExactRoles('super_admin'));
         $this->assertTrue($manager->hasExactRoles('Manager'));
         $this->assertCount(11, $manager->getAllPermissions());

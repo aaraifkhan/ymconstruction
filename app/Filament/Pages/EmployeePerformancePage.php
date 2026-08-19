@@ -7,16 +7,26 @@ use App\Services\CalculateEmployeeProductivityService;
 use BackedEnum;
 use Carbon\Carbon;
 use Filament\Facades\Filament;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Concerns\InteractsWithForms;
+use Filament\Forms\Contracts\HasForms;
 use Filament\Pages\Page;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 
-class EmployeePerformancePage extends Page
+class EmployeePerformancePage extends Page implements HasForms
 {
+    use InteractsWithForms;
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTrophy;
 
     protected static \UnitEnum|string|null $navigationGroup = 'Department Operations';
 
     protected static ?string $navigationLabel = 'Performance & Productivity Analytics';
+
+    protected static ?string $title = 'Employee Performance & Productivity Analytics';
 
     protected static ?int $navigationSort = 5;
 
@@ -24,33 +34,71 @@ class EmployeePerformancePage extends Page
 
     public ?int $selectedEmploymentId = null;
 
-    public string $startDate;
+    public string $startDate = '';
 
-    public string $endDate;
+    public string $endDate = '';
 
     public function mount(): void
     {
         $this->startDate = now()->startOfMonth()->toDateString();
         $this->endDate = now()->toDateString();
 
-        $userEmpId = auth()->user()?->employee?->employments()->where('company_id', Filament::getTenant()?->id)->value('id');
-        $this->selectedEmploymentId = $userEmpId ?? Employment::query()->where('company_id', Filament::getTenant()?->id)->value('id');
+        $tenantId = Filament::getTenant()?->id;
+        $userEmpId = auth()->user()?->employee?->employments()->where('company_id', $tenantId)->value('id');
+        $this->selectedEmploymentId = $userEmpId ?? Employment::query()->where('company_id', $tenantId)->where('employment_status', '!=', 'ended')->value('id');
+
+        $this->form->fill([
+            'selectedEmploymentId' => $this->selectedEmploymentId,
+            'startDate' => $this->startDate,
+            'endDate' => $this->endDate,
+        ]);
     }
 
-    public function getEmployeesProperty(): array
+    public function form(Schema $schema): Schema
     {
         $company = Filament::getTenant();
-        if (! $company) {
-            return [];
-        }
 
-        return Employment::query()
-            ->where('company_id', $company->id)
-            ->where('employment_status', '!=', 'ended')
-            ->with('employee')
-            ->get()
-            ->mapWithKeys(fn (Employment $e) => [$e->id => "{$e->employee?->full_name} ({$e->employee_code})"])
-            ->toArray();
+        return $schema
+            ->components([
+                Section::make('Filter & Scope Parameters')
+                    ->description('Select an employee and reporting period to analyze composite productivity metrics and delivery breakdown.')
+                    ->icon('heroicon-o-funnel')
+                    ->schema([
+                        Select::make('selectedEmploymentId')
+                            ->label('Employee')
+                            ->options(function () use ($company): array {
+                                return Employment::query()
+                                    ->where('company_id', $company?->id)
+                                    ->where('employment_status', '!=', 'ended')
+                                    ->with(['employee', 'designation', 'department'])
+                                    ->get()
+                                    ->mapWithKeys(fn (Employment $e): array => [
+                                        $e->id => "{$e->employee?->full_name} ({$e->employee_code}) — ".($e->designation?->name ?? 'Staff'),
+                                    ])
+                                    ->toArray();
+                            })
+                            ->searchable()
+                            ->preload()
+                            ->required()
+                            ->live()
+                            ->afterStateUpdated(fn ($state) => $this->selectedEmploymentId = $state ? (int) $state : null),
+
+                        DatePicker::make('startDate')
+                            ->label('From Date')
+                            ->default($this->startDate)
+                            ->required()
+                            ->live()
+                            ->afterStateUpdated(fn ($state) => $this->startDate = $state),
+
+                        DatePicker::make('endDate')
+                            ->label('To Date')
+                            ->default($this->endDate)
+                            ->required()
+                            ->live()
+                            ->afterStateUpdated(fn ($state) => $this->endDate = $state),
+                    ])
+                    ->columns(3),
+            ]);
     }
 
     public function getAnalyticsDataProperty(): ?array

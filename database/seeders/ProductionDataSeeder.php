@@ -84,18 +84,17 @@ class ProductionDataSeeder extends Seeder
         );
 
         foreach (self::USERS as $email => $definition) {
-            $existingUser = User::withTrashed()
-                ->where('email', $email)
-                ->first();
+            $user = User::withTrashed()->firstOrNew(['email' => $email]);
 
-            $user = User::withTrashed()->updateOrCreate(
-                ['email' => $email],
-                [
-                    'name' => $definition['name'],
-                    'email_verified_at' => $existingUser?->email_verified_at ?? now(),
-                    'password' => config('baseline.initial_user_password'),
-                ],
-            );
+            $user->name = $definition['name'];
+            if (! $user->exists) {
+                $user->email_verified_at = now();
+                $user->password = config('baseline.initial_user_password');
+            } elseif ($user->email_verified_at === null) {
+                $user->email_verified_at = now();
+            }
+
+            $user->save();
 
             if ($user->trashed()) {
                 $user->restore();

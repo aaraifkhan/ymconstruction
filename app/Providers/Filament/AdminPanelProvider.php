@@ -79,6 +79,7 @@ class AdminPanelProvider extends PanelProvider
                 fn (): View => view('filament.admin.sidebar-user-menu'),
             )
             ->navigationGroups([
+                'Department Operations',
                 'Master Data',
                 'Accounts Management',
                 'HR Management',
@@ -341,6 +342,7 @@ class AdminPanelProvider extends PanelProvider
 
                 $navGroups = [];
                 $orderedGroupNames = [
+                    'Department Operations',
                     'Master Data',
                     'Accounts Management',
                     'HR Management',
@@ -359,7 +361,30 @@ class AdminPanelProvider extends PanelProvider
                         $navGroups[] = NavigationGroup::make('HR Management')->items($activeHrParents);
                     } elseif (isset($groupItems[$gName])) {
                         $items = $groupItems[$gName];
-                        usort($items, fn ($a, $b) => strcmp($a->getLabel(), $b->getLabel()));
+                        usort($items, function ($a, $b) {
+                            $sortA = $a->getSort() ?? 0;
+                            $sortB = $b->getSort() ?? 0;
+                            if ($sortA !== $sortB) {
+                                return $sortA <=> $sortB;
+                            }
+
+                            return strcmp($a->getLabel(), $b->getLabel());
+                        });
+                        $navGroups[] = NavigationGroup::make($gName)->items($items);
+                    }
+                }
+
+                foreach ($groupItems as $gName => $items) {
+                    if (! in_array($gName, $orderedGroupNames, true) && ! in_array($gName, ['Accounts Management', 'HR Management'], true)) {
+                        usort($items, function ($a, $b) {
+                            $sortA = $a->getSort() ?? 0;
+                            $sortB = $b->getSort() ?? 0;
+                            if ($sortA !== $sortB) {
+                                return $sortA <=> $sortB;
+                            }
+
+                            return strcmp($a->getLabel(), $b->getLabel());
+                        });
                         $navGroups[] = NavigationGroup::make($gName)->items($items);
                     }
                 }

@@ -13,6 +13,8 @@ use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
 use App\Enums\TeamMemberRole;
 use App\Enums\TeamType;
+use App\Filament\Pages\DailyReportingMatrixPage;
+use App\Filament\Pages\EmployeePerformancePage;
 use App\Models\Company;
 use App\Models\DailyWorkReport;
 use App\Models\Department;
@@ -23,7 +25,9 @@ use App\Models\Task;
 use App\Models\User;
 use App\Services\CalculateEmployeeProductivityService;
 use Carbon\Carbon;
+use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class DepartmentTeamTaskWorkflowTest extends TestCase
@@ -351,5 +355,29 @@ class DepartmentTeamTaskWorkflowTest extends TestCase
     {
         $this->artisan('work-reports:check-deadline')
             ->assertExitCode(0);
+    }
+
+    public function test_daily_reporting_matrix_page_renders_successfully(): void
+    {
+        $superAdmin = User::query()->where('email', 'superadmin@gmail.com')->firstOrFail();
+        $company = Company::query()->firstOrFail();
+
+        $this->actingAs($superAdmin);
+        Filament::setTenant($company);
+
+        Livewire::test(DailyReportingMatrixPage::class)
+            ->assertSuccessful();
+    }
+
+    public function test_employee_performance_page_renders_successfully(): void
+    {
+        $superAdmin = User::query()->where('email', 'superadmin@gmail.com')->firstOrFail();
+        $company = Company::query()->firstOrFail();
+
+        $this->actingAs($superAdmin);
+        Filament::setTenant($company);
+
+        Livewire::test(EmployeePerformancePage::class)
+            ->assertSuccessful();
     }
 }
