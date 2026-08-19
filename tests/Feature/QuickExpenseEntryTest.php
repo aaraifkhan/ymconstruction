@@ -2,21 +2,29 @@
 
 namespace Tests\Feature;
 
+use App\Actions\Accounting\ApproveJournalEntryAction;
+use App\Actions\Accounting\PostJournalEntryAction;
 use App\Actions\Accounting\ProvisionCompanyAccountingFoundationAction;
 use App\Actions\Accounting\ProvisionStandardAccountTemplatesAction;
 use App\Actions\Accounting\RecordQuickExpenseAction;
+use App\Actions\Accounting\SubmitJournalEntryAction;
 use App\Enums\AccountingProfile;
 use App\Enums\ExpenseCategory;
 use App\Enums\ExpensePaymentMethod;
+use App\Enums\FinancialPeriodStatus;
 use App\Enums\JournalStatus;
 use App\Enums\VoucherType;
 use App\Filament\Pages\QuickExpenseEntryPage;
 use App\Models\Company;
+use App\Models\FinancialPeriod;
+use App\Models\JournalEntry;
+use App\Models\JournalLine;
 use App\Models\Project;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
 use Spatie\Permission\Models\Role;
@@ -42,6 +50,8 @@ class QuickExpenseEntryTest extends TestCase
         $role = Role::findOrCreate('super_admin');
         $user = User::factory()->create();
         $user->assignRole($role);
+
+        $this->fundAccount($company, '1111', 50000, $user);
 
         $action = app(RecordQuickExpenseAction::class);
         $journal = $action->handle(
@@ -114,6 +124,8 @@ class QuickExpenseEntryTest extends TestCase
         $user = User::factory()->create();
         $user->assignRole($role);
 
+        $this->fundAccount($bmc, '1112', 50000, $user);
+
         $action = app(RecordQuickExpenseAction::class);
         $journal = $action->handle(
             company: $bmc,
@@ -174,6 +186,8 @@ class QuickExpenseEntryTest extends TestCase
         $user->assignRole($role);
         $user->companies()->attach($company, ['is_active' => true, 'can_access_descendants' => false]);
 
+        $this->fundAccount($company, '1111', 100000, $user);
+
         $this->actingAs($user);
         Filament::setTenant($company);
         Filament::bootCurrentPanel();
@@ -199,5 +213,48 @@ class QuickExpenseEntryTest extends TestCase
             'debit' => 75000,
             'description' => 'Excavation payment to GAB Earthworks',
         ]);
+    }
+
+    private function fundAccount(Company $company, string $accountCode, float $amount, User $user): void
+    {
+        $account = $company->accounts()->where('code', $accountCode)->firstOrFail();
+        $creditAccount = $company->accounts()->where('code', '4700')->firstOrFail();
+        $period = FinancialPeriod::withoutGlobalScopes()->where('company_id', $company->getKey())->where('status', FinancialPeriodStatus::Open)->firstOrFail();
+
+        $entry = JournalEntry::create([
+            'company_id' => $company->getKey(),
+            'financial_year_id' => $period->financial_year_id,
+            'financial_period_id' => $period->getKey(),
+            'voucher_type' => VoucherType::Receipt,
+            'idempotency_key' => (string) Str::uuid(),
+            'status' => JournalStatus::Draft,
+            'transaction_date' => $period->starts_on,
+            'description' => 'Cash funding receipt',
+            'prepared_by_id' => $user->getKey(),
+        ]);
+
+        JournalLine::create([
+            'journal_entry_id' => $entry->getKey(),
+            'company_id' => $company->getKey(),
+            'line_number' => 1,
+            'account_id' => $account->getKey(),
+            'debit' => $amount,
+            'credit' => 0,
+        ]);
+        JournalLine::create([
+            'journal_entry_id' => $entry->getKey(),
+            'company_id' => $company->getKey(),
+            'line_number' => 2,
+            'account_id' => $creditAccount->getKey(),
+            'debit' => 0,
+            'credit' => $amount,
+        ]);
+
+        $checker = User::factory()->create();
+        $checker->assignRole(Role::findOrCreate('super_admin'));
+
+        app(SubmitJournalEntryAction::class)->handle($entry, $user);
+        app(ApproveJournalEntryAction::class)->handle($entry, $checker);
+        app(PostJournalEntryAction::class)->handle($entry, $checker);
     }
 }

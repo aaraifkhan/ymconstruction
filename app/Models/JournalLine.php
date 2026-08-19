@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Database\Factories\JournalLineFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -26,7 +27,7 @@ class JournalLine extends Model
     protected static function booted(): void
     {
         static::saving(function (self $line): void {
-            $entry = JournalEntry::query()->find($line->journal_entry_id);
+            $entry = JournalEntry::withoutGlobalScopes()->find($line->journal_entry_id);
             if ($entry === null || (int) $entry->company_id !== (int) $line->company_id || ! $entry->isEditable()) {
                 throw ValidationException::withMessages(['journal_entry_id' => 'Journal lines may only be changed on an editable journal in the same company.']);
             }
@@ -37,7 +38,7 @@ class JournalLine extends Model
                 throw ValidationException::withMessages(['debit' => 'Each line requires a positive debit or positive credit, never both.']);
             }
 
-            $account = Account::query()->whereKey($line->account_id)->where('company_id', $line->company_id)->first();
+            $account = Account::withoutGlobalScopes()->whereKey($line->account_id)->where('company_id', $line->company_id)->first();
             if ($account === null) {
                 throw ValidationException::withMessages(['account_id' => 'The account must belong to the journal company.']);
             }
@@ -48,7 +49,7 @@ class JournalLine extends Model
         });
 
         static::deleting(function (self $line): void {
-            if (! $line->journalEntry()->firstOrFail()->isEditable()) {
+            if (! $line->journalEntry()->withoutGlobalScopes()->firstOrFail()->isEditable()) {
                 throw ValidationException::withMessages(['journal_entry_id' => 'Posted or in-review journal lines are immutable.']);
             }
         });
@@ -56,57 +57,57 @@ class JournalLine extends Model
 
     public function journalEntry(): BelongsTo
     {
-        return $this->belongsTo(JournalEntry::class);
+        return $this->belongsTo(JournalEntry::class)->withoutGlobalScopes();
     }
 
     public function company(): BelongsTo
     {
-        return $this->belongsTo(Company::class);
+        return $this->belongsTo(Company::class)->withoutGlobalScopes();
     }
 
     public function relatedCompany(): BelongsTo
     {
-        return $this->belongsTo(Company::class, 'related_company_id');
+        return $this->belongsTo(Company::class, 'related_company_id')->withoutGlobalScopes();
     }
 
     public function account(): BelongsTo
     {
-        return $this->belongsTo(Account::class);
+        return $this->belongsTo(Account::class)->withoutGlobalScopes();
     }
 
     public function party(): BelongsTo
     {
-        return $this->belongsTo(Party::class);
+        return $this->belongsTo(Party::class)->withoutGlobalScopes();
     }
 
     public function project(): BelongsTo
     {
-        return $this->belongsTo(Project::class);
+        return $this->belongsTo(Project::class)->withoutGlobalScopes();
     }
 
     public function projectSite(): BelongsTo
     {
-        return $this->belongsTo(ProjectSite::class);
+        return $this->belongsTo(ProjectSite::class)->withoutGlobalScopes();
     }
 
     public function costCenter(): BelongsTo
     {
-        return $this->belongsTo(CostCenter::class);
+        return $this->belongsTo(CostCenter::class)->withoutGlobalScopes();
     }
 
     public function employment(): BelongsTo
     {
-        return $this->belongsTo(Employment::class);
+        return $this->belongsTo(Employment::class)->withoutGlobalScopes();
     }
 
     public function companyBankAccount(): BelongsTo
     {
-        return $this->belongsTo(CompanyBankAccount::class);
+        return $this->belongsTo(CompanyBankAccount::class)->withoutGlobalScopes();
     }
 
     public function fixedAsset(): BelongsTo
     {
-        return $this->belongsTo(FixedAsset::class);
+        return $this->belongsTo(FixedAsset::class)->withoutGlobalScopes();
     }
 
     public function bankReconciliationMatches(): HasMany
@@ -133,21 +134,65 @@ class JournalLine extends Model
 
         if ($this->related_company_id !== null && (
             (int) $this->related_company_id === (int) $this->company_id
-            || ! Company::query()->whereKey($this->related_company_id)->where('is_active', true)->exists()
+            || ! Company::withoutGlobalScopes()->whereKey($this->related_company_id)->where('is_active', true)->exists()
         )) {
             throw ValidationException::withMessages(['related_company_id' => 'Related company must be a different active company.']);
         }
 
         foreach ($dimensions as $field => $model) {
             $id = $this->{$field};
-            if ($id !== null && ! $model::query()->whereKey($id)->where('company_id', $this->company_id)->exists()) {
+            if ($id !== null && ! $model::withoutGlobalScopes()->whereKey($id)->where('company_id', $this->company_id)->exists()) {
                 throw ValidationException::withMessages([$field => 'Every journal dimension must belong to the journal company.']);
             }
         }
 
         if ($this->project_site_id !== null && $this->project_id !== null
-            && ! ProjectSite::query()->whereKey($this->project_site_id)->where('project_id', $this->project_id)->exists()) {
+            && ! ProjectSite::withoutGlobalScopes()->whereKey($this->project_site_id)->where('project_id', $this->project_id)->exists()) {
             throw ValidationException::withMessages(['project_site_id' => 'The project site must belong to the selected project.']);
         }
+    }
+
+    /**
+     * @param  Builder<static>  $query
+     */
+    protected function performInsert(Builder $query): bool
+    {
+        $explicitCompanyId = $this->attributes['company_id'] ?? null;
+
+        if ($this->fireModelEvent('creating') === false) {
+            return false;
+        }
+
+        if ($explicitCompanyId !== null) {
+            $this->attributes['company_id'] = $explicitCompanyId;
+        }
+
+        if ($this->usesTimestamps()) {
+            $this->updateTimestamps();
+        }
+
+        $attributes = $this->getAttributesForInsert();
+
+        if (empty($attributes)) {
+            return true;
+        }
+
+        $keyName = $this->getKeyName();
+
+        if ($this->getIncrementing()) {
+            $this->insertAndSetId($query, $attributes);
+        } else {
+            if (empty($attributes[$keyName])) {
+                $this->setAttribute($keyName, $this->newUniqueId());
+            }
+
+            $query->insert($attributes);
+        }
+
+        $this->exists = true;
+        $this->wasRecentlyCreated = true;
+        $this->fireModelEvent('created', false);
+
+        return true;
     }
 }

@@ -274,6 +274,8 @@ class FoundationPermissionSeeder extends Seeder
             'Validate:OpeningBalanceBatch',
             'Post:OpeningBalanceBatch',
             'View:AccountingReports',
+            'View:MasterAccountsHub',
+            'CrossCompany:Accounts',
         );
 
         foreach (['PurchaseRequisition', 'PurchaseRequisitionLine', 'PurchaseOrder', 'PurchaseOrderLine', 'ProcurementApprovalRule'] as $subject) {

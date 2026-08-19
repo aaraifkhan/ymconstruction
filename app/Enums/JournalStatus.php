@@ -2,7 +2,9 @@
 
 namespace App\Enums;
 
-enum JournalStatus: string
+use Filament\Support\Contracts\HasLabel;
+
+enum JournalStatus: string implements HasLabel
 {
     case Draft = 'draft';
     case Submitted = 'submitted';
@@ -11,9 +13,14 @@ enum JournalStatus: string
     case Rejected = 'rejected';
     case Reversed = 'reversed';
 
-    public function label(): string
+    public function getLabel(): string
     {
         return str($this->value)->headline()->toString();
+    }
+
+    public function label(): string
+    {
+        return $this->getLabel();
     }
 
     public function color(): string

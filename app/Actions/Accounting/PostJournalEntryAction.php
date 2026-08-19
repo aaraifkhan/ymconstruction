@@ -23,7 +23,7 @@ class PostJournalEntryAction
         Gate::forUser($actor)->authorize('post', $entry);
 
         return DB::transaction(function () use ($entry, $actor): JournalEntry {
-            $entry = JournalEntry::query()->whereKey($entry)->lockForUpdate()->firstOrFail();
+            $entry = JournalEntry::withoutGlobalScopes()->whereKey($entry)->lockForUpdate()->firstOrFail();
             if ($entry->status === JournalStatus::Posted) {
                 return $entry;
             }
@@ -34,9 +34,9 @@ class PostJournalEntryAction
                 throw ValidationException::withMessages(['posted_by_id' => 'The journal preparer cannot post the same journal.']);
             }
 
-            FinancialPeriod::query()->whereKey($entry->financial_period_id)->lockForUpdate()->firstOrFail();
+            FinancialPeriod::withoutGlobalScopes()->whereKey($entry->financial_period_id)->lockForUpdate()->firstOrFail();
             $result = $this->validator->handle($entry->fresh());
-            $sequence = VoucherSequence::query()
+            $sequence = VoucherSequence::withoutGlobalScopes()
                 ->where('company_id', $entry->company_id)
                 ->where('financial_year_id', $entry->financial_year_id)
                 ->where('voucher_type', $entry->voucher_type)

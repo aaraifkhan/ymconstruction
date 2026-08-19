@@ -22,7 +22,7 @@ class JournalEntryForm
             Section::make('Voucher')->columns(3)->schema([
                 Select::make('voucher_type')->options(collect($types)->mapWithKeys(fn (VoucherType $type) => [$type->value => str($type->value)->headline()]))->required(),
                 Select::make('financial_period_id')->relationship('financialPeriod', 'name')->required()->searchable()->preload(),
-                DatePicker::make('transaction_date')->required(),
+                DatePicker::make('transaction_date')->required()->default(today()),
                 TextInput::make('reference')->maxLength(120),
                 TextInput::make('currency_code')->default('PKR')->required()->length(3),
                 Textarea::make('description')->required()->columnSpanFull(),
@@ -32,9 +32,10 @@ class JournalEntryForm
                     ->mutateRelationshipDataBeforeCreateUsing(fn (array $data): array => [...$data, 'company_id' => Filament::getTenant()->getKey()])
                     ->schema([
                         Select::make('account_id')->relationship('account', 'name', modifyQueryUsing: fn ($query) => $query->where('is_active', true)->whereDoesntHave('children'))
-                            ->getOptionLabelFromRecordUsing(fn ($record): string => "{$record->code} — {$record->name}")->searchable(['code', 'name'])->preload()->required()->columnSpan(2),
-                        TextInput::make('debit')->numeric()->default(0)->minValue(0),
-                        TextInput::make('credit')->numeric()->default(0)->minValue(0),
+                            ->getOptionLabelFromRecordUsing(fn ($record): string => "{$record->code} — {$record->name}")
+                            ->searchable(['code', 'name'])->preload()->required()->columnSpan(2),
+                        TextInput::make('debit')->numeric()->default(0)->minValue(0)->prefix('PKR'),
+                        TextInput::make('credit')->numeric()->default(0)->minValue(0)->prefix('PKR'),
                         Select::make('party_id')->relationship('party', 'name')->searchable()->preload(),
                         Select::make('project_id')->relationship('project', 'name')->searchable()->preload(),
                         Select::make('project_site_id')->relationship('projectSite', 'name')->searchable()->preload(),

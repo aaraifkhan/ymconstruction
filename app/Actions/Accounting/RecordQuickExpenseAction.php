@@ -66,7 +66,7 @@ class RecordQuickExpenseAction
             $expenseOfCompanyId,
             $reference
         ): JournalEntry {
-            $period = FinancialPeriod::query()
+            $period = FinancialPeriod::withoutGlobalScopes()
                 ->where('company_id', $company->getKey())
                 ->where('status', FinancialPeriodStatus::Open)
                 ->whereDate('starts_on', '<=', $date)
@@ -158,7 +158,7 @@ class RecordQuickExpenseAction
     private function resolveDebitAccount(Company $company, ExpenseCategory $category): Account
     {
         $code = $category->defaultAccountCode();
-        $account = $company->accounts()->where('code', $code)->where('is_active', true)->first();
+        $account = $company->accounts()->withoutGlobalScopes()->where('code', $code)->where('is_active', true)->first();
 
         if ($account !== null && $account->allows_manual_posting) {
             return $account;
@@ -166,7 +166,8 @@ class RecordQuickExpenseAction
 
         // Fallback for employee advance
         if ($category === ExpenseCategory::EmployeeAdvance) {
-            $mapping = AccountingMapping::where('company_id', $company->getKey())
+            $mapping = AccountingMapping::withoutGlobalScopes()
+                ->where('company_id', $company->getKey())
                 ->where('system_key', AccountingMappingKey::EmployeeAdvances)
                 ->where('is_active', true)
                 ->first();
@@ -177,6 +178,7 @@ class RecordQuickExpenseAction
 
         // Fallback to active leaf expense account in 5000 / 7000 group
         $fallback = $company->accounts()
+            ->withoutGlobalScopes()
             ->where('allows_manual_posting', true)
             ->where('is_active', true)
             ->where(function ($query) use ($category): void {
@@ -211,7 +213,8 @@ class RecordQuickExpenseAction
 
     private function mappedAccount(Company $company, AccountingMappingKey $key, string $label): Account
     {
-        $mapping = AccountingMapping::where('company_id', $company->getKey())
+        $mapping = AccountingMapping::withoutGlobalScopes()
+            ->where('company_id', $company->getKey())
             ->where('system_key', $key)
             ->where('is_active', true)
             ->with('account')
@@ -222,7 +225,7 @@ class RecordQuickExpenseAction
         }
 
         // Fallback to account by system key directly on account model
-        $account = $company->accounts()->where('system_key', $key)->where('is_active', true)->first();
+        $account = $company->accounts()->withoutGlobalScopes()->where('system_key', $key)->where('is_active', true)->first();
         if ($account !== null) {
             return $account;
         }
@@ -232,7 +235,8 @@ class RecordQuickExpenseAction
 
     private function bankMappedAccount(Company $company, ?int $bankAccountId): Account
     {
-        $mapping = AccountingMapping::where('company_id', $company->getKey())
+        $mapping = AccountingMapping::withoutGlobalScopes()
+            ->where('company_id', $company->getKey())
             ->where('company_bank_account_id', $bankAccountId)
             ->where('is_active', true)
             ->with('account')

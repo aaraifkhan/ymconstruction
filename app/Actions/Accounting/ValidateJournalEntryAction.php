@@ -14,6 +14,12 @@ use Illuminate\Validation\ValidationException;
 
 class ValidateJournalEntryAction
 {
+    public function __construct(
+        private ?CheckAccountAvailableBalanceAction $balanceService = null,
+    ) {
+        $this->balanceService ??= app(CheckAccountAvailableBalanceAction::class);
+    }
+
     /** @return array{debit_total:string, credit_total:string, line_count:int} */
     public function handle(JournalEntry $entry, bool $requireOpenPeriod = true): array
     {
@@ -28,7 +34,7 @@ class ValidateJournalEntryAction
             throw ValidationException::withMessages(['financial_period_id' => 'Only an open financial period accepts postings.']);
         }
 
-        $settings = AccountingSetting::query()->where('company_id', $entry->company_id)->firstOrFail();
+        $settings = AccountingSetting::withoutGlobalScopes()->where('company_id', $entry->company_id)->firstOrFail();
         if ($entry->currency_code !== $settings->base_currency_code) {
             throw ValidationException::withMessages(['currency_code' => 'Journal currency must match the company base currency.']);
         }
@@ -46,15 +52,36 @@ class ValidateJournalEntryAction
             throw ValidationException::withMessages(['lines' => 'Journal debit and credit totals must be equal and greater than zero.']);
         }
 
+        $isSystemGenerated = $entry->source_type !== null || in_array($entry->voucher_type, [VoucherType::OpeningBalance, VoucherType::Reversal], true);
+
         foreach ($lines as $line) {
             $account = $line->account;
             if (! $account->is_active || $account->children()->exists()) {
                 throw ValidationException::withMessages(['lines' => "Account {$account->code} is inactive or non-posting."]);
             }
 
-            $isSystemGenerated = $entry->source_type !== null || in_array($entry->voucher_type, [VoucherType::OpeningBalance, VoucherType::Reversal], true);
             if (! $isSystemGenerated && ! $account->allows_manual_posting) {
                 throw ValidationException::withMessages(['lines' => "Account {$account->code} does not allow manual posting."]);
+            }
+
+            $debit = (string) $line->debit;
+            $credit = (string) $line->credit;
+            if (bccomp($debit, '0.0000', 4) > 0 && bccomp($credit, '0.0000', 4) > 0) {
+                throw ValidationException::withMessages(['lines' => "Line {$line->line_number} cannot have both Debit and Credit amounts."]);
+            }
+            if (bccomp($debit, '0.0000', 4) === 0 && bccomp($credit, '0.0000', 4) === 0) {
+                throw ValidationException::withMessages(['lines' => "Line {$line->line_number} must have either a Debit or Credit amount."]);
+            }
+
+            if (! $isSystemGenerated && bccomp($credit, '0.0000', 4) > 0 && $this->balanceService->isStrictCashAccount($account)) {
+                $availableBalance = $this->balanceService->getAccountBalance($entry->company_id, $account);
+                if (bccomp($availableBalance, $credit, 4) === -1) {
+                    $availFormatted = number_format((float) $availableBalance, 2);
+                    $reqFormatted = number_format((float) $credit, 2);
+                    throw ValidationException::withMessages([
+                        'lines' => "Insufficient cash balance in account {$account->code} ({$account->name}). Available: PKR {$availFormatted}, Required: PKR {$reqFormatted}. Please record an opening balance or cash receipt first.",
+                    ]);
+                }
             }
 
             $this->validateRequiredDimensions($account, $line);

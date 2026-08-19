@@ -19,7 +19,7 @@ class RejectJournalEntryAction
         }
 
         return DB::transaction(function () use ($entry, $actor, $reason): JournalEntry {
-            $entry = JournalEntry::query()->whereKey($entry)->lockForUpdate()->firstOrFail();
+            $entry = JournalEntry::withoutGlobalScopes()->whereKey($entry)->lockForUpdate()->firstOrFail();
             if (! in_array($entry->status, [JournalStatus::Submitted, JournalStatus::Approved], true)) {
                 throw ValidationException::withMessages(['status' => 'Only submitted or approved journals may be rejected.']);
             }

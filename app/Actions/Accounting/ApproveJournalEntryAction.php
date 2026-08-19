@@ -16,7 +16,7 @@ class ApproveJournalEntryAction
         Gate::forUser($actor)->authorize('approve', $entry);
 
         return DB::transaction(function () use ($entry, $actor): JournalEntry {
-            $entry = JournalEntry::query()->whereKey($entry)->lockForUpdate()->firstOrFail();
+            $entry = JournalEntry::withoutGlobalScopes()->whereKey($entry)->lockForUpdate()->firstOrFail();
             if ($entry->status !== JournalStatus::Submitted) {
                 throw ValidationException::withMessages(['status' => 'Only submitted journals may be approved.']);
             }

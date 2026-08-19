@@ -55,21 +55,27 @@ class AccountingLedgerAuthorizationTest extends TestCase
         $period = $currentCompany->financialPeriods()->where('period_number', 1)->firstOrFail();
         $cash = $currentCompany->accounts()->where('code', '1111')->firstOrFail();
         $income = $currentCompany->accounts()->where('code', '4700')->firstOrFail();
-        Livewire::test(CreateJournalEntry::class)
+        $component = Livewire::test(CreateJournalEntry::class)
             ->assertFormFieldExists('voucher_type')
             ->assertFormFieldExists('financial_period_id')
-            ->assertFormFieldExists('lines')
-            ->fillForm([
-                'voucher_type' => VoucherType::Journal->value,
-                'financial_period_id' => $period->getKey(),
-                'transaction_date' => '2026-07-20',
-                'description' => 'Created from Filament',
-                'currency_code' => 'PKR',
-                'lines' => [
-                    ['account_id' => $cash->getKey(), 'debit' => 10, 'credit' => 0],
-                    ['account_id' => $income->getKey(), 'debit' => 0, 'credit' => 10],
-                ],
-            ])
+            ->assertFormFieldExists('lines');
+
+        $lineKeys = array_keys($component->get('data.lines') ?? []);
+        $k1 = $lineKeys[0] ?? '0';
+        $k2 = $lineKeys[1] ?? '1';
+
+        $component
+            ->set('data.voucher_type', VoucherType::Journal->value)
+            ->set('data.financial_period_id', $period->getKey())
+            ->set('data.transaction_date', '2026-07-20')
+            ->set('data.description', 'Created from Filament')
+            ->set('data.currency_code', 'PKR')
+            ->set("data.lines.{$k1}.account_id", $cash->getKey())
+            ->set("data.lines.{$k1}.debit", 10)
+            ->set("data.lines.{$k1}.credit", 0)
+            ->set("data.lines.{$k2}.account_id", $income->getKey())
+            ->set("data.lines.{$k2}.debit", 0)
+            ->set("data.lines.{$k2}.credit", 10)
             ->call('create')
             ->assertHasNoFormErrors();
         Livewire::test(AccountingReports::class)->assertOk();

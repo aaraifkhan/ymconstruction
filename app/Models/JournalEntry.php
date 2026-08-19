@@ -6,6 +6,7 @@ use App\Enums\JournalStatus;
 use App\Enums\VoucherType;
 use Database\Factories\JournalEntryFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -42,8 +43,8 @@ class JournalEntry extends Model
                 throw ValidationException::withMessages(['idempotency_key' => 'Every journal request requires an idempotency key.']);
             }
 
-            $yearMatches = FinancialYear::query()->whereKey($entry->financial_year_id)->where('company_id', $entry->company_id)->exists();
-            $periodMatches = FinancialPeriod::query()->whereKey($entry->financial_period_id)
+            $yearMatches = FinancialYear::withoutGlobalScopes()->whereKey($entry->financial_year_id)->where('company_id', $entry->company_id)->exists();
+            $periodMatches = FinancialPeriod::withoutGlobalScopes()->whereKey($entry->financial_period_id)
                 ->where('company_id', $entry->company_id)->where('financial_year_id', $entry->financial_year_id)->exists();
 
             if (! $yearMatches || ! $periodMatches) {
@@ -51,7 +52,7 @@ class JournalEntry extends Model
             }
 
             if ($entry->source_type !== null || $entry->source_id !== null) {
-                $source = $entry->source()->first();
+                $source = $entry->source()->withoutGlobalScopes()->first();
                 $sourceCompanyId = $source instanceof Company ? $source->getKey() : $source?->company_id;
                 $sourceMatches = $source instanceof IntercompanyTransaction
                     ? in_array((int) $entry->company_id, [(int) $source->company_id, (int) $source->counterparty_company_id], true)
@@ -62,7 +63,7 @@ class JournalEntry extends Model
             }
 
             if ($entry->exists) {
-                $persisted = self::query()->whereKey($entry)->firstOrFail();
+                $persisted = self::withoutGlobalScopes()->whereKey($entry)->firstOrFail();
                 $allowedPostedChanges = ['status', 'reversed_by_entry_id', 'updated_at'];
                 $targetStatus = $entry->status;
 
@@ -131,22 +132,22 @@ class JournalEntry extends Model
 
     public function company(): BelongsTo
     {
-        return $this->belongsTo(Company::class);
+        return $this->belongsTo(Company::class)->withoutGlobalScopes();
     }
 
     public function financialYear(): BelongsTo
     {
-        return $this->belongsTo(FinancialYear::class);
+        return $this->belongsTo(FinancialYear::class)->withoutGlobalScopes();
     }
 
     public function financialPeriod(): BelongsTo
     {
-        return $this->belongsTo(FinancialPeriod::class);
+        return $this->belongsTo(FinancialPeriod::class)->withoutGlobalScopes();
     }
 
     public function lines(): HasMany
     {
-        return $this->hasMany(JournalLine::class)->orderBy('line_number');
+        return $this->hasMany(JournalLine::class)->withoutGlobalScopes()->orderBy('line_number');
     }
 
     public function source(): MorphTo
@@ -222,5 +223,49 @@ class JournalEntry extends Model
             'debit_total' => 'decimal:4',
             'credit_total' => 'decimal:4',
         ];
+    }
+
+    /**
+     * @param  Builder<static>  $query
+     */
+    protected function performInsert(Builder $query): bool
+    {
+        $explicitCompanyId = $this->attributes['company_id'] ?? null;
+
+        if ($this->fireModelEvent('creating') === false) {
+            return false;
+        }
+
+        if ($explicitCompanyId !== null) {
+            $this->attributes['company_id'] = $explicitCompanyId;
+        }
+
+        if ($this->usesTimestamps()) {
+            $this->updateTimestamps();
+        }
+
+        $attributes = $this->getAttributesForInsert();
+
+        if (empty($attributes)) {
+            return true;
+        }
+
+        $keyName = $this->getKeyName();
+
+        if ($this->getIncrementing()) {
+            $this->insertAndSetId($query, $attributes);
+        } else {
+            if (empty($attributes[$keyName])) {
+                $this->setAttribute($keyName, $this->newUniqueId());
+            }
+
+            $query->insert($attributes);
+        }
+
+        $this->exists = true;
+        $this->wasRecentlyCreated = true;
+        $this->fireModelEvent('created', false);
+
+        return true;
     }
 }

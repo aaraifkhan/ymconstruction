@@ -18,7 +18,7 @@ class SubmitJournalEntryAction
         Gate::forUser($actor)->authorize('submit', $entry);
 
         return DB::transaction(function () use ($entry, $actor): JournalEntry {
-            $entry = JournalEntry::query()->whereKey($entry)->lockForUpdate()->firstOrFail();
+            $entry = JournalEntry::withoutGlobalScopes()->whereKey($entry)->lockForUpdate()->firstOrFail();
             if (! in_array($entry->status, [JournalStatus::Draft, JournalStatus::Rejected], true)) {
                 throw ValidationException::withMessages(['status' => 'Only draft or rejected journals may be submitted.']);
             }
