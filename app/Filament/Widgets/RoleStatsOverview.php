@@ -3,16 +3,21 @@
 namespace App\Filament\Widgets;
 
 use App\Filament\Resources\Roles\RoleResource;
-use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
+use Filament\Facades\Filament;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 use Spatie\Permission\Models\Role;
 
 class RoleStatsOverview extends StatsOverviewWidget
 {
-    use HasWidgetShield;
-
     protected static ?int $sort = 2;
+
+    public static function canView(): bool
+    {
+        $user = Filament::auth()?->user();
+
+        return $user !== null && ($user->hasRole('super_admin') || $user->can('view_role_stats_overview') || RoleResource::canViewAny());
+    }
 
     protected int|string|array $columnSpan = 1;
 

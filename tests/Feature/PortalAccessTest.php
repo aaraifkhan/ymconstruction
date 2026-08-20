@@ -7,6 +7,7 @@ use App\Models\User;
 use Database\Seeders\CompanySeeder;
 use Filament\Auth\Http\Responses\Contracts\LoginResponse as LoginResponseContract;
 use Filament\Auth\Pages\Login;
+use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Livewire\Livewire;
 use Spatie\Permission\Models\Role;
@@ -91,17 +92,32 @@ class PortalAccessTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_super_admin_can_open_the_non_tenant_admin_landing(): void
+    public function test_super_admin_portal_entry_redirects_directly_to_super_admin_panel(): void
     {
         $this->seed(CompanySeeder::class);
         $user = User::factory()->create()->assignRole(Role::findOrCreate('super_admin'));
 
         $this->actingAs($user)
-            ->get('/admin')
-            ->assertOk()
-            ->assertSee('Collective administration and reporting')
-            ->assertSee('BMC Construction')
-            ->assertSee('7 Orbit Medical Billing');
+            ->get(route('portal.super-admin'))
+            ->assertRedirect(Filament::getPanel('super-admin')->getUrl());
+    }
+
+    public function test_non_super_admin_cannot_access_super_admin_panel(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get('/super-admin')
+            ->assertForbidden();
+    }
+
+    public function test_super_admin_can_access_super_admin_panel(): void
+    {
+        $user = User::factory()->create()->assignRole(Role::findOrCreate('super_admin'));
+
+        $this->actingAs($user)
+            ->get('/super-admin')
+            ->assertSuccessful();
     }
 
     public function test_unauthenticated_guests_redirect_to_login_when_accessing_admin(): void
@@ -120,5 +136,40 @@ class PortalAccessTest extends TestCase
     {
         $this->get(route('login'))
             ->assertRedirect(route('filament.admin.auth.login'));
+    }
+
+    public function test_admin_sidebar_has_back_to_access_portal_navigation_group_at_bottom(): void
+    {
+        $this->seed(CompanySeeder::class);
+        $company = Company::query()->where('slug', 'ymc-construction')->firstOrFail();
+        $user = User::factory()->create()->assignRole(Role::findOrCreate('super_admin'));
+
+        $this->actingAs($user);
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+        Filament::setTenant($company);
+
+        $navigation = Filament::getPanel('admin')->getNavigation();
+        $lastGroup = collect($navigation)->last();
+
+        $this->assertNotNull($lastGroup);
+        $this->assertSame('Portal', $lastGroup->getLabel());
+        $this->assertSame('Back to Access Portal', $lastGroup->getItems()[0]->getLabel());
+        $this->assertSame(route('portal'), $lastGroup->getItems()[0]->getUrl());
+    }
+
+    public function test_super_admin_sidebar_has_back_to_access_portal_navigation_group_at_bottom(): void
+    {
+        $user = User::factory()->create()->assignRole(Role::findOrCreate('super_admin'));
+
+        $this->actingAs($user);
+        Filament::setCurrentPanel(Filament::getPanel('super-admin'));
+
+        $navigation = Filament::getPanel('super-admin')->getNavigation();
+        $lastGroup = collect($navigation)->last();
+
+        $this->assertNotNull($lastGroup);
+        $this->assertSame('Portal', $lastGroup->getLabel());
+        $this->assertSame('Back to Access Portal', $lastGroup->getItems()[0]->getLabel());
+        $this->assertSame(route('portal'), $lastGroup->getItems()[0]->getUrl());
     }
 }

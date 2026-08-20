@@ -28,7 +28,7 @@ class DailyReportingMatrixPage extends Page implements HasTable
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCalendarDays;
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Department Operations';
+    protected static \UnitEnum|string|null $navigationGroup = 'SM Department Operations';
 
     protected static ?string $navigationLabel = 'Daily Attendance & Work Matrix';
 

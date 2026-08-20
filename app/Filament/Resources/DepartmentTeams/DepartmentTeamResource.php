@@ -29,7 +29,7 @@ class DepartmentTeamResource extends Resource
 
     protected static ?string $tenantRelationshipName = 'departmentTeams';
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Department Operations';
+    protected static \UnitEnum|string|null $navigationGroup = 'SM Department Operations';
 
     protected static ?int $navigationSort = 1;
 

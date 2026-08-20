@@ -14,6 +14,7 @@ Future developers and AI agents must:
 4. Keep **Implemented**, **Planned**, and **Needs Business Confirmation** clearly separated.
 5. Read and follow `docs/FINANCE_PROJECTS_OPERATIONS_IMPLEMENTATION_PLAN.md` before working on Accounts, Chart of Accounts, Projects, Sales, Purchases, Inventory, Banking, Payroll accounting-posting, Assets, or consolidated reporting.
 6. Read and follow `docs/HR_WORKFORCE_IMPLEMENTATION_PLAN.md` before working on Departments, Employees, Employments, employee documents, Attendance, fingerprint/biometric attendance-machine integration, Leave, Employee Loans/Advances, Payroll calculations, performance, warnings, promotions/transfers, separation, employee asset custody, clearance, Final Settlement, or HR reporting.
+7. Build strictly Filament-native solutions (Tables, Forms, Infolists, Widgets, Panels, Notifications, Actions, Resource Pages) and leverage Laravel Boost documentation tools (`search-docs`) before creating implementation plans or writing code. Never build custom Blade/HTML or bespoke workarounds when native Filament features exist.
 
 ## Product direction
 
@@ -82,7 +83,10 @@ The original multi-company foundation, document platform, HR foundation, joining
 - User-to-company membership with active/inactive access
 - Company access is direct active membership only; legacy descendant-access metadata is not used
 - Filament company tenancy, searchable company switcher, and company registration
-- Super-admin access to every active company
+- Dedicated Non-Tenant Super Admin Panel (`/super-admin`) strictly decoupled from company operational panels, hosting Company Management, Company Bank Accounts, Global Company Modules & Capability Matrix, Users, Roles & Permissions (Shield), System Activities & Logs, and System Settings
+- Company Tenant Operations Panels (`/admin/company/{company}`) dedicated to business operational modules (Accounts, HR, Documents, Projects, Medical Billing) with system administration excluded from navigation
+- Access portal (`/portal`) routing directing company cards to company operations and the Super Admin card directly to `/super-admin`
+- Super-admin access to every active company and system-level governance
 - Shared module catalog for Documents, HR, Accounts, and Projects
 - Per-company module state (`enabled` or `disabled`), workflow variant, and settings
 - Each company starts with Documents, HR, Accounts, and Projects enabled independently

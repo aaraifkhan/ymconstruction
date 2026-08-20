@@ -54,6 +54,12 @@ This application is a Laravel application and its main Laravel ecosystems packag
 
 This project has domain-specific skills available in `**/skills/**`. You MUST activate the relevant skill whenever you work in that domain—don't wait until you're stuck.
 
+## Filament Native-First Architecture & Standards
+
+- **Filament Native First**: All features across this application must be built using Filament's native components and ecosystem (Filament Tables, Forms, Infolists, Widgets, Panels, Notifications, Actions, Modal workflows, and Resources/Pages).
+- **No Custom Reinvention**: Do not build custom Blade/HTML layouts, custom controllers, or bespoke JavaScript for functionality that Filament natively supports. Custom work is strictly limited to cases where Filament provides no native solution.
+- **Laravel Boost & Docs First**: Before creating any implementation plan or modifying code, use Laravel Boost tools (`search-docs`) to verify official Filament v5 & Laravel 13 patterns, schemas, and methods. Ensure implementation plans explicitly align with Filament standards rather than ad-hoc custom approaches.
+
 ## Conventions
 
 - You must follow all existing code conventions used in this application. When creating or editing a file, check sibling files for the correct structure, approach, and naming.

@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\AttendanceDeviceUserMappings\Pages;
 
 use App\Filament\Resources\AttendanceDeviceUserMappings\AttendanceDeviceUserMappingResource;
+use Filament\Facades\Filament;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateAttendanceDeviceUserMapping extends CreateRecord
@@ -11,7 +12,7 @@ class CreateAttendanceDeviceUserMapping extends CreateRecord
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
-        $data['company_id'] = $this->getTenant()->getKey();
+        $data['company_id'] = Filament::getTenant()->getKey();
 
         return $data;
     }

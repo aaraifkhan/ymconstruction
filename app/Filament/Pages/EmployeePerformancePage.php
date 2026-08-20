@@ -22,7 +22,7 @@ class EmployeePerformancePage extends Page implements HasForms
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTrophy;
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Department Operations';
+    protected static \UnitEnum|string|null $navigationGroup = 'SM Department Operations';
 
     protected static ?string $navigationLabel = 'Performance & Productivity Analytics';
 

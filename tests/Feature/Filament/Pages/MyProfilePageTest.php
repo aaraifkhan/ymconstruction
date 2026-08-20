@@ -58,16 +58,24 @@ class MyProfilePageTest extends TestCase
             ->assertOk();
     }
 
-    public function test_tenant_registration_page_can_be_rendered_without_url_generation_exception(): void
+    public function test_profile_navigation_item_is_grouped_under_settings_and_other_group_does_not_exist(): void
     {
         $user = User::factory()->create();
-        $user->givePermissionTo(Permission::findOrCreate('Create:Company'));
+        $user->givePermissionTo(Permission::findOrCreate('View:MyProfile'));
 
-        $this->actingAs($user);
-        Filament::setCurrentPanel(Filament::getPanel('admin'));
+        $this->actingAsCompanyUser($user);
 
-        $this->get('/admin/new')
-            ->assertOk();
+        $groups = Filament::getCurrentPanel()->getNavigation();
+        $groupLabels = array_map(fn ($group) => $group->getLabel(), $groups);
+
+        $this->assertNotContains('Other', $groupLabels);
+        $this->assertContains('Settings', $groupLabels);
+
+        $settingsGroup = collect($groups)->first(fn ($group) => $group->getLabel() === 'Settings');
+        $this->assertNotNull($settingsGroup);
+
+        $itemLabels = array_map(fn ($item) => $item->getLabel(), $settingsGroup->getItems());
+        $this->assertContains('Profile', $itemLabels);
     }
 
     private function actingAsCompanyUser(User $user): void

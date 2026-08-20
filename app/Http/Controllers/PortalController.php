@@ -32,15 +32,13 @@ class PortalController extends Controller
         return redirect()->to(Filament::getPanel('admin')->getUrl($company));
     }
 
-    public function superAdmin(Request $request): View
+    public function superAdmin(Request $request): RedirectResponse
     {
         /** @var User $user */
         $user = $request->user();
 
         abort_unless($user->hasRole('super_admin'), 403);
 
-        return view('super-admin.index', [
-            'companies' => $user->getAccessibleCompanies(),
-        ]);
+        return redirect()->to(Filament::getPanel('super-admin')->getUrl());
     }
 }

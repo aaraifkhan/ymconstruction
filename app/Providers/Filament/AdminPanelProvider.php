@@ -2,7 +2,16 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Pages\ConsolidatedReports;
+use App\Filament\Pages\GlobalModulesAssignmentPage;
+use App\Filament\Pages\GroupHrReports;
 use App\Filament\Pages\MyProfile;
+use App\Filament\Pages\Settings;
+use App\Filament\Resources\Activities\ActivityResource;
+use App\Filament\Resources\Companies\CompanyResource;
+use App\Filament\Resources\CompanyBankAccounts\CompanyBankAccountResource;
+use App\Filament\Resources\Users\UserResource;
+use App\Http\Middleware\EnsureTenantModuleAccess;
 use App\Models\Company;
 use App\Settings\GeneralSettings;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
@@ -19,6 +28,7 @@ use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Assets\Css;
 use Filament\Support\Colors\Color;
+use Filament\Support\Icons\Heroicon;
 use Filament\View\PanelsRenderHook;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -62,6 +72,9 @@ class AdminPanelProvider extends PanelProvider
             ->login()
             ->tenant(Company::class, slugAttribute: 'slug')
             ->tenantRoutePrefix('company')
+            ->tenantMiddleware([
+                EnsureTenantModuleAccess::class,
+            ], isPersistent: true)
             ->searchableTenantMenu()
             ->homeUrl(fn (): string => route('portal'))
             ->colors([
@@ -79,7 +92,7 @@ class AdminPanelProvider extends PanelProvider
                 fn (): View => view('filament.admin.sidebar-user-menu'),
             )
             ->navigationGroups([
-                'Department Operations',
+                'SM Department Operations',
                 'Master Data',
                 'Accounts Management',
                 'HR Management',
@@ -157,7 +170,7 @@ class AdminPanelProvider extends PanelProvider
                 $accountsReportLabels = ['Financial Statements', 'Daily Cash & Bank Statement', 'Monthly Expense Summary', 'Accounts Payable', 'Sales & Project Profitability', 'Group Consolidation', 'Treasury & Banking', 'Inventory Stock Ledger', 'Site Inventory Balances', 'Daily Reporting Matrix'];
                 $accountsSetupLabels = ['Accounting Mappings', 'Accounting Settings', 'Account Templates', 'AP Match Tolerances', 'Procurement Approval Rules'];
 
-                $accountsModuleGroups = ['Accounting', 'Accounts', 'Assets', 'Transactions', 'Reports', 'Approvals'];
+                $accountsModuleGroups = ['Accounts Management', 'Accounting', 'Accounts', 'Assets', 'Transactions', 'Reports', 'Approvals'];
 
                 $groupItems = [];
                 $parentChildren = [
@@ -180,7 +193,25 @@ class AdminPanelProvider extends PanelProvider
                     'Accounting Setup & Rules' => [],
                 ];
 
+                $systemResources = [
+                    CompanyResource::class,
+                    CompanyBankAccountResource::class,
+                    UserResource::class,
+                    ActivityResource::class,
+                ];
+
+                $systemPages = [
+                    GlobalModulesAssignmentPage::class,
+                    Settings::class,
+                    ConsolidatedReports::class,
+                    GroupHrReports::class,
+                ];
+
                 foreach ($panel->getResources() as $resource) {
+                    if (in_array($resource, $systemResources, true)) {
+                        continue;
+                    }
+
                     if (! method_exists($resource, 'getNavigationItems')) {
                         continue;
                     }
@@ -212,7 +243,7 @@ class AdminPanelProvider extends PanelProvider
 
                             $item->parentItem($targetParent)->group('HR Management');
                             $parentChildren[$targetParent][] = $item;
-                        } elseif (in_array($group, $accountsModuleGroups) || $label === 'Company Bank Accounts' || in_array($label, $accountsHubLabels) || in_array($label, $accountsGLLabels) || in_array($label, $accountsTransactionsLabels) || in_array($label, $accountsBankingLabels) || in_array($label, $accountsAssetsLabels) || in_array($label, $accountsLedgerLabels) || in_array($label, $accountsReportLabels) || in_array($label, $accountsSetupLabels)) {
+                        } elseif (in_array($group, $accountsModuleGroups) || in_array($label, $accountsHubLabels) || in_array($label, $accountsGLLabels) || in_array($label, $accountsTransactionsLabels) || in_array($label, $accountsBankingLabels) || in_array($label, $accountsAssetsLabels) || in_array($label, $accountsLedgerLabels) || in_array($label, $accountsReportLabels) || in_array($label, $accountsSetupLabels)) {
                             if (in_array($label, $accountsHubLabels)) {
                                 $targetAccountsParent = 'Accounts Hub & Fast Entry';
                             } elseif (in_array($label, $accountsTransactionsLabels) || $group === 'Transactions') {
@@ -242,6 +273,10 @@ class AdminPanelProvider extends PanelProvider
                 }
 
                 foreach ($panel->getPages() as $page) {
+                    if (in_array($page, $systemPages, true)) {
+                        continue;
+                    }
+
                     if (! method_exists($page, 'getNavigationItems')) {
                         continue;
                     }
@@ -277,7 +312,7 @@ class AdminPanelProvider extends PanelProvider
 
                             $item->parentItem($targetParent)->group('HR Management');
                             $parentChildren[$targetParent][] = $item;
-                        } elseif (in_array($group, $accountsModuleGroups) || $label === 'Company Bank Accounts' || in_array($label, $accountsHubLabels) || in_array($label, $accountsGLLabels) || in_array($label, $accountsTransactionsLabels) || in_array($label, $accountsBankingLabels) || in_array($label, $accountsAssetsLabels) || in_array($label, $accountsLedgerLabels) || in_array($label, $accountsReportLabels) || in_array($label, $accountsSetupLabels)) {
+                        } elseif (in_array($group, $accountsModuleGroups) || in_array($label, $accountsHubLabels) || in_array($label, $accountsGLLabels) || in_array($label, $accountsTransactionsLabels) || in_array($label, $accountsBankingLabels) || in_array($label, $accountsAssetsLabels) || in_array($label, $accountsLedgerLabels) || in_array($label, $accountsReportLabels) || in_array($label, $accountsSetupLabels)) {
                             if (in_array($label, $accountsHubLabels)) {
                                 $targetAccountsParent = 'Accounts Hub & Fast Entry';
                             } elseif (in_array($label, $accountsTransactionsLabels) || $group === 'Transactions') {
@@ -342,24 +377,43 @@ class AdminPanelProvider extends PanelProvider
 
                 $navGroups = [];
                 $orderedGroupNames = [
-                    'Department Operations',
+                    'SM Department Operations',
                     'Master Data',
                     'Accounts Management',
                     'HR Management',
-                    'Company Management',
-                    'User Management',
-                    'System',
-                    'Settings',
-                    'Administration',
                     'Document Management',
+                    'Projects Management',
+                    'Projects',
+                    'Medical Billing',
+                    'Settings',
                 ];
 
+                $groupModuleMap = [
+                    'SM Department Operations' => 'sm_department_operations',
+                    'HR Management' => 'hr',
+                    'Accounts Management' => 'accounts',
+                    'Document Management' => 'documents',
+                    'Projects Management' => 'projects',
+                    'Projects' => 'projects',
+                    'Medical Billing' => 'medical_billing',
+                ];
+
+                $tenant = Filament::getTenant();
+
                 foreach ($orderedGroupNames as $gName) {
+                    if (isset($groupModuleMap[$gName]) && $tenant instanceof Company && ! $tenant->hasModuleEnabled($groupModuleMap[$gName])) {
+                        continue;
+                    }
+
                     if ($gName === 'Accounts Management') {
-                        $navGroups[] = NavigationGroup::make('Accounts Management')->items($activeAccountsParents);
+                        if (count($activeAccountsParents)) {
+                            $navGroups[] = NavigationGroup::make('Accounts Management')->items($activeAccountsParents);
+                        }
                     } elseif ($gName === 'HR Management') {
-                        $navGroups[] = NavigationGroup::make('HR Management')->items($activeHrParents);
-                    } elseif (isset($groupItems[$gName])) {
+                        if (count($activeHrParents)) {
+                            $navGroups[] = NavigationGroup::make('HR Management')->items($activeHrParents);
+                        }
+                    } elseif (isset($groupItems[$gName]) && count($groupItems[$gName])) {
                         $items = $groupItems[$gName];
                         usort($items, function ($a, $b) {
                             $sortA = $a->getSort() ?? 0;
@@ -376,6 +430,10 @@ class AdminPanelProvider extends PanelProvider
 
                 foreach ($groupItems as $gName => $items) {
                     if (! in_array($gName, $orderedGroupNames, true) && ! in_array($gName, ['Accounts Management', 'HR Management'], true)) {
+                        if (isset($groupModuleMap[$gName]) && $tenant instanceof Company && ! $tenant->hasModuleEnabled($groupModuleMap[$gName])) {
+                            continue;
+                        }
+
                         usort($items, function ($a, $b) {
                             $sortA = $a->getSort() ?? 0;
                             $sortB = $b->getSort() ?? 0;
@@ -389,6 +447,13 @@ class AdminPanelProvider extends PanelProvider
                     }
                 }
 
+                $navGroups[] = NavigationGroup::make('Portal')
+                    ->items([
+                        NavigationItem::make('Back to Access Portal')
+                            ->url(fn (): string => route('portal'))
+                            ->icon('heroicon-o-arrow-left-on-rectangle'),
+                    ]);
+
                 $builder->groups($navGroups);
 
                 return $builder;
@@ -396,6 +461,10 @@ class AdminPanelProvider extends PanelProvider
             ->brandName($brandName)
             ->favicon($favicon)
             ->userMenuItems([
+                Action::make('portal')
+                    ->label('Access Portal')
+                    ->icon(Heroicon::OutlinedSquares2x2)
+                    ->url(fn (): string => route('portal')),
                 'profile' => fn (Action $action): Action => $action
                     ->url(fn (): ?string => Filament::getTenant() !== null ? MyProfile::getUrl() : null)
                     ->visible(fn (): bool => Filament::getTenant() !== null && MyProfile::canAccess()),
@@ -416,7 +485,8 @@ class AdminPanelProvider extends PanelProvider
                         shouldRegisterUserMenu: false,
                         shouldRegisterNavigation: false,
                         hasAvatars: true,
-                        slug: 'my-profile'
+                        slug: 'my-profile',
+                        navigationGroup: 'Settings',
                     )
                     ->customMyProfilePage(MyProfile::class)
                     ->enableTwoFactorAuthentication(),

@@ -29,6 +29,8 @@ class Settings extends Page
 
     protected static ?string $navigationLabel = 'App Settings';
 
+    protected static ?int $navigationSort = 10;
+
     public ?array $data = [];
 
     public function mount(GeneralSettings $settings): void

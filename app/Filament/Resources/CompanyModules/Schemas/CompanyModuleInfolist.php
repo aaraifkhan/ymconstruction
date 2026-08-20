@@ -14,15 +14,32 @@ class CompanyModuleInfolist
     {
         return $schema
             ->components([
-                Section::make('Module configuration')
+                Section::make('Module details & capabilities')
                     ->schema([
                         TextEntry::make('module.name')
-                            ->label('Module'),
+                            ->label('Module Name')
+                            ->weight('bold'),
                         TextEntry::make('state')
                             ->badge()
-                            ->formatStateUsing(fn (CompanyModuleState $state): string => $state->label()),
+                            ->formatStateUsing(fn (CompanyModuleState $state): string => $state->label())
+                            ->color(fn (CompanyModuleState $state): string => match ($state) {
+                                CompanyModuleState::Enabled => 'success',
+                                CompanyModuleState::Disabled => 'danger',
+                                CompanyModuleState::Inherit => 'gray',
+                            }),
+                        TextEntry::make('module.key')
+                            ->label('Module Key')
+                            ->fontFamily('mono'),
                         TextEntry::make('variant')
                             ->placeholder('Default workflow'),
+                        TextEntry::make('module.description')
+                            ->label('Description')
+                            ->columnSpanFull(),
+                        TextEntry::make('module.features')
+                            ->label('Bundled Sub-Features & Capabilities')
+                            ->bulleted()
+                            ->columnSpanFull()
+                            ->placeholder('No specific sub-features listed'),
                         KeyValueEntry::make('settings')
                             ->placeholder('No custom settings')
                             ->columnSpanFull(),

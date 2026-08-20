@@ -9,12 +9,15 @@ use App\Actions\HR\SyncAttendanceDeviceAction;
 use App\Contracts\AttendanceDeviceAdapter;
 use App\Data\AttendanceDevicePullResult;
 use App\Data\AttendanceEventData;
+use App\Enums\AttendanceDeviceTransport;
 use App\Enums\AttendanceImportBatchStatus;
 use App\Enums\AttendanceImportSource;
 use App\Enums\AttendancePunchDirection;
 use App\Enums\AttendancePunchSource;
 use App\Enums\AttendanceRawEventStatus;
+use App\Filament\Resources\AttendanceDevices\Pages\CreateAttendanceDevice;
 use App\Filament\Resources\AttendanceDevices\Pages\ListAttendanceDevices;
+use App\Filament\Resources\AttendanceDeviceUserMappings\Pages\CreateAttendanceDeviceUserMapping;
 use App\Filament\Resources\AttendanceImportBatches\Pages\ListAttendanceImportBatches;
 use App\Filament\Resources\AttendanceRawEvents\Pages\ListAttendanceRawEvents;
 use App\Models\AttendanceDevice;
@@ -257,6 +260,68 @@ class AttendanceMachineIngestionFoundationTest extends TestCase
             ->assertCanNotSeeTableRecords([$otherDevice]);
         Livewire::test(ListAttendanceImportBatches::class)->assertSuccessful();
         Livewire::test(ListAttendanceRawEvents::class)->assertSuccessful();
+    }
+
+    public function test_filament_create_attendance_device_associates_with_tenant(): void
+    {
+        [$company] = $this->deviceContext();
+        $actor = $this->actor($company, [
+            'Create:AttendanceDevice',
+            'ViewAny:AttendanceDevice',
+        ]);
+
+        $this->actingAs($actor);
+        Filament::setTenant($company);
+        Filament::bootCurrentPanel();
+
+        Livewire::test(CreateAttendanceDevice::class)
+            ->fillForm([
+                'code' => 'DEV-99',
+                'name' => 'HQ Main Biometric',
+                'device_identifier' => 'FP-999-XYZ',
+                'timezone' => 'Asia/Karachi',
+                'transport' => AttendanceDeviceTransport::ZkTecoAdms->value,
+                'is_active' => true,
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $this->assertDatabaseHas('attendance_devices', [
+            'company_id' => $company->getKey(),
+            'code' => 'DEV-99',
+            'name' => 'HQ Main Biometric',
+            'device_identifier' => 'FP-999-XYZ',
+        ]);
+    }
+
+    public function test_filament_create_attendance_device_user_mapping_associates_with_tenant(): void
+    {
+        [$company, $employment, $device] = $this->deviceContext();
+        $actor = $this->actor($company, [
+            'Create:AttendanceDeviceUserMapping',
+            'ViewAny:AttendanceDeviceUserMapping',
+        ]);
+
+        $this->actingAs($actor);
+        Filament::setTenant($company);
+        Filament::bootCurrentPanel();
+
+        Livewire::test(CreateAttendanceDeviceUserMapping::class)
+            ->fillForm([
+                'attendance_device_id' => $device->getKey(),
+                'employment_id' => $employment->getKey(),
+                'external_user_id' => 'EXT-505',
+                'effective_from' => '2026-07-01',
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $this->assertDatabaseHas('attendance_device_user_mappings', [
+            'company_id' => $company->getKey(),
+            'attendance_device_id' => $device->getKey(),
+            'employment_id' => $employment->getKey(),
+            'external_user_id' => 'EXT-505',
+        ]);
     }
 
     /**

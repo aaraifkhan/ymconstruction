@@ -7,12 +7,36 @@ use Filament\Schemas\Components\Livewire;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Schema;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Str;
 use Jeffgreco13\FilamentBreezy\Pages\MyProfilePage;
 
 class MyProfile extends MyProfilePage
 {
     use HasPageShield;
+
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-user-circle';
+
+    protected static string|\UnitEnum|null $navigationGroup = 'Settings';
+
+    protected static ?string $navigationLabel = 'Profile';
+
+    protected static ?int $navigationSort = 20;
+
+    public static function getNavigationGroup(): ?string
+    {
+        return 'Settings';
+    }
+
+    public static function getNavigationIcon(): string|\BackedEnum|Htmlable|null
+    {
+        return 'heroicon-o-user-circle';
+    }
+
+    public static function getNavigationSort(): ?int
+    {
+        return 20;
+    }
 
     protected string $view = 'filament-panels::pages.page';
 

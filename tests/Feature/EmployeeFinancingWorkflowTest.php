@@ -19,6 +19,7 @@ use App\Enums\AccountingProfile;
 use App\Enums\EmployeeFinancingStatus;
 use App\Enums\EmployeeFinancingType;
 use App\Enums\TreasuryStatus;
+use App\Filament\Resources\EmployeeFinancings\Pages\CreateEmployeeFinancing;
 use App\Filament\Resources\EmployeeFinancings\Pages\ListEmployeeFinancings;
 use App\Models\Company;
 use App\Models\CompanyBankAccount;
@@ -162,6 +163,38 @@ class EmployeeFinancingWorkflowTest extends TestCase
         Livewire::test(ListEmployeeFinancings::class)
             ->assertCanSeeTableRecords([$financing])
             ->assertSuccessful();
+    }
+
+    public function test_filament_create_employee_financing_associates_with_tenant(): void
+    {
+        [$company, $employment, $maker] = $this->context();
+
+        $this->actingAs($maker);
+        Filament::setTenant($company);
+        Filament::bootCurrentPanel();
+
+        Livewire::test(CreateEmployeeFinancing::class)
+            ->fillForm([
+                'employment_id' => $employment->getKey(),
+                'type' => EmployeeFinancingType::Loan->value,
+                'sub_category' => 'personal_loan',
+                'request_date' => '2026-08-01',
+                'purpose' => 'Emergency medical expenses',
+                'principal_amount' => 50000,
+                'finance_charge' => 0,
+                'installment_count' => 5,
+                'first_due_date' => '2026-09-01',
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $this->assertDatabaseHas('employee_financings', [
+            'company_id' => $company->getKey(),
+            'employment_id' => $employment->getKey(),
+            'requested_by_id' => $maker->getKey(),
+            'principal_amount' => '50000.0000',
+            'total_repayable' => '50000.0000',
+        ]);
     }
 
     public function test_approved_principal_waiver_posts_expense_and_reduces_subledger(): void

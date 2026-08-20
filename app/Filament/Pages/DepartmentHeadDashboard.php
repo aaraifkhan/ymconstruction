@@ -13,7 +13,7 @@ class DepartmentHeadDashboard extends Page
 {
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedPresentationChartBar;
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Department Operations';
+    protected static \UnitEnum|string|null $navigationGroup = 'SM Department Operations';
 
     protected static ?string $navigationLabel = 'Head Operations Dashboard';
 

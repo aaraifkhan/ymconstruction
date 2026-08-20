@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\CompanyModules\Tables;
 
 use App\Enums\CompanyModuleState;
+use App\Models\CompanyModule;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -21,7 +22,9 @@ class CompanyModulesTable
                 TextColumn::make('module.name')
                     ->label('Module')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->weight('bold')
+                    ->description(fn (CompanyModule $record): string => $record->module?->description ?? ''),
                 TextColumn::make('state')
                     ->badge()
                     ->formatStateUsing(fn (CompanyModuleState $state): string => $state->label())

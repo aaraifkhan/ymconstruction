@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
 
-#[Fillable(['key', 'name', 'description', 'is_active', 'sort_order'])]
+#[Fillable(['key', 'name', 'icon', 'navigation_group', 'description', 'features', 'is_active', 'sort_order'])]
 class Module extends Model
 {
     /** @use HasFactory<ModuleFactory> */
@@ -36,7 +36,7 @@ class Module extends Model
     {
         return LogOptions::defaults()
             ->useLogName('modules')
-            ->logOnly(['key', 'name', 'description', 'is_active', 'sort_order'])
+            ->logOnly(['key', 'name', 'icon', 'navigation_group', 'description', 'features', 'is_active', 'sort_order'])
             ->logOnlyDirty()
             ->dontLogEmptyChanges();
     }
@@ -44,6 +44,7 @@ class Module extends Model
     protected function casts(): array
     {
         return [
+            'features' => 'array',
             'is_active' => 'boolean',
             'sort_order' => 'integer',
         ];

@@ -20,7 +20,11 @@ class CompanyModuleResource extends Resource
 {
     protected static ?string $model = CompanyModule::class;
 
+    protected static bool $isScopedToTenant = false;
+
     protected static ?string $tenantRelationshipName = 'companyModules';
+
+    protected static bool $shouldRegisterNavigation = false;
 
     protected static \UnitEnum|string|null $navigationGroup = 'Company Management';
 

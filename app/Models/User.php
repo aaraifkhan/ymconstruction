@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
+use Filament\Models\Contracts\FilamentUser;
 use Filament\Models\Contracts\HasTenants;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -23,10 +24,19 @@ use Spatie\Permission\Traits\HasRoles;
 
 #[Fillable(['name', 'email', 'password', 'email_verified_at'])]
 #[Hidden(['password', 'remember_token'])]
-class User extends Authenticatable implements HasTenants
+class User extends Authenticatable implements FilamentUser, HasTenants
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, HasRoles, LogsActivity, Notifiable, SoftDeletes, TwoFactorAuthenticatable;
+
+    public function canAccessPanel(Panel $panel): bool
+    {
+        if ($panel->getId() === 'super-admin') {
+            return $this->hasRole('super_admin');
+        }
+
+        return true;
+    }
 
     public function getActivitylogOptions(): LogOptions
     {
@@ -75,11 +85,52 @@ class User extends Authenticatable implements HasTenants
                 ->get();
         }
 
-        return $this->companies()
+        $directCompanies = $this->companies()
             ->where('companies.is_active', true)
             ->wherePivot('is_active', true)
             ->orderBy('companies.name')
             ->get();
+
+        $descendantRootIds = $directCompanies
+            ->filter(fn (Company $company): bool => (bool) $company->pivot->can_access_descendants)
+            ->modelKeys();
+
+        if ($descendantRootIds === []) {
+            return $directCompanies;
+        }
+
+        $allActiveCompanies = Company::query()
+            ->active()
+            ->get()
+            ->keyBy(fn (Company $company): int => $company->getKey());
+
+        $descendantCompanies = $allActiveCompanies->filter(
+            function (Company $company) use ($allActiveCompanies, $descendantRootIds): bool {
+                $parentCompanyId = $company->parent_company_id;
+                $visitedCompanyIds = [];
+
+                while ($parentCompanyId !== null) {
+                    if (in_array($parentCompanyId, $descendantRootIds, true)) {
+                        return true;
+                    }
+
+                    if (in_array($parentCompanyId, $visitedCompanyIds, true)) {
+                        return false;
+                    }
+
+                    $visitedCompanyIds[] = $parentCompanyId;
+                    $parentCompanyId = $allActiveCompanies->get($parentCompanyId)?->parent_company_id;
+                }
+
+                return false;
+            }
+        );
+
+        return $directCompanies
+            ->concat($descendantCompanies)
+            ->unique(fn (Company $company): int => $company->getKey())
+            ->sortBy('name')
+            ->values();
     }
 
     /**

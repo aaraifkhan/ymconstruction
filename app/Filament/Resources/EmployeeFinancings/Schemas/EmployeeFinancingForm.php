@@ -29,20 +29,27 @@ class EmployeeFinancingForm
                     ->live(),
                 Select::make('sub_category')
                     ->label('Sub-category')
-                    ->options(fn (callable $get): array => match (EmployeeFinancingType::tryFrom($get('type'))) {
-                        EmployeeFinancingType::Loan => [
-                            'vehicle_loan' => 'Vehicle Loan',
-                            'personal_loan' => 'Personal Loan',
-                            'home_loan' => 'Home Loan',
-                            'business_loan' => 'Business Loan',
-                        ],
-                        EmployeeFinancingType::Advance => [
-                            'salary_advance' => 'Salary Advance',
-                            'medical_advance' => 'Medical Advance',
-                            'education_advance' => 'Education Advance',
-                            'travel_advance' => 'Travel Advance',
-                        ],
-                        default => [],
+                    ->options(function (callable $get): array {
+                        $type = $get('type');
+                        $typeEnum = $type instanceof EmployeeFinancingType
+                            ? $type
+                            : (is_string($type) ? EmployeeFinancingType::tryFrom($type) : null);
+
+                        return match ($typeEnum) {
+                            EmployeeFinancingType::Loan => [
+                                'vehicle_loan' => 'Vehicle Loan',
+                                'personal_loan' => 'Personal Loan',
+                                'home_loan' => 'Home Loan',
+                                'business_loan' => 'Business Loan',
+                            ],
+                            EmployeeFinancingType::Advance => [
+                                'salary_advance' => 'Salary Advance',
+                                'medical_advance' => 'Medical Advance',
+                                'education_advance' => 'Education Advance',
+                                'travel_advance' => 'Travel Advance',
+                            ],
+                            default => [],
+                        };
                     })
                     ->helperText('Specific category within the selected type.')
                     ->searchable(),

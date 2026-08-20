@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\AttendanceDevices\Pages;
 
 use App\Filament\Resources\AttendanceDevices\AttendanceDeviceResource;
+use Filament\Facades\Filament;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateAttendanceDevice extends CreateRecord
@@ -11,7 +12,7 @@ class CreateAttendanceDevice extends CreateRecord
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
-        $data['company_id'] = $this->getTenant()->getKey();
+        $data['company_id'] = Filament::getTenant()->getKey();
 
         return $data;
     }

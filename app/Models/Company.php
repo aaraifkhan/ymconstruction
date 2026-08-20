@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\CompanyModuleState;
 use Database\Factories\CompanyFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -95,6 +96,52 @@ class Company extends Model
     public function companyModules(): HasMany
     {
         return $this->hasMany(CompanyModule::class);
+    }
+
+    public function hasModuleEnabled(string $moduleKey): bool
+    {
+        $module = Module::query()->where('key', $moduleKey)->first();
+        if (! $module) {
+            return true;
+        }
+
+        if (! $module->is_active) {
+            return false;
+        }
+
+        /** @var CompanyModule|null $companyModule */
+        $companyModule = $this->companyModules()->where('module_id', $module->id)->first();
+        if ($companyModule) {
+            if ($companyModule->state === CompanyModuleState::Enabled) {
+                return true;
+            }
+            if ($companyModule->state === CompanyModuleState::Disabled) {
+                return false;
+            }
+            if ($companyModule->state === CompanyModuleState::Inherit && $this->parentCompany) {
+                return $this->parentCompany->hasModuleEnabled($moduleKey);
+            }
+        }
+
+        if ($this->parentCompany) {
+            return $this->parentCompany->hasModuleEnabled($moduleKey);
+        }
+
+        return true;
+    }
+
+    public function getEnabledModuleKeys(): array
+    {
+        $allModules = Module::query()->where('is_active', true)->get();
+        $enabledKeys = [];
+
+        foreach ($allModules as $module) {
+            if ($this->hasModuleEnabled($module->key)) {
+                $enabledKeys[] = $module->key;
+            }
+        }
+
+        return $enabledKeys;
     }
 
     public function bankAccounts(): HasMany
