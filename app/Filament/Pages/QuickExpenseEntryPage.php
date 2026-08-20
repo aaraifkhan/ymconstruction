@@ -61,16 +61,34 @@ class QuickExpenseEntryPage extends Page implements HasTable
     public static function canAccess(): bool
     {
         $user = Filament::auth()->user();
+        if ($user === null) {
+            return false;
+        }
 
-        return Filament::getTenant() !== null
-            && $user !== null
-            && ($user->hasRole('super_admin') || $user->can('Create:JournalEntry'));
+        $hasPermission = $user->hasRole('super_admin') || $user->can('Create:JournalEntry');
+        if (! $hasPermission) {
+            return false;
+        }
+
+        return Filament::getTenant() !== null || Filament::getCurrentPanel()?->getId() === 'accounts-hub';
     }
 
     public function mount(): void
     {
         abort_unless(static::canAccess(), 403);
+
+        $user = Filament::auth()->user();
+        $targetCompanyId = Filament::getTenant()?->getKey();
+
+        if (! $targetCompanyId) {
+            $firstAccessible = $user?->hasRole('super_admin')
+                ? Company::withoutGlobalScopes()->where('is_active', true)->first()
+                : $user?->companies()->wherePivot('is_active', true)->first();
+            $targetCompanyId = $firstAccessible?->getKey();
+        }
+
         $this->form->fill([
+            'target_company_id' => $targetCompanyId,
             'transaction_date' => today()->toDateString(),
             'payment_method' => ExpensePaymentMethod::Cash->value,
             'category' => ExpenseCategory::Miscellaneous->value,
@@ -79,7 +97,10 @@ class QuickExpenseEntryPage extends Page implements HasTable
 
     public function form(Schema $form): Schema
     {
-        $company = Filament::getTenant();
+        $user = Filament::auth()->user();
+        $accessibleCompanyIds = $user?->hasRole('super_admin')
+            ? Company::withoutGlobalScopes()->where('is_active', true)->pluck('id')->all()
+            : $user?->companies()->wherePivot('is_active', true)->pluck('companies.id')->all() ?? [];
 
         return $form
             ->statePath('data')
@@ -88,6 +109,15 @@ class QuickExpenseEntryPage extends Page implements HasTable
                     ->description('Quickly enter expenses without writing manual double-entry lines. The system will automatically construct and post the balanced journal entry.')
                     ->columns(3)
                     ->schema([
+                        Select::make('target_company_id')
+                            ->label('Target Company')
+                            ->options(fn () => Company::withoutGlobalScopes()->whereIn('id', $accessibleCompanyIds)->where('is_active', true)->pluck('name', 'id'))
+                            ->default(fn () => Filament::getTenant()?->getKey() ?? ($accessibleCompanyIds[0] ?? null))
+                            ->visible(fn () => Filament::getTenant() === null)
+                            ->required(fn () => Filament::getTenant() === null)
+                            ->live()
+                            ->columnSpanFull(),
+
                         DatePicker::make('transaction_date')
                             ->label('Expense Date')
                             ->required()
@@ -115,28 +145,40 @@ class QuickExpenseEntryPage extends Page implements HasTable
 
                         Select::make('company_bank_account_id')
                             ->label('Company Bank Account')
-                            ->options(fn () => CompanyBankAccount::query()
-                                ->where('company_id', $company?->getKey())
-                                ->where('is_active', true)
-                                ->pluck('bank_name', 'id'))
+                            ->options(function ($get) {
+                                $compKey = $get('target_company_id') ?? Filament::getTenant()?->getKey();
+
+                                return CompanyBankAccount::query()
+                                    ->where('company_id', $compKey)
+                                    ->where('is_active', true)
+                                    ->pluck('bank_name', 'id');
+                            })
                             ->visible(fn ($get) => $get('payment_method') === ExpensePaymentMethod::Bank->value)
                             ->required(fn ($get) => $get('payment_method') === ExpensePaymentMethod::Bank->value)
                             ->searchable(),
 
                         Select::make('project_id')
                             ->label('Project / Site (Cost Allocation)')
-                            ->options(fn () => Project::query()
-                                ->where('company_id', Filament::getTenant()?->getKey())
-                                ->pluck('name', 'id'))
+                            ->options(function ($get) {
+                                $compKey = $get('target_company_id') ?? Filament::getTenant()?->getKey();
+
+                                return Project::query()
+                                    ->where('company_id', $compKey)
+                                    ->pluck('name', 'id');
+                            })
                             ->searchable()
                             ->required(fn ($get) => in_array($get('category'), array_map(fn ($c) => $c->value, array_filter(ExpenseCategory::cases(), fn ($c) => $c->isDirectProjectCost())), true)),
 
                         Select::make('party_id')
                             ->label('Payee / Vendor / Party (Optional)')
-                            ->options(fn () => Party::query()
-                                ->where('company_id', $company?->getKey())
-                                ->where('is_active', true)
-                                ->pluck('name', 'id'))
+                            ->options(function ($get) {
+                                $compKey = $get('target_company_id') ?? Filament::getTenant()?->getKey();
+
+                                return Party::query()
+                                    ->where('company_id', $compKey)
+                                    ->where('is_active', true)
+                                    ->pluck('name', 'id');
+                            })
                             ->searchable(),
 
                         Select::make('expense_of_company_id')
@@ -163,8 +205,16 @@ class QuickExpenseEntryPage extends Page implements HasTable
     public function submit(RecordQuickExpenseAction $action): void
     {
         $validated = $this->form->getState();
-        $company = Filament::getTenant();
         $user = Filament::auth()->user();
+        $targetCompanyId = $validated['target_company_id'] ?? Filament::getTenant()?->getKey();
+        $company = Company::withoutGlobalScopes()->findOrFail($targetCompanyId);
+
+        // Check if user is authorized for target company
+        if (! $user->hasRole('super_admin') && ! $user->companies()->where('companies.id', $company->getKey())->wherePivot('is_active', true)->exists()) {
+            Notification::make()->title('Access Denied')->body("You do not have active access to {$company->name}.")->danger()->send();
+
+            return;
+        }
 
         $category = ExpenseCategory::from($validated['category']);
         $paymentMethod = ExpensePaymentMethod::from($validated['payment_method']);
@@ -186,12 +236,13 @@ class QuickExpenseEntryPage extends Page implements HasTable
             );
 
             Notification::make()
-                ->title('Expense Recorded Successfully')
+                ->title("Expense Recorded in {$company->name}")
                 ->body("Voucher {$journal->voucher_number} ({$category->getLabel()} - PKR ".number_format((float) $validated['amount'], 2).') was submitted.')
                 ->success()
                 ->send();
 
             $this->form->fill([
+                'target_company_id' => $targetCompanyId,
                 'transaction_date' => $validated['transaction_date'],
                 'payment_method' => $validated['payment_method'],
                 'category' => ExpenseCategory::Miscellaneous->value,
@@ -208,21 +259,37 @@ class QuickExpenseEntryPage extends Page implements HasTable
     public function table(Table $table): Table
     {
         $company = Filament::getTenant();
+        $user = Filament::auth()->user();
+        $accessibleCompanyIds = $user?->hasRole('super_admin')
+            ? Company::withoutGlobalScopes()->where('is_active', true)->pluck('id')->all()
+            : $user?->companies()->wherePivot('is_active', true)->pluck('companies.id')->all() ?? [];
+
+        $query = JournalEntry::withoutGlobalScopes()
+            ->with(['company', 'lines.account', 'lines.project', 'preparedBy'])
+            ->latest('transaction_date')
+            ->latest('id');
+
+        if ($company) {
+            $query->where('company_id', $company->getKey());
+        } else {
+            $query->whereIn('company_id', $accessibleCompanyIds);
+        }
 
         return $table
-            ->query(
-                JournalEntry::query()
-                    ->where('company_id', $company?->getKey())
-                    ->with(['lines.account', 'lines.project', 'preparedBy'])
-                    ->latest('transaction_date')
-                    ->latest('id')
-            )
+            ->query($query)
             ->heading('Recently Recorded Expenses')
-            ->description('Real-time audit log of operational expenses posted into this workspace')
+            ->description('Real-time audit log of operational expenses posted into ledger')
             ->columns([
                 TextColumn::make('transaction_date')
                     ->label('Date')
                     ->date()
+                    ->sortable(),
+                TextColumn::make('company.name')
+                    ->label('Company')
+                    ->badge()
+                    ->color('info')
+                    ->visible(fn () => Filament::getTenant() === null)
+                    ->searchable()
                     ->sortable(),
                 TextColumn::make('voucher_number')
                     ->label('Voucher #')
@@ -277,6 +344,10 @@ class QuickExpenseEntryPage extends Page implements HasTable
                     ->toggleable(),
             ])
             ->filters([
+                SelectFilter::make('company_id')
+                    ->label('Company')
+                    ->options(fn () => Company::withoutGlobalScopes()->whereIn('id', $accessibleCompanyIds)->where('is_active', true)->pluck('name', 'id'))
+                    ->visible(fn () => Filament::getTenant() === null),
                 SelectFilter::make('status')
                     ->options(JournalStatus::class),
                 SelectFilter::make('project_id')
@@ -290,8 +361,24 @@ class QuickExpenseEntryPage extends Page implements HasTable
     /** @return array<string, mixed> */
     public function getFinancialSummaryProperty(): array
     {
-        $company = Filament::getTenant();
-        if ($company === null) {
+        $tenant = Filament::getTenant();
+        $user = Filament::auth()->user();
+        if ($user === null) {
+            return [
+                'cash_balance' => 0.0,
+                'bank_balance' => 0.0,
+                'today_expenses' => 0.0,
+                'month_expenses' => 0.0,
+            ];
+        }
+
+        $companies = $tenant instanceof Company
+            ? collect([$tenant])
+            : ($user->hasRole('super_admin')
+                ? Company::withoutGlobalScopes()->where('is_active', true)->get()
+                : $user->companies()->wherePivot('is_active', true)->get());
+
+        if ($companies->isEmpty()) {
             return [
                 'cash_balance' => 0.0,
                 'bank_balance' => 0.0,
@@ -301,39 +388,42 @@ class QuickExpenseEntryPage extends Page implements HasTable
         }
 
         $balanceAction = app(CheckAccountAvailableBalanceAction::class);
-
-        // Cash in hand accounts
-        $cashAccounts = Account::withoutGlobalScopes()
-            ->where('company_id', $company->getKey())
-            ->where(function ($q): void {
-                $q->where('code', 'LIKE', '1111%')
-                    ->orWhere('code', 'LIKE', '1112%')
-                    ->orWhere('name', 'LIKE', '%Cash in Hand%')
-                    ->orWhere('name', 'LIKE', '%Petty Cash%');
-            })
-            ->get();
-
         $cashBalance = '0.0000';
-        foreach ($cashAccounts as $acc) {
-            $cashBalance = bcadd($cashBalance, (string) $balanceAction->getAccountBalance($company, $acc), 4);
-        }
-
-        // Bank balance
-        $bankAccounts = CompanyBankAccount::query()
-            ->where('company_id', $company->getKey())
-            ->where('is_active', true)
-            ->get();
-
         $bankBalance = '0.0000';
-        foreach ($bankAccounts as $bankAcc) {
-            $bankBalance = bcadd($bankBalance, (string) $balanceAction->getBankAccountBalance($company, $bankAcc), 4);
+        $companyIds = $companies->pluck('id')->all();
+
+        foreach ($companies as $comp) {
+            // Cash in hand accounts
+            $cashAccounts = Account::withoutGlobalScopes()
+                ->where('company_id', $comp->getKey())
+                ->where(function ($q): void {
+                    $q->where('code', 'LIKE', '1111%')
+                        ->orWhere('code', 'LIKE', '1112%')
+                        ->orWhere('name', 'LIKE', '%Cash in Hand%')
+                        ->orWhere('name', 'LIKE', '%Petty Cash%');
+                })
+                ->get();
+
+            foreach ($cashAccounts as $acc) {
+                $cashBalance = bcadd($cashBalance, (string) $balanceAction->getAccountBalance($comp, $acc), 4);
+            }
+
+            // Bank balance
+            $bankAccounts = CompanyBankAccount::query()
+                ->where('company_id', $comp->getKey())
+                ->where('is_active', true)
+                ->get();
+
+            foreach ($bankAccounts as $bankAcc) {
+                $bankBalance = bcadd($bankBalance, (string) $balanceAction->getBankAccountBalance($comp, $bankAcc), 4);
+            }
         }
 
         // Today's expenses
         $todayExpenses = JournalEntry::withoutGlobalScopes()
             ->join('journal_lines', 'journal_entries.id', '=', 'journal_lines.journal_entry_id')
             ->join('accounts', 'journal_lines.account_id', '=', 'accounts.id')
-            ->where('journal_entries.company_id', $company->getKey())
+            ->whereIn('journal_entries.company_id', $companyIds)
             ->where('journal_entries.status', JournalStatus::Posted->value)
             ->whereDate('journal_entries.transaction_date', today())
             ->where(function ($q): void {
@@ -347,7 +437,7 @@ class QuickExpenseEntryPage extends Page implements HasTable
         $monthExpenses = JournalEntry::withoutGlobalScopes()
             ->join('journal_lines', 'journal_entries.id', '=', 'journal_lines.journal_entry_id')
             ->join('accounts', 'journal_lines.account_id', '=', 'accounts.id')
-            ->where('journal_entries.company_id', $company->getKey())
+            ->whereIn('journal_entries.company_id', $companyIds)
             ->where('journal_entries.status', JournalStatus::Posted->value)
             ->whereBetween('journal_entries.transaction_date', [today()->startOfMonth(), today()->endOfMonth()])
             ->where(function ($q): void {

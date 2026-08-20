@@ -232,4 +232,24 @@ enum ExpenseCategory: string implements HasLabel
     {
         return $this->group() === 'bidding';
     }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function generalGroupOptions(): array
+    {
+        return [
+            self::Entertainment->value => '☕ Staff Tea, Chai & Kitchen Supplies (6700)',
+            self::StaffEngagement->value => '🎉 Staff Engagement & Office Refreshments (5150)',
+            self::Utilities->value => '💡 Shared Utilities (Electricity / Gas / Water) (5400)',
+            self::CleaningExpense->value => '🧹 Office Cleaning & Pantry Supplies (5450)',
+            self::Internet->value => '🌐 Internet & Shared Communication (5500)',
+            self::Stationery->value => '📝 General Office Stationery (5800)',
+            self::RepairsMaintenance->value => '🔧 Office Repairs & Maintenance (5900)',
+            self::FixedAssetPurchase->value => '🏢 Shared Group Fixed Asset (Furniture / AC / Equipment) (1280)',
+            self::Miscellaneous->value => '📦 Miscellaneous General Expense (6900)',
+            self::Fuel->value => '⛽ Fuel & Generator Expense (5200)',
+            self::SoftwareSubscription->value => '💻 Software & Shared Subscriptions (6600)',
+        ];
+    }
 }

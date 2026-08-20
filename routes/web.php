@@ -19,4 +19,5 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/portal', [PortalController::class, 'index'])->name('portal');
     Route::get('/portal/company/{company:slug}', [PortalController::class, 'enterCompany'])->name('portal.company');
     Route::get('/admin', [PortalController::class, 'superAdmin'])->name('portal.super-admin');
+    Route::get('/portal/accounts-hub', [PortalController::class, 'accountsHub'])->name('portal.accounts-hub');
 });

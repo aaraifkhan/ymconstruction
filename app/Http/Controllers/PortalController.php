@@ -16,9 +16,16 @@ class PortalController extends Controller
         /** @var User $user */
         $user = $request->user();
 
+        $isSuperAdmin = $user->hasRole('super_admin');
+        $hasAccountsHubAccess = $isSuperAdmin
+            || $user->can('View:MasterAccountsHub')
+            || $user->can('Create:JournalEntry')
+            || ($user->getAccessibleCompanies()->isNotEmpty() && $user->getAccessibleCompanies()->contains(fn (Company $c) => $c->hasModuleEnabled('accounts')));
+
         return view('portal.index', [
             'companies' => $user->getAccessibleCompanies(),
-            'isSuperAdmin' => $user->hasRole('super_admin'),
+            'isSuperAdmin' => $isSuperAdmin,
+            'hasAccountsHubAccess' => $hasAccountsHubAccess,
         ]);
     }
 
@@ -40,5 +47,20 @@ class PortalController extends Controller
         abort_unless($user->hasRole('super_admin'), 403);
 
         return redirect()->to(Filament::getPanel('super-admin')->getUrl());
+    }
+
+    public function accountsHub(Request $request): RedirectResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $canAccess = $user->hasRole('super_admin')
+            || $user->can('View:MasterAccountsHub')
+            || $user->can('Create:JournalEntry')
+            || ($user->getAccessibleCompanies()->isNotEmpty() && $user->getAccessibleCompanies()->contains(fn (Company $c) => $c->hasModuleEnabled('accounts')));
+
+        abort_unless($canAccess, 403);
+
+        return redirect()->to(Filament::getPanel('accounts-hub')->getUrl());
     }
 }

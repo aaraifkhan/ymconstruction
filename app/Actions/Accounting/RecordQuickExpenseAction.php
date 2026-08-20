@@ -176,6 +176,19 @@ class RecordQuickExpenseAction
             }
         }
 
+        // Fallback for fixed asset purchase
+        if ($category === ExpenseCategory::FixedAssetPurchase) {
+            $assetFallback = $company->accounts()
+                ->withoutGlobalScopes()
+                ->where('allows_manual_posting', true)
+                ->where('is_active', true)
+                ->where('code', 'LIKE', '12%')
+                ->first();
+            if ($assetFallback !== null) {
+                return $assetFallback;
+            }
+        }
+
         // Fallback to active leaf expense account in 5000 / 7000 group
         $fallback = $company->accounts()
             ->withoutGlobalScopes()

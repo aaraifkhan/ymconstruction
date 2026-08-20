@@ -77,24 +77,39 @@ class MasterAccountsHubPage extends Page implements HasTable
     public static function canAccess(): bool
     {
         $user = Filament::auth()->user();
+        if ($user === null) {
+            return false;
+        }
 
-        return Filament::getTenant() !== null
-            && $user !== null
-            && ($user->hasRole('super_admin') || $user->can('View:MasterAccountsHub'));
+        $hasPermission = $user->hasRole('super_admin') || $user->can('View:MasterAccountsHub');
+        if (! $hasPermission) {
+            return false;
+        }
+
+        return Filament::getTenant() !== null || Filament::getCurrentPanel()?->getId() === 'accounts-hub';
     }
 
     public function mount(): void
     {
         abort_unless(static::canAccess(), 403);
 
-        $tenantId = Filament::getTenant()?->getKey();
-        $openPeriod = FinancialPeriod::withoutGlobalScopes()
-            ->where('company_id', $tenantId)
+        $user = Filament::auth()->user();
+        $targetCompanyId = Filament::getTenant()?->getKey();
+
+        if (! $targetCompanyId) {
+            $firstAccessible = $user?->hasRole('super_admin')
+                ? Company::withoutGlobalScopes()->where('is_active', true)->first()
+                : $user?->companies()->wherePivot('is_active', true)->first();
+            $targetCompanyId = $firstAccessible?->getKey();
+        }
+
+        $openPeriod = $targetCompanyId ? FinancialPeriod::withoutGlobalScopes()
+            ->where('company_id', $targetCompanyId)
             ->where('status', FinancialPeriodStatus::Open)
-            ->first();
+            ->first() : null;
 
         $this->form->fill([
-            'target_company_id' => $tenantId,
+            'target_company_id' => $targetCompanyId,
             'entry_type' => 'expense',
             'transaction_date' => today()->toDateString(),
             'financial_period_id' => $openPeriod?->getKey(),
@@ -126,7 +141,7 @@ class MasterAccountsHubPage extends Page implements HasTable
                         Select::make('target_company_id')
                             ->label('Target Company')
                             ->options(fn () => Company::withoutGlobalScopes()->whereIn('id', $accessibleCompanyIds)->where('is_active', true)->pluck('name', 'id'))
-                            ->default(fn () => Filament::getTenant()?->getKey())
+                            ->default(fn () => Filament::getTenant()?->getKey() ?? ($accessibleCompanyIds[0] ?? null))
                             ->required()
                             ->live()
                             ->afterStateUpdated(function ($state, Set $set): void {

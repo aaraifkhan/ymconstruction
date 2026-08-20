@@ -172,4 +172,20 @@ class PortalAccessTest extends TestCase
         $this->assertSame('Back to Access Portal', $lastGroup->getItems()[0]->getLabel());
         $this->assertSame(route('portal'), $lastGroup->getItems()[0]->getUrl());
     }
+
+    public function test_accounts_hub_sidebar_has_back_to_access_portal_navigation_group_at_bottom(): void
+    {
+        $user = User::factory()->create()->assignRole(Role::findOrCreate('super_admin'));
+
+        $this->actingAs($user);
+        Filament::setCurrentPanel(Filament::getPanel('accounts-hub'));
+
+        $navigation = Filament::getPanel('accounts-hub')->getNavigation();
+        $lastGroup = collect($navigation)->last();
+
+        $this->assertNotNull($lastGroup);
+        $this->assertSame('Portal', $lastGroup->getLabel());
+        $this->assertSame('Back to Access Portal', $lastGroup->getItems()[0]->getLabel());
+        $this->assertSame(route('portal'), $lastGroup->getItems()[0]->getUrl());
+    }
 }

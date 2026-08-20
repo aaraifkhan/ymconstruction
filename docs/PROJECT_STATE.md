@@ -84,8 +84,9 @@ The original multi-company foundation, document platform, HR foundation, joining
 - Company access is direct active membership only; legacy descendant-access metadata is not used
 - Filament company tenancy, searchable company switcher, and company registration
 - Dedicated Non-Tenant Super Admin Panel (`/super-admin`) strictly decoupled from company operational panels, hosting Company Management, Company Bank Accounts, Global Company Modules & Capability Matrix, Users, Roles & Permissions (Shield), System Activities & Logs, and System Settings
+- Dedicated Non-Tenant Accounts Hub Panel (`/accounts-hub`) for centralized cross-company operational expense logging, group-wide fund and cash/bank balance monitoring, quick expense vouchers, and multi-company shared cost allocations
 - Company Tenant Operations Panels (`/admin/company/{company}`) dedicated to business operational modules (Accounts, HR, Documents, Projects, Medical Billing) with system administration excluded from navigation
-- Access portal (`/portal`) routing directing company cards to company operations and the Super Admin card directly to `/super-admin`
+- Access portal (`/portal`) routing directing company cards to company operations, the Super Admin card to `/super-admin`, and the Accounts Hub & Fast Entry card directly to `/accounts-hub`
 - Super-admin access to every active company and system-level governance
 - Shared module catalog for Documents, HR, Accounts, and Projects
 - Per-company module state (`enabled` or `disabled`), workflow variant, and settings

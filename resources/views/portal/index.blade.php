@@ -24,6 +24,10 @@
         .admin { border-color: #27364e; background: #172033; color: #fff; }
         .admin .logo { background: rgba(255, 255, 255, .1); font-size: 3.25rem; }
         .admin p { color: #c6d3e1; }
+        .hub { border-color: #0d9488; background: linear-gradient(135deg, #0f766e, #115e59); color: #fff; }
+        .hub:hover, .hub:focus-visible { border-color: #14b8a6; box-shadow: 0 18px 40px rgba(13, 148, 136, .3); }
+        .hub .logo { background: rgba(255, 255, 255, .15); font-size: 3.25rem; color: #5eead4; }
+        .hub p { color: #ccfbf1; }
         .empty { max-width: 580px; border: 1px solid #dce5ea; border-radius: 1rem; background: #fff; padding: 1.5rem; }
         .sign-out-wrapper { display: flex; justify-content: center; margin-top: 3rem; }
         .sign-out-btn {
@@ -81,6 +85,16 @@
                         </div>
                     </a>
                 @endforeach
+
+                @if ($hasAccountsHubAccess ?? false)
+                    <a class="card hub" href="{{ route('portal.accounts-hub') }}">
+                        <div class="logo" aria-hidden="true">&#9889;</div>
+                        <div>
+                            <h2>Accounts Hub &amp; Fast Entry</h2>
+                            <p>Universal cross-company expense &amp; fund hub</p>
+                        </div>
+                    </a>
+                @endif
 
                 @if ($isSuperAdmin)
                     <a class="card admin" href="{{ route('portal.super-admin') }}">

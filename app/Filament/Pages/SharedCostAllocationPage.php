@@ -51,16 +51,34 @@ class SharedCostAllocationPage extends Page implements HasTable
     public static function canAccess(): bool
     {
         $user = Filament::auth()->user();
+        if ($user === null) {
+            return false;
+        }
 
-        return Filament::getTenant() !== null
-            && $user !== null
-            && ($user->hasRole('super_admin') || $user->can('Create:JournalEntry'));
+        $hasPermission = $user->hasRole('super_admin') || $user->can('Create:JournalEntry');
+        if (! $hasPermission) {
+            return false;
+        }
+
+        return Filament::getTenant() !== null || Filament::getCurrentPanel()?->getId() === 'accounts-hub';
     }
 
     public function mount(): void
     {
         abort_unless(static::canAccess(), 403);
+
+        $user = Filament::auth()->user();
+        $payingCompanyId = Filament::getTenant()?->getKey();
+
+        if (! $payingCompanyId) {
+            $firstAccessible = $user?->hasRole('super_admin')
+                ? Company::withoutGlobalScopes()->where('is_active', true)->first()
+                : $user?->companies()->wherePivot('is_active', true)->first();
+            $payingCompanyId = $firstAccessible?->getKey();
+        }
+
         $this->form->fill([
+            'paying_company_id' => $payingCompanyId,
             'date' => today()->toDateString(),
             'payment_method' => ExpensePaymentMethod::Cash->value,
             'description' => 'Shared head office monthly utility / expense split',
@@ -74,6 +92,11 @@ class SharedCostAllocationPage extends Page implements HasTable
 
     public function form(Schema $form): Schema
     {
+        $user = Filament::auth()->user();
+        $accessibleCompanyIds = $user?->hasRole('super_admin')
+            ? Company::withoutGlobalScopes()->where('is_active', true)->pluck('id')->all()
+            : $user?->companies()->wherePivot('is_active', true)->pluck('companies.id')->all() ?? [];
+
         return $form
             ->statePath('data')
             ->schema([
@@ -81,6 +104,15 @@ class SharedCostAllocationPage extends Page implements HasTable
                     ->description('Enter head office or joint expenses (e.g. utility bills, rent, internet) and allocate cost percentages/amounts across group entities.')
                     ->columns(3)
                     ->schema([
+                        Select::make('paying_company_id')
+                            ->label('Paying Entity (Fund Source Company)')
+                            ->options(fn () => Company::withoutGlobalScopes()->whereIn('id', $accessibleCompanyIds)->where('is_active', true)->pluck('name', 'id'))
+                            ->default(fn () => Filament::getTenant()?->getKey() ?? ($accessibleCompanyIds[0] ?? null))
+                            ->visible(fn () => Filament::getTenant() === null)
+                            ->required(fn () => Filament::getTenant() === null)
+                            ->live()
+                            ->columnSpanFull(),
+
                         DatePicker::make('date')
                             ->label('Transaction Date')
                             ->default(today()->toDateString())
@@ -107,7 +139,11 @@ class SharedCostAllocationPage extends Page implements HasTable
 
                         Select::make('company_bank_account_id')
                             ->label('Company Bank Account')
-                            ->options(fn () => CompanyBankAccount::query()->where('company_id', Filament::getTenant()?->getKey())->pluck('bank_name', 'id'))
+                            ->options(function ($get) {
+                                $payingKey = $get('paying_company_id') ?? Filament::getTenant()?->getKey();
+
+                                return CompanyBankAccount::query()->where('company_id', $payingKey)->where('is_active', true)->pluck('bank_name', 'id');
+                            })
                             ->visible(fn ($get) => $get('payment_method') === ExpensePaymentMethod::Bank->value)
                             ->required(fn ($get) => $get('payment_method') === ExpensePaymentMethod::Bank->value)
                             ->searchable(),
@@ -125,6 +161,7 @@ class SharedCostAllocationPage extends Page implements HasTable
                                     ->label('Entity')
                                     ->options(fn () => Company::query()->where('is_active', true)->pluck('name', 'id'))
                                     ->disabled()
+                                    ->dehydrated()
                                     ->required(),
                                 TextInput::make('amount')
                                     ->label('Share Amount (PKR)')
@@ -144,58 +181,86 @@ class SharedCostAllocationPage extends Page implements HasTable
     public function submit(AllocateSharedOperatingExpenseAction $action): void
     {
         $state = $this->form->getState();
-        $payingCompany = Filament::getTenant();
         $user = Filament::auth()->user();
+        $payingCompanyId = $state['paying_company_id'] ?? Filament::getTenant()?->getKey();
+        $payingCompany = Company::withoutGlobalScopes()->findOrFail($payingCompanyId);
+
+        // Check if user is authorized for paying company
+        if (! $user->hasRole('super_admin') && ! $user->companies()->where('companies.id', $payingCompany->getKey())->wherePivot('is_active', true)->exists()) {
+            Notification::make()->title('Access Denied')->body("You do not have active access to {$payingCompany->name}.")->danger()->send();
+
+            return;
+        }
 
         $shares = array_map(fn ($s) => [
             'company_id' => (int) $s['company_id'],
             'amount' => (string) $s['amount'],
         ], $state['shares']);
 
-        $res = $action->handle(
-            payingCompany: $payingCompany,
-            actor: $user,
-            date: CarbonImmutable::parse($state['date']),
-            category: ExpenseCategory::from($state['category']),
-            paymentMethod: ExpensePaymentMethod::from($state['payment_method']),
-            totalAmount: (string) $state['total_amount'],
-            description: $state['description'],
-            shares: $shares,
-            companyBankAccountId: ! empty($state['company_bank_account_id']) ? (int) $state['company_bank_account_id'] : null,
-        );
+        try {
+            $res = $action->handle(
+                payingCompany: $payingCompany,
+                actor: $user,
+                date: CarbonImmutable::parse($state['date']),
+                category: ExpenseCategory::from($state['category']),
+                paymentMethod: ExpensePaymentMethod::from($state['payment_method']),
+                totalAmount: (string) $state['total_amount'],
+                description: $state['description'],
+                shares: $shares,
+                companyBankAccountId: ! empty($state['company_bank_account_id']) ? (int) $state['company_bank_account_id'] : null,
+            );
 
-        Notification::make()
-            ->title('Shared Cost Allocation Posted')
-            ->body("Voucher {$res['paying_journal']->voucher_number} created with ".count($res['recipient_journals']).' reciprocal inter-company journal entries.')
-            ->success()
-            ->send();
+            Notification::make()
+                ->title('Shared Cost Allocation Posted')
+                ->body("Voucher {$res['paying_journal']->voucher_number} created with ".count($res['recipient_journals']).' reciprocal inter-company journal entries.')
+                ->success()
+                ->send();
 
-        $this->mount();
+            $this->mount();
+        } catch (\Throwable $e) {
+            Notification::make()->title('Allocation Failed')->body($e->getMessage())->danger()->send();
+        }
     }
 
     public function table(Table $table): Table
     {
         $company = Filament::getTenant();
+        $user = Filament::auth()->user();
+        $accessibleCompanyIds = $user?->hasRole('super_admin')
+            ? Company::withoutGlobalScopes()->where('is_active', true)->pluck('id')->all()
+            : $user?->companies()->wherePivot('is_active', true)->pluck('companies.id')->all() ?? [];
+
+        $query = JournalEntry::withoutGlobalScopes()
+            ->where(function ($q): void {
+                $q->where('description', 'LIKE', 'Shared % allocation%')
+                    ->orWhere('description', 'LIKE', '%split%')
+                    ->orWhere('description', 'LIKE', '%shared%');
+            })
+            ->with(['company', 'lines.account', 'lines.relatedCompany', 'preparedBy'])
+            ->latest('transaction_date')
+            ->latest('id');
+
+        if ($company) {
+            $query->where('company_id', $company->getKey());
+        } else {
+            $query->whereIn('company_id', $accessibleCompanyIds);
+        }
 
         return $table
-            ->query(
-                JournalEntry::query()
-                    ->where('company_id', $company?->getKey())
-                    ->where(function ($q): void {
-                        $q->where('description', 'LIKE', 'Shared % allocation%')
-                            ->orWhere('description', 'LIKE', '%split%')
-                            ->orWhere('description', 'LIKE', '%shared%');
-                    })
-                    ->with(['lines.account', 'lines.relatedCompany', 'preparedBy'])
-                    ->latest('transaction_date')
-                    ->latest('id')
-            )
+            ->query($query)
             ->heading('Recent Shared Cost Allocation Entries')
-            ->description('Inter-company expense allocations posted from this workspace')
+            ->description('Inter-company expense allocations posted into ledger')
             ->columns([
                 TextColumn::make('transaction_date')
                     ->label('Date')
                     ->date()
+                    ->sortable(),
+                TextColumn::make('company.name')
+                    ->label('Paying Company')
+                    ->badge()
+                    ->color('info')
+                    ->visible(fn () => Filament::getTenant() === null)
+                    ->searchable()
                     ->sortable(),
                 TextColumn::make('voucher_number')
                     ->label('Voucher #')
@@ -239,6 +304,10 @@ class SharedCostAllocationPage extends Page implements HasTable
                     ->toggleable(),
             ])
             ->filters([
+                SelectFilter::make('company_id')
+                    ->label('Company')
+                    ->options(fn () => Company::withoutGlobalScopes()->whereIn('id', $accessibleCompanyIds)->where('is_active', true)->pluck('name', 'id'))
+                    ->visible(fn () => Filament::getTenant() === null),
                 SelectFilter::make('status')
                     ->options(JournalStatus::class),
             ])
