@@ -40,12 +40,22 @@ class EmployeeAssetCustody extends Model
     protected static function booted(): void
     {
         static::saving(function (self $custody): void {
-            if (! Employment::query()->whereKey($custody->employment_id)
-                ->where('company_id', $custody->company_id)->exists()
-                || ! FixedAsset::query()->whereKey($custody->fixed_asset_id)
-                    ->where('company_id', $custody->company_id)->exists()) {
+            $employmentExists = Employment::query()
+                ->whereKey($custody->employment_id)
+                ->where('company_id', $custody->company_id)
+                ->exists();
+
+            $assetExists = FixedAsset::query()
+                ->whereKey($custody->fixed_asset_id)
+                ->where(function ($q) use ($custody): void {
+                    $q->where('company_id', $custody->company_id)
+                        ->orWhere('assigned_company_id', $custody->company_id);
+                })
+                ->exists();
+
+            if (! $employmentExists || ! $assetExists) {
                 throw ValidationException::withMessages([
-                    'employment_id' => 'Employment and Fixed Asset must belong to the custody company.',
+                    'employment_id' => 'Employment and Fixed Asset must belong or be assigned to the custody company.',
                 ]);
             }
 

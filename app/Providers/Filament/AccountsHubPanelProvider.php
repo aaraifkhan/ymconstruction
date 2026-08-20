@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Pages\GeneralAssetCustodyPage;
 use App\Filament\Pages\GeneralGroupExpensePage;
 use App\Filament\Pages\MasterAccountsHubPage;
 use App\Filament\Pages\MyProfile;
@@ -75,6 +76,7 @@ class AccountsHubPanelProvider extends PanelProvider
                 MasterAccountsHubPage::class,
                 QuickExpenseEntryPage::class,
                 GeneralGroupExpensePage::class,
+                GeneralAssetCustodyPage::class,
                 SharedCostAllocationPage::class,
             ])
             ->navigation(function (): NavigationBuilder {
@@ -86,6 +88,7 @@ class AccountsHubPanelProvider extends PanelProvider
                             ...MasterAccountsHubPage::getNavigationItems(),
                             ...QuickExpenseEntryPage::getNavigationItems(),
                             ...GeneralGroupExpensePage::getNavigationItems(),
+                            ...GeneralAssetCustodyPage::getNavigationItems(),
                             ...SharedCostAllocationPage::getNavigationItems(),
                         ]),
 

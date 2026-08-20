@@ -223,7 +223,6 @@ class ManageEmployeeClearanceAction
         $definitions = collect();
         $custodies = EmployeeAssetCustody::query()
             ->with('fixedAsset:id,asset_number,name')
-            ->where('company_id', $clearance->company_id)
             ->where('employment_id', $clearance->employment_id)
             ->whereIn('status', [
                 EmployeeAssetCustodyStatus::Issued->value,

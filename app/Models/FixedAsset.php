@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\AssetAcquisitionSource;
+use App\Enums\AssetCustodyStatus;
 use App\Enums\AssetStatus;
 use App\Enums\DepreciationMethod;
 use Database\Factories\FixedAssetFactory;
@@ -19,11 +20,12 @@ use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
 
 #[Fillable([
-    'company_id', 'asset_category_id', 'vendor_bill_line_id', 'capitalization_credit_account_id',
+    'company_id', 'assigned_company_id', 'asset_category_id', 'vendor_bill_line_id', 'capitalization_credit_account_id',
     'custodian_employment_id', 'project_id', 'project_site_id', 'cost_center_id', 'asset_number',
     'name', 'serial_number', 'location', 'acquisition_source', 'acquired_on', 'available_for_use_on',
     'acquisition_cost', 'residual_value', 'useful_life_months', 'depreciation_method',
-    'accumulated_depreciation', 'status', 'notes', 'prepared_by_id', 'submitted_by_id',
+    'accumulated_depreciation', 'status', 'custody_status', 'assigned_at', 'condition_on_assignment',
+    'handover_notes', 'notes', 'prepared_by_id', 'submitted_by_id',
     'submitted_at', 'approved_by_id', 'approved_at', 'rejected_by_id', 'rejected_at',
     'rejection_reason', 'capitalized_by_id', 'capitalized_at', 'acquisition_journal_entry_id',
 ])]
@@ -32,7 +34,13 @@ class FixedAsset extends Model
     /** @use HasFactory<FixedAssetFactory> */
     use HasFactory, LogsActivity, SoftDeletes;
 
-    protected $attributes = ['acquisition_source' => 'manual', 'depreciation_method' => 'straight_line', 'accumulated_depreciation' => 0, 'status' => 'draft'];
+    protected $attributes = [
+        'acquisition_source' => 'manual',
+        'depreciation_method' => 'straight_line',
+        'accumulated_depreciation' => 0,
+        'status' => 'draft',
+        'custody_status' => 'in_pool',
+    ];
 
     protected static function booted(): void
     {
@@ -47,17 +55,37 @@ class FixedAsset extends Model
             if (! AssetCategory::query()->whereKey($asset->asset_category_id)->where('company_id', $asset->company_id)->where('is_active', true)->exists()) {
                 throw ValidationException::withMessages(['asset_category_id' => 'Choose an active same-company asset category.']);
             }
-            foreach (['custodian_employment_id' => Employment::class, 'project_id' => Project::class, 'project_site_id' => ProjectSite::class, 'cost_center_id' => CostCenter::class] as $field => $model) {
-                if ($asset->{$field} !== null && ! $model::query()->whereKey($asset->{$field})->where('company_id', $asset->company_id)->exists()) {
-                    throw ValidationException::withMessages([$field => 'Asset dimensions must belong to the asset company.']);
+
+            if ($asset->custodian_employment_id !== null) {
+                $targetCompanyId = $asset->assigned_company_id ?? $asset->company_id;
+                if (! Employment::query()->whereKey($asset->custodian_employment_id)->whereIn('company_id', array_unique([$targetCompanyId, $asset->company_id]))->exists()) {
+                    throw ValidationException::withMessages(['custodian_employment_id' => 'Custodian employment must belong to the asset owner or assigned company.']);
                 }
             }
+
+            foreach (['project_id' => Project::class, 'project_site_id' => ProjectSite::class, 'cost_center_id' => CostCenter::class] as $field => $model) {
+                if ($asset->{$field} !== null) {
+                    $targetCompanyId = $asset->assigned_company_id ?? $asset->company_id;
+                    if (! $model::query()->whereKey($asset->{$field})->whereIn('company_id', array_unique([$targetCompanyId, $asset->company_id]))->exists()) {
+                        throw ValidationException::withMessages([$field => 'Asset dimensions must belong to the asset company.']);
+                    }
+                }
+            }
+
             if ($asset->project_site_id !== null && $asset->project_id !== null
                 && ! ProjectSite::query()->whereKey($asset->project_site_id)->where('project_id', $asset->project_id)->exists()) {
                 throw ValidationException::withMessages(['project_site_id' => 'Project site must belong to the selected project.']);
             }
+
             if ($asset->exists && ! in_array(self::query()->find($asset->getKey())?->status, [AssetStatus::Draft, AssetStatus::Rejected], true)) {
-                $workflow = ['status', 'submitted_by_id', 'submitted_at', 'approved_by_id', 'approved_at', 'rejected_by_id', 'rejected_at', 'rejection_reason', 'capitalized_by_id', 'capitalized_at', 'acquisition_journal_entry_id', 'accumulated_depreciation', 'custodian_employment_id', 'project_id', 'project_site_id', 'cost_center_id', 'location', 'updated_at'];
+                $workflow = [
+                    'status', 'submitted_by_id', 'submitted_at', 'approved_by_id', 'approved_at',
+                    'rejected_by_id', 'rejected_at', 'rejection_reason', 'capitalized_by_id',
+                    'capitalized_at', 'acquisition_journal_entry_id', 'accumulated_depreciation',
+                    'assigned_company_id', 'custodian_employment_id', 'custody_status',
+                    'assigned_at', 'condition_on_assignment', 'handover_notes',
+                    'project_id', 'project_site_id', 'cost_center_id', 'location', 'updated_at',
+                ];
                 if (array_diff(array_keys($asset->getDirty()), $workflow) !== []) {
                     throw ValidationException::withMessages(['status' => 'Approved asset financial details are immutable.']);
                 }
@@ -80,6 +108,11 @@ class FixedAsset extends Model
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
+    }
+
+    public function assignedCompany(): BelongsTo
+    {
+        return $this->belongsTo(Company::class, 'assigned_company_id');
     }
 
     public function vendorBillLine(): BelongsTo
@@ -155,10 +188,20 @@ class FixedAsset extends Model
     protected function casts(): array
     {
         return [
-            'acquisition_source' => AssetAcquisitionSource::class, 'status' => AssetStatus::class,
-            'depreciation_method' => DepreciationMethod::class, 'acquired_on' => 'date', 'available_for_use_on' => 'date',
-            'acquisition_cost' => 'decimal:4', 'residual_value' => 'decimal:4', 'accumulated_depreciation' => 'decimal:4',
-            'submitted_at' => 'datetime', 'approved_at' => 'datetime', 'rejected_at' => 'datetime', 'capitalized_at' => 'datetime',
+            'acquisition_source' => AssetAcquisitionSource::class,
+            'status' => AssetStatus::class,
+            'custody_status' => AssetCustodyStatus::class,
+            'depreciation_method' => DepreciationMethod::class,
+            'acquired_on' => 'date',
+            'available_for_use_on' => 'date',
+            'assigned_at' => 'datetime',
+            'acquisition_cost' => 'decimal:4',
+            'residual_value' => 'decimal:4',
+            'accumulated_depreciation' => 'decimal:4',
+            'submitted_at' => 'datetime',
+            'approved_at' => 'datetime',
+            'rejected_at' => 'datetime',
+            'capitalized_at' => 'datetime',
         ];
     }
 }

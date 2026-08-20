@@ -105,6 +105,7 @@ class AccountsHubPanelTest extends TestCase
         $this->assertContains('Master Accounts Hub', $itemLabels);
         $this->assertContains('Quick Expense Entry', $itemLabels);
         $this->assertContains('General & Group Expenses', $itemLabels);
+        $this->assertContains('General Asset Registry & Custody', $itemLabels);
         $this->assertContains('Shared Cost Allocation', $itemLabels);
 
         $portalGroup = collect($navigation)->first(fn ($g) => $g->getLabel() === 'Portal');

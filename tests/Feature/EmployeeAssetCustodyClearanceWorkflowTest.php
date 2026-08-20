@@ -70,7 +70,7 @@ class EmployeeAssetCustodyClearanceWorkflowTest extends TestCase
         ]);
         $workflow = app(TransitionEmployeeAssetCustodyAction::class);
 
-        $custody->update(['issued_condition' => 'Excellent']);
+        $custody->update(['issued_on' => '2026-07-28', 'issued_condition' => 'Excellent']);
         $workflow->issue($custody, $issuer);
         $this->expectValidationException(fn () => $custody->refresh()->update(['issued_condition' => 'Changed']));
         $this->expectValidationException(fn () => $workflow->issue($duplicate, $issuer));
