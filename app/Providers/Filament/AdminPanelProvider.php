@@ -161,7 +161,7 @@ class AdminPanelProvider extends PanelProvider
                         ->group('Accounts Management'),
                 ];
 
-                $accountsHubLabels = ['Master Accounts Hub', 'Quick Expense Entry', 'General & Group Expenses', 'General Asset Registry & Custody', 'Shared Cost Allocation'];
+                $accountsHubLabels = ['Master Accounts Hub', 'Quick Expense Entry', 'Quick Income Entry', 'General & Group Expenses', 'General Asset Registry & Custody', 'Shared Cost Allocation'];
                 $accountsGLLabels = ['Vouchers / Journals', 'Opening Balances', 'Opening Migration', 'Chart of Accounts', 'Financial Periods', 'Financial Years', 'Voucher Sequences', 'Year-end Closings', 'Payroll Account Mappings'];
                 $accountsTransactionsLabels = ['Customer Invoices & Credit Notes', 'Vendor Bills & Credit Notes', 'Purchase Orders', 'Purchase Requisitions', 'Goods Receipts & Inspection', 'Inventory Transfers & Issues'];
                 $accountsBankingLabels = ['Bank Accounts', 'Company Bank Accounts', 'Bank Statements', 'Bank Reconciliation', 'Payments, Receipts & Transfers', 'Inter-company'];

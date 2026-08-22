@@ -7,6 +7,7 @@ use App\Filament\Pages\GeneralGroupExpensePage;
 use App\Filament\Pages\MasterAccountsHubPage;
 use App\Filament\Pages\MyProfile;
 use App\Filament\Pages\QuickExpenseEntryPage;
+use App\Filament\Pages\QuickIncomeEntryPage;
 use App\Filament\Pages\SharedCostAllocationPage;
 use App\Settings\GeneralSettings;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
@@ -75,6 +76,7 @@ class AccountsHubPanelProvider extends PanelProvider
             ->pages([
                 MasterAccountsHubPage::class,
                 QuickExpenseEntryPage::class,
+                QuickIncomeEntryPage::class,
                 GeneralGroupExpensePage::class,
                 GeneralAssetCustodyPage::class,
                 SharedCostAllocationPage::class,
@@ -87,6 +89,7 @@ class AccountsHubPanelProvider extends PanelProvider
                         ->items([
                             ...MasterAccountsHubPage::getNavigationItems(),
                             ...QuickExpenseEntryPage::getNavigationItems(),
+                            ...QuickIncomeEntryPage::getNavigationItems(),
                             ...GeneralGroupExpensePage::getNavigationItems(),
                             ...GeneralAssetCustodyPage::getNavigationItems(),
                             ...SharedCostAllocationPage::getNavigationItems(),

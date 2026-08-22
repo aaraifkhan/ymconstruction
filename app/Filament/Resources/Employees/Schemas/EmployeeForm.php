@@ -28,10 +28,10 @@ class EmployeeForm
     public static function configure(Schema $schema): Schema
     {
         return $schema->components([
-            Section::make('Employee profile')
+            Section::make('Employee Profile & Status')
                 ->schema([
-                    TextInput::make('full_name')->label('Full name')->required()->maxLength(255),
-                    Toggle::make('is_active')->label('Active profile')->default(true)->required(),
+                    TextInput::make('full_name')->label('Full Name')->required()->maxLength(255),
+                    Toggle::make('is_active')->label('Active Profile')->default(true)->required(),
                     FileUpload::make('photograph_path')
                         ->label('Photograph')
                         ->image()
@@ -45,48 +45,48 @@ class EmployeeForm
                         ->columnSpanFull()
                         ->visible(fn (string $operation, ?Employee $record): bool => self::canManageSensitive($operation, $record)),
                 ])
-                ->columns(2)
+                ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
                 ->columnSpanFull(),
-            Section::make('Identity information')
+            Section::make('Identity Information')
                 ->schema([
-                    TextInput::make('father_or_husband_name')->label("Father's / husband's name")->maxLength(255),
-                    TextInput::make('cnic')->label('CNIC')->placeholder('12345-1234567-1')->maxLength(15),
-                    DatePicker::make('date_of_birth')->label('Date of birth')->beforeOrEqual('today'),
-                    Select::make('gender')->options(collect(Gender::cases())->mapWithKeys(
+                    TextInput::make('father_or_husband_name')->label("Father's / Husband's Name")->maxLength(255),
+                    TextInput::make('cnic')->label('CNIC Number')->placeholder('12345-1234567-1')->maxLength(15),
+                    DatePicker::make('date_of_birth')->label('Date of Birth')->beforeOrEqual('today'),
+                    Select::make('gender')->label('Gender')->options(collect(Gender::cases())->mapWithKeys(
                         fn (Gender $gender): array => [$gender->value => $gender->label()],
                     )->all()),
-                    Select::make('marital_status')->label('Marital status')->options(collect(MaritalStatus::cases())->mapWithKeys(
+                    Select::make('marital_status')->label('Marital Status')->options(collect(MaritalStatus::cases())->mapWithKeys(
                         fn (MaritalStatus $status): array => [$status->value => $status->label()],
                     )->all()),
-                    TextInput::make('nationality')->default('Pakistani')->maxLength(100),
+                    TextInput::make('nationality')->label('Nationality')->default('Pakistani')->maxLength(100),
                 ])
                 ->visible(fn (string $operation, ?Employee $record): bool => self::canManageSensitive($operation, $record))
-                ->columns(2)
+                ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
                 ->columnSpanFull(),
-            Section::make('Contact and medical information')
+            Section::make('Contact & Medical Information')
                 ->schema([
-                    Textarea::make('address')->rows(3)->columnSpanFull(),
-                    TextInput::make('mobile')->tel()->maxLength(50),
-                    TextInput::make('alternate_contact')->label('Alternate contact')->tel()->maxLength(50),
-                    TextInput::make('email')->email()->maxLength(255),
-                    Select::make('blood_group')->label('Blood group')->options(array_combine(
+                    TextInput::make('mobile')->label('Primary Mobile')->tel()->maxLength(50),
+                    TextInput::make('alternate_contact')->label('Alternate Contact')->tel()->maxLength(50),
+                    TextInput::make('email')->label('Personal Email')->email()->maxLength(255),
+                    Select::make('blood_group')->label('Blood Group')->options(array_combine(
                         ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'],
                         ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'],
                     )),
+                    Textarea::make('address')->label('Residential Address')->rows(2)->columnSpanFull(),
                 ])
                 ->visible(fn (string $operation, ?Employee $record): bool => self::canManageSensitive($operation, $record))
-                ->columns(2)
+                ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
                 ->columnSpanFull(),
-            Section::make('Initial company employment')
+            Section::make('Initial Company Employment')
                 ->description('Creates the profile and its first employment in the active company together.')
                 ->schema([
                     TextInput::make('employment_employee_code_preview')
-                        ->label('Employee code')
+                        ->label('Employee Code')
                         ->placeholder('Assigned automatically')
                         ->disabled()
                         ->dehydrated(false),
                     DatePicker::make('employment_joining_date')
-                        ->label('Date of joining')
+                        ->label('Date of Joining')
                         ->minDate('2000-01-01')
                         ->maxDate(now()->addYear())
                         ->required(),
@@ -128,7 +128,7 @@ class EmployeeForm
                         ->searchable()
                         ->preload(),
                     Select::make('employment_reporting_to_employment_id')
-                        ->label('Reporting to')
+                        ->label('Reporting To')
                         ->options(fn (): array => Employment::query()
                             ->whereBelongsTo(Filament::getTenant())
                             ->whereNotIn('employment_status', [
@@ -146,14 +146,14 @@ class EmployeeForm
                         ->preload()
                         ->placeholder('Select reporting manager (optional)'),
                     Select::make('employment_employment_category')
-                        ->label('Employee category')
+                        ->label('Employee Category')
                         ->options(collect(EmploymentCategory::cases())->mapWithKeys(
                             fn (EmploymentCategory $category): array => [$category->value => $category->label()],
                         )->all())
                         ->default(EmploymentCategory::AdministrativeStaff->value)
                         ->required(),
                     Select::make('employment_employment_type')
-                        ->label('Employment type')
+                        ->label('Employment Type')
                         ->options(collect(EmploymentType::cases())->mapWithKeys(
                             fn (EmploymentType $type): array => [$type->value => $type->label()],
                         )->all())
@@ -169,21 +169,21 @@ class EmployeeForm
                         ->default(EmploymentStatus::Probation->value)
                         ->required(),
                     DatePicker::make('employment_probation_start_date')
-                        ->label('Probation start')
+                        ->label('Probation Start')
                         ->afterOrEqual('employment_joining_date'),
                     DatePicker::make('employment_probation_end_date')
-                        ->label('Probation end')
+                        ->label('Probation End')
                         ->afterOrEqual('employment_probation_start_date'),
                     DatePicker::make('employment_confirmation_date')
-                        ->label('Confirmation date')
+                        ->label('Confirmation Date')
                         ->afterOrEqual('employment_joining_date'),
                     TextInput::make('employment_notice_period_days')
-                        ->label('Notice period (calendar days)')
+                        ->label('Notice Period (Calendar Days)')
                         ->numeric()
                         ->minValue(1)
                         ->maxValue(65535),
                     Select::make('employment_work_location_id')
-                        ->label('Work location')
+                        ->label('Work Location')
                         ->options(fn (): array => Filament::getTenant()?->workLocations()
                             ->where('is_active', true)
                             ->orderBy('name')
@@ -191,10 +191,10 @@ class EmployeeForm
                             ->all() ?? [])
                         ->searchable()
                         ->preload(),
-                    TimePicker::make('employment_work_start_time')->label('Start time')->seconds(false),
-                    TimePicker::make('employment_work_end_time')->label('End time')->seconds(false),
+                    TimePicker::make('employment_work_start_time')->label('Start Time')->seconds(false),
+                    TimePicker::make('employment_work_end_time')->label('End Time')->seconds(false),
                     TextInput::make('employment_working_days_per_week')
-                        ->label('Working days per week')
+                        ->label('Working Days Per Week')
                         ->numeric()
                         ->minValue(1)
                         ->maxValue(7)
@@ -202,7 +202,7 @@ class EmployeeForm
                         ->required(),
                 ])
                 ->visibleOn('create')
-                ->columns(2)
+                ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
                 ->columnSpanFull(),
         ]);
     }

@@ -20,18 +20,51 @@ class AssetCategoryForm
             ])->all() ?? [];
 
         return $schema->components([
-            Section::make('Category and accounting mappings')->schema([
-                TextInput::make('code')->required()->maxLength(30),
-                TextInput::make('name')->required()->maxLength(150),
-                Select::make('cost_account_id')->label('Asset cost account')->options($accounts)->searchable()->required(),
-                Select::make('accumulated_depreciation_account_id')->label('Accumulated depreciation account')->options($accounts)->searchable(),
-                Select::make('depreciation_expense_account_id')->label('Depreciation expense account')->options($accounts)->searchable(),
-                Select::make('disposal_gain_account_id')->label('Disposal gain account')->options($accounts)->searchable(),
-                Select::make('disposal_loss_account_id')->label('Disposal loss account')->options($accounts)->searchable(),
-                TextInput::make('default_useful_life_months')->label('Default life (months)')->numeric()->minValue(1)->required(),
-                Checkbox::make('is_depreciable')->default(true),
-                Checkbox::make('is_active')->default(true),
-            ])->columns(2)->columnSpanFull(),
+            Section::make('Category Identity & Depreciation Settings')
+                ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
+                ->columnSpanFull()
+                ->schema([
+                    TextInput::make('code')
+                        ->label('Category Code')
+                        ->required()
+                        ->maxLength(30),
+                    TextInput::make('name')
+                        ->label('Category Name')
+                        ->required()
+                        ->maxLength(150),
+                    TextInput::make('default_useful_life_months')
+                        ->label('Default Useful Life (Months)')
+                        ->numeric()
+                        ->minValue(1)
+                        ->required(),
+                    Select::make('cost_account_id')
+                        ->label('Asset Cost GL Account')
+                        ->options($accounts)
+                        ->searchable()
+                        ->required(),
+                    Select::make('accumulated_depreciation_account_id')
+                        ->label('Accumulated Depreciation GL Account')
+                        ->options($accounts)
+                        ->searchable(),
+                    Select::make('depreciation_expense_account_id')
+                        ->label('Depreciation Expense GL Account')
+                        ->options($accounts)
+                        ->searchable(),
+                    Select::make('disposal_gain_account_id')
+                        ->label('Disposal Gain GL Account')
+                        ->options($accounts)
+                        ->searchable(),
+                    Select::make('disposal_loss_account_id')
+                        ->label('Disposal Loss GL Account')
+                        ->options($accounts)
+                        ->searchable(),
+                    Checkbox::make('is_depreciable')
+                        ->label('Is Depreciable Asset')
+                        ->default(true),
+                    Checkbox::make('is_active')
+                        ->label('Is Active')
+                        ->default(true),
+                ]),
         ]);
     }
 }

@@ -10,14 +10,17 @@ use App\Enums\AccountingProfile;
 use App\Enums\ExpenseCategory;
 use App\Enums\ExpensePaymentMethod;
 use App\Enums\JournalStatus;
+use App\Enums\VoucherType;
 use App\Filament\Pages\ProjectExpenseLedgerPage;
 use App\Models\Company;
+use App\Models\JournalEntry;
 use App\Models\Project;
 use App\Models\User;
 use App\Reports\ProjectExpenseLedgerReport;
 use Carbon\CarbonImmutable;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -46,6 +49,24 @@ class ProjectExpenseLedgerTest extends TestCase
         $poster = User::factory()->create();
         $maker->assignRole($role);
         $poster->assignRole($role);
+
+        $period = $company->financialPeriods()->whereDate('starts_on', '<=', '2026-08-01')->whereDate('ends_on', '>=', '2026-08-01')->firstOrFail();
+        $cash = $company->accounts()->where('code', '1111')->firstOrFail();
+        $equity = $company->accounts()->where('allows_manual_posting', true)->where('code', 'LIKE', '3%')->firstOrFail();
+        $opening = JournalEntry::query()->create([
+            'company_id' => $company->getKey(),
+            'financial_year_id' => $period->financial_year_id,
+            'financial_period_id' => $period->getKey(),
+            'voucher_type' => VoucherType::OpeningBalance,
+            'idempotency_key' => Str::uuid(),
+            'transaction_date' => '2026-08-01',
+            'description' => 'Opening cash capital',
+            'prepared_by_id' => $maker->getKey(),
+        ]);
+        $opening->lines()->create(['company_id' => $company->getKey(), 'line_number' => 1, 'account_id' => $cash->getKey(), 'debit' => '500000.0000', 'credit' => '0.0000']);
+        $opening->lines()->create(['company_id' => $company->getKey(), 'line_number' => 2, 'account_id' => $equity->getKey(), 'debit' => '0.0000', 'credit' => '500000.0000']);
+        $opening->update(['status' => JournalStatus::Approved, 'approved_by_id' => $poster->getKey()]);
+        app(PostJournalEntryAction::class)->handle($opening, $poster);
 
         $quickExpense = app(RecordQuickExpenseAction::class);
 

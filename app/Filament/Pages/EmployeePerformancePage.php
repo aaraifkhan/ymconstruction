@@ -63,6 +63,8 @@ class EmployeePerformancePage extends Page implements HasForms
                 Section::make('Filter & Scope Parameters')
                     ->description('Select an employee and reporting period to analyze composite productivity metrics and delivery breakdown.')
                     ->icon('heroicon-o-funnel')
+                    ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
+                    ->columnSpanFull()
                     ->schema([
                         Select::make('selectedEmploymentId')
                             ->label('Employee')
@@ -96,8 +98,7 @@ class EmployeePerformancePage extends Page implements HasForms
                             ->required()
                             ->live()
                             ->afterStateUpdated(fn ($state) => $this->endDate = $state),
-                    ])
-                    ->columns(3),
+                    ]),
             ]);
     }
 

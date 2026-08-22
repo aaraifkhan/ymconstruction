@@ -18,10 +18,12 @@ class CompanyModuleForm
     {
         return $schema
             ->components([
-                Section::make('Company module configuration')
+                Section::make('Company Module Activation & Settings')
+                    ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
+                    ->columnSpanFull()
                     ->schema([
                         Select::make('module_id')
-                            ->label('Module')
+                            ->label('System Module')
                             ->relationship(
                                 name: 'module',
                                 titleAttribute: 'name',
@@ -41,6 +43,7 @@ class CompanyModuleForm
                             ->disabledOn('edit')
                             ->required(),
                         Select::make('state')
+                            ->label('Module Status')
                             ->options(
                                 collect(CompanyModuleState::cases())
                                     ->mapWithKeys(fn (CompanyModuleState $state): array => [
@@ -51,16 +54,16 @@ class CompanyModuleForm
                             ->default(CompanyModuleState::Inherit->value)
                             ->required(),
                         TextInput::make('variant')
+                            ->label('Feature Variant')
                             ->helperText('Leave blank unless a confirmed company workflow requires a named variant.')
                             ->maxLength(100),
                         KeyValue::make('settings')
+                            ->label('Custom Module Configuration')
                             ->helperText('Only use confirmed module settings. Avoid storing core structured business data here.')
                             ->keyLabel('Setting')
                             ->valueLabel('Value')
                             ->columnSpanFull(),
-                    ])
-                    ->columns(2)
-                    ->columnSpanFull(),
+                    ]),
             ]);
     }
 }

@@ -14,33 +14,36 @@ class ModuleForm
     {
         return $schema
             ->components([
-                Section::make('Module details')
+                Section::make('System Core Module Details')
+                    ->columns(['sm' => 1, 'md' => 2, 'lg' => 4])
+                    ->columnSpanFull()
                     ->schema([
                         TextInput::make('name')
+                            ->label('Module Name')
                             ->required()
                             ->maxLength(255),
                         TextInput::make('key')
-                            ->helperText('Stable internal key. Do not change it after workflows start using the module.')
+                            ->label('Internal Key')
+                            ->helperText('Stable identifier. Do not change.')
                             ->required()
                             ->alphaDash()
                             ->unique(ignoreRecord: true)
                             ->maxLength(100),
-                        Textarea::make('description')
-                            ->rows(3)
-                            ->columnSpanFull(),
                         TextInput::make('sort_order')
-                            ->label('Display order')
+                            ->label('Display Order')
                             ->numeric()
                             ->minValue(0)
                             ->default(0)
                             ->required(),
                         Toggle::make('is_active')
-                            ->label('Available for companies')
+                            ->label('Available for Companies')
                             ->default(true)
                             ->required(),
-                    ])
-                    ->columns(2)
-                    ->columnSpanFull(),
+                        Textarea::make('description')
+                            ->label('Module Purpose & Functional Scope')
+                            ->rows(2)
+                            ->columnSpanFull(),
+                    ]),
             ]);
     }
 }

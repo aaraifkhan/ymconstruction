@@ -14,9 +14,12 @@ class UnitOfMeasureForm
     public static function configure(Schema $schema): Schema
     {
         return $schema->components([
-            Section::make('Unit of measure')
+            Section::make('Unit of Measure (UOM) Details')
+                ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
+                ->columnSpanFull()
                 ->schema([
                     TextInput::make('code')
+                        ->label('UOM Code')
                         ->required()
                         ->alphaDash()
                         ->maxLength(30)
@@ -27,18 +30,26 @@ class UnitOfMeasureForm
                                 Filament::getTenant()?->getKey(),
                             ),
                         ),
-                    TextInput::make('name')->required()->maxLength(255),
-                    TextInput::make('symbol')->required()->maxLength(20),
+                    TextInput::make('name')
+                        ->label('UOM Name (e.g. Bag, Ton, Meter)')
+                        ->required()
+                        ->maxLength(255),
+                    TextInput::make('symbol')
+                        ->label('Symbol (e.g. kg, ft, m3)')
+                        ->required()
+                        ->maxLength(20),
                     TextInput::make('decimal_places')
+                        ->label('Precision (Decimal Places)')
                         ->required()
                         ->integer()
                         ->minValue(0)
                         ->maxValue(4)
                         ->default(4),
-                    Toggle::make('is_active')->label('Active')->default(true)->required(),
-                ])
-                ->columns(2)
-                ->columnSpanFull(),
+                    Toggle::make('is_active')
+                        ->label('Is Active')
+                        ->default(true)
+                        ->required(),
+                ]),
         ]);
     }
 }

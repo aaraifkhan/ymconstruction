@@ -15,9 +15,12 @@ class ItemCategoryForm
     public static function configure(Schema $schema): Schema
     {
         return $schema->components([
-            Section::make('Item category')
+            Section::make('Item Category Details')
+                ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
+                ->columnSpanFull()
                 ->schema([
                     TextInput::make('code')
+                        ->label('Category Code')
                         ->required()
                         ->alphaDash()
                         ->maxLength(50)
@@ -28,12 +31,19 @@ class ItemCategoryForm
                                 Filament::getTenant()?->getKey(),
                             ),
                         ),
-                    TextInput::make('name')->required()->maxLength(255),
-                    Textarea::make('description')->rows(3)->columnSpanFull(),
-                    Toggle::make('is_active')->label('Active')->default(true)->required(),
-                ])
-                ->columns(2)
-                ->columnSpanFull(),
+                    TextInput::make('name')
+                        ->label('Category Name')
+                        ->required()
+                        ->maxLength(255),
+                    Toggle::make('is_active')
+                        ->label('Is Active')
+                        ->default(true)
+                        ->required(),
+                    Textarea::make('description')
+                        ->label('Category Description')
+                        ->rows(2)
+                        ->columnSpanFull(),
+                ]),
         ]);
     }
 }

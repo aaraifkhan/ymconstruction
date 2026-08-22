@@ -14,72 +14,79 @@ class CompanyForm
     {
         return $schema
             ->components([
-                Section::make('Company identity')
+                Section::make('Company Identity & Registration')
+                    ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
+                    ->columnSpanFull()
                     ->schema([
                         TextInput::make('name')
+                            ->label('Company Display Name')
                             ->required()
                             ->maxLength(255),
                         TextInput::make('legal_name')
-                            ->label('Legal name')
+                            ->label('Registered Legal Name')
                             ->maxLength(255),
                         TextInput::make('slug')
-                            ->label('URL key')
-                            ->helperText('A permanent short key used in company URLs, for example: bunyan-construction.')
+                            ->label('Tenant Slug / URL Key')
+                            ->helperText('Used in URLs: e.g. bunyan-construction.')
                             ->required()
                             ->alphaDash()
                             ->unique(ignoreRecord: true)
                             ->maxLength(100),
                         TextInput::make('registration_number')
-                            ->label('Registration number')
+                            ->label('SECP / Reg Number')
                             ->maxLength(255),
                         TextInput::make('tax_number')
-                            ->label('Tax number / NTN')
+                            ->label('NTN / Tax Number')
                             ->maxLength(255),
-                    ])
-                    ->columns(2)
-                    ->columnSpanFull(),
-                Section::make('Contact information')
+                    ]),
+                Section::make('Contact Details & Registered Office')
+                    ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
+                    ->columnSpanFull()
                     ->schema([
                         TextInput::make('email')
+                            ->label('Corporate Email')
                             ->email()
                             ->maxLength(255),
                         TextInput::make('phone')
+                            ->label('Telephone / Hotline')
                             ->tel()
                             ->maxLength(50),
                         TextInput::make('website')
+                            ->label('Website URL')
                             ->url()
                             ->maxLength(255),
                         TextInput::make('city')
+                            ->label('City')
                             ->maxLength(255),
                         Textarea::make('address')
-                            ->rows(3)
+                            ->label('Registered Head Office Address')
+                            ->rows(2)
                             ->columnSpanFull(),
-                    ])
-                    ->columns(2)
-                    ->columnSpanFull(),
-                Section::make('Localization and status')
+                    ]),
+                Section::make('Localization & Operational Status')
+                    ->columns(['sm' => 1, 'md' => 2, 'lg' => 4])
+                    ->columnSpanFull()
                     ->schema([
                         TextInput::make('country_code')
-                            ->label('Country code')
+                            ->label('Country Code')
                             ->default('PK')
                             ->required()
                             ->length(2),
                         TextInput::make('currency_code')
-                            ->label('Currency code')
+                            ->label('Base Currency')
                             ->default('PKR')
                             ->required()
                             ->length(3),
                         TextInput::make('timezone')
+                            ->label('Timezone')
                             ->default('Asia/Karachi')
                             ->required()
                             ->maxLength(100),
                         Toggle::make('is_active')
-                            ->label('Active')
+                            ->label('Is Company Active')
                             ->default(true)
                             ->required(),
-                    ])
-                    ->columns(2)
-                    ->columnSpanFull(),
+                    ]),
             ]);
     }
 }

@@ -93,7 +93,7 @@ class DailyWorkReportForm
                             ->rows(2)
                             ->columnSpanFull(),
                     ])
-                    ->columns(3)
+                    ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
                     ->columnSpanFull(),
 
                 // Task Deliverables & Work Breakdown
@@ -126,7 +126,7 @@ class DailyWorkReportForm
                                 TextInput::make('task_title')
                                     ->label('Task / Work Summary')
                                     ->required()
-                                    ->columnSpan(2),
+                                    ->columnSpan(['sm' => 1, 'md' => 2, 'lg' => 2]),
                                 Select::make('status_today')
                                     ->label('Status Today')
                                     ->options([
@@ -150,17 +150,17 @@ class DailyWorkReportForm
                                     ->label('Deliverable Details / Summary')
                                     ->rows(2)
                                     ->placeholder('e.g. Completed 2 social banners, coded header component...')
-                                    ->columnSpan(2),
+                                    ->columnSpan(['sm' => 1, 'md' => 2, 'lg' => 2]),
                                 TextInput::make('work_links')
                                     ->label('Links to Work / Files')
                                     ->placeholder('https://drive.google.com/... or staging URL')
                                     ->columnSpanFull(),
                                 Textarea::make('blockers')
                                     ->label('Task Specific Blockers')
-                                    ->rows(1)
+                                    ->rows(2)
                                     ->columnSpanFull(),
                             ])
-                            ->columns(3)
+                            ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
                             ->columnSpanFull()
                             ->defaultItems(1),
                     ])
@@ -187,13 +187,13 @@ class DailyWorkReportForm
                         TextInput::make('meetings_booked_count')->label('Meetings Booked')->numeric()->default(0),
                         TextInput::make('proposals_sent_count')->label('Proposals Sent')->numeric()->default(0),
                         TextInput::make('deals_closed_count')->label('Deals Closed')->numeric()->default(0),
-                        TextInput::make('revenue_generated')->label('Revenue Generated (PKR)')->numeric()->default(0),
+                        TextInput::make('revenue_generated')->label('Revenue Generated (PKR)')->numeric()->prefix('PKR')->default(0),
                         TextInput::make('pending_leads_count')->label('Pending Leads')->numeric()->default(0),
                         TextInput::make('lost_leads_count')->label('Lost Leads')->numeric()->default(0),
-                        Textarea::make('lost_lead_reasons')->label('Reason for Lost Leads')->rows(2)->columnSpan(2),
+                        Textarea::make('lost_lead_reasons')->label('Reason for Lost Leads')->rows(2)->columnSpan(['sm' => 1, 'md' => 2, 'lg' => 2]),
                         Textarea::make('next_followup_targets')->label('Follow-up Targets for Tomorrow')->rows(2)->columnSpanFull(),
                     ])
-                    ->columns(3)
+                    ->columns(['sm' => 1, 'md' => 2, 'lg' => 4])
                     ->collapsible()
                     ->columnSpanFull(),
             ]);

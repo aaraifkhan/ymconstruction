@@ -19,7 +19,9 @@ class DepartmentTeamForm
     {
         return $schema
             ->components([
-                Section::make('Team Information')
+                Section::make('Department Team Information')
+                    ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
+                    ->columnSpanFull()
                     ->schema([
                         Select::make('department_id')
                             ->label('Department')
@@ -46,7 +48,7 @@ class DepartmentTeamForm
                             ->default(TeamType::Other->value)
                             ->required(),
                         Select::make('team_lead_id')
-                            ->label('Team Lead')
+                            ->label('Team Lead / Manager')
                             ->relationship(
                                 'teamLead',
                                 'employee_code',
@@ -55,17 +57,15 @@ class DepartmentTeamForm
                             ->getOptionLabelFromRecordUsing(fn (Employment $record) => "{$record->employee?->full_name} ({$record->employee_code})")
                             ->searchable()
                             ->preload(),
-                        Textarea::make('description')
-                            ->label('Description')
-                            ->rows(3)
-                            ->columnSpanFull(),
                         Toggle::make('is_active')
-                            ->label('Active')
+                            ->label('Is Active')
                             ->default(true)
                             ->required(),
-                    ])
-                    ->columns(2)
-                    ->columnSpanFull(),
+                        Textarea::make('description')
+                            ->label('Team Description / Scope')
+                            ->rows(2)
+                            ->columnSpanFull(),
+                    ]),
             ]);
     }
 }

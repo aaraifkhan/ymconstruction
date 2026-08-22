@@ -55,13 +55,16 @@ class DocumentForm
     {
         return $schema
             ->components([
-                Section::make('Document details')
+                Section::make('Document Classification & Parameters')
+                    ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
+                    ->columnSpanFull()
                     ->schema([
                         TextInput::make('title')
+                            ->label('Document Title')
                             ->required()
                             ->maxLength(255),
                         TextInput::make('reference_number')
-                            ->label('Reference number')
+                            ->label('Document Reference / Serial #')
                             ->maxLength(255)
                             ->unique(
                                 ignoreRecord: true,
@@ -83,7 +86,7 @@ class DocumentForm
                             ->preload()
                             ->required(),
                         Select::make('hr_document_type_id')
-                            ->label('HR document type')
+                            ->label('HR Document Type')
                             ->relationship(
                                 name: 'hrDocumentType',
                                 titleAttribute: 'name',
@@ -102,18 +105,18 @@ class DocumentForm
                             )
                             ->searchable()
                             ->preload()
-                            ->helperText('Required for new Employee/Employment uploads; existing free-form records can be mapped later.')
+                            ->helperText('Required for new Employee/Employment uploads.')
                             ->required(fn (string $operation, Get $get): bool => $operation === 'create'
                                 && in_array($get('document_scope'), ['employee', 'employment'], true))
                             ->visible(fn (string $operation, Get $get, ?Document $record): bool => $operation === 'edit'
                                 ? in_array($record?->documentable_type, [Employee::class, Employment::class], true)
                                 : in_array($get('document_scope'), ['employee', 'employment'], true)),
                         Select::make('document_scope')
-                            ->label('Related record type')
+                            ->label('Related Record Entity')
                             ->options([
                                 'company' => 'Company',
-                                'employee' => 'Employee profile',
-                                'employment' => 'Company employment',
+                                'employee' => 'Employee Profile',
+                                'employment' => 'Company Employment',
                                 'project' => 'Project',
                                 'journal' => 'Voucher / Journal',
                                 'purchase_requisition' => 'Purchase Requisition',
@@ -131,7 +134,7 @@ class DocumentForm
                             ->required()
                             ->visibleOn('create'),
                         Select::make('related_record_id')
-                            ->label('Related record')
+                            ->label('Related Record')
                             ->options(function (Get $get): array {
                                 $company = Filament::getTenant();
 
@@ -245,7 +248,7 @@ class DocumentForm
                             ->required(fn (Get $get): bool => $get('document_scope') !== 'company')
                             ->visible(fn (string $operation, Get $get): bool => $operation === 'create' && $get('document_scope') !== 'company'),
                         Select::make('classification')
-                            ->label('Sensitivity')
+                            ->label('Security / Sensitivity')
                             ->options(
                                 collect(DocumentClassification::cases())
                                     ->mapWithKeys(fn (DocumentClassification $classification): array => [
@@ -256,22 +259,21 @@ class DocumentForm
                             ->default(DocumentClassification::Internal->value)
                             ->required(),
                         DatePicker::make('issue_date')
-                            ->label('Issue date'),
+                            ->label('Issue Date'),
                         DatePicker::make('expiry_date')
-                            ->label('Expiry date')
+                            ->label('Expiry / Validity Date')
                             ->afterOrEqual('issue_date'),
                         Textarea::make('description')
-                            ->rows(3)
+                            ->label('Document Summary / Description')
+                            ->rows(2)
                             ->columnSpanFull(),
                         KeyValue::make('metadata')
-                            ->label('Additional metadata')
+                            ->label('Additional Custom Metadata')
                             ->keyLabel('Field')
                             ->valueLabel('Value')
                             ->reorderable()
                             ->columnSpanFull(),
-                    ])
-                    ->columns(2)
-                    ->columnSpanFull(),
+                    ]),
                 Section::make('Initial file')
                     ->description('The stored file name is generated securely. The original name is retained only as metadata.')
                     ->schema([

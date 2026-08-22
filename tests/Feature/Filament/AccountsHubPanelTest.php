@@ -7,10 +7,13 @@ use App\Actions\Accounting\ProvisionStandardAccountTemplatesAction;
 use App\Enums\AccountingProfile;
 use App\Enums\ExpenseCategory;
 use App\Enums\ExpensePaymentMethod;
+use App\Enums\IncomeCategory;
 use App\Enums\JournalStatus;
+use App\Enums\VoucherType;
 use App\Filament\Pages\GeneralGroupExpensePage;
 use App\Filament\Pages\MasterAccountsHubPage;
 use App\Filament\Pages\QuickExpenseEntryPage;
+use App\Filament\Pages\QuickIncomeEntryPage;
 use App\Filament\Pages\SharedCostAllocationPage;
 use App\Filament\Widgets\QuickExpenseStatsWidget;
 use App\Models\Company;
@@ -104,6 +107,7 @@ class AccountsHubPanelTest extends TestCase
 
         $this->assertContains('Master Accounts Hub', $itemLabels);
         $this->assertContains('Quick Expense Entry', $itemLabels);
+        $this->assertContains('Quick Income Entry', $itemLabels);
         $this->assertContains('General & Group Expenses', $itemLabels);
         $this->assertContains('General Asset Registry & Custody', $itemLabels);
         $this->assertContains('Shared Cost Allocation', $itemLabels);
@@ -209,6 +213,35 @@ class AccountsHubPanelTest extends TestCase
         $recipientEntry = JournalEntry::withoutGlobalScopes()->where('company_id', $companyB->getKey())->latest('id')->first();
         $this->assertNotNull($recipientEntry);
         $this->assertSame('4000.0000', $recipientEntry->debit_total);
+    }
+
+    public function test_can_post_quick_income_from_accounts_hub_panel(): void
+    {
+        $companyA = $this->provisionCompany('Alpha Corp');
+        $companyB = $this->provisionCompany('Beta Corp');
+
+        $user = User::factory()->create()->assignRole(Role::findOrCreate('super_admin'));
+
+        $this->actingAs($user);
+        Filament::setCurrentPanel(Filament::getPanel('accounts-hub'));
+        Filament::bootCurrentPanel();
+
+        Livewire::test(QuickIncomeEntryPage::class)
+            ->assertOk()
+            ->set('data.target_company_id', $companyB->getKey())
+            ->set('data.transaction_date', '2026-08-10')
+            ->set('data.income_category', IncomeCategory::ServiceRevenue->value)
+            ->set('data.receiving_method', ExpensePaymentMethod::Cash->value)
+            ->set('data.amount', '8500.00')
+            ->set('data.description', 'Consulting fees received for Beta Corp')
+            ->call('submit')
+            ->assertHasNoFormErrors();
+
+        $entry = JournalEntry::withoutGlobalScopes()->where('company_id', $companyB->getKey())->latest('id')->first();
+        $this->assertNotNull($entry);
+        $this->assertSame($companyB->getKey(), $entry->company_id);
+        $this->assertSame(VoucherType::Receipt, $entry->voucher_type);
+        $this->assertSame('8500.0000', $entry->debit_total);
     }
 
     public function test_quick_expense_stats_widget_renders_in_hub_panel(): void

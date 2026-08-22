@@ -182,7 +182,7 @@ class SalesReportsTest extends TestCase
         ]);
         JournalLine::factory()->forEntryAndAccount(
             $journal,
-            $company->accounts()->where('code', '1111')->firstOrFail(),
+            $company->accounts()->where('allows_manual_posting', true)->where('code', 'LIKE', '3%')->firstOrFail(),
         )->create([
             'line_number' => 2,
             'debit' => '0.0000',

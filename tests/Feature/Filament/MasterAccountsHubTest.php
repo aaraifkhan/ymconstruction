@@ -241,6 +241,7 @@ class MasterAccountsHubTest extends TestCase
         $hubChildLabels = collect($hubParent->getChildItems())->map(fn ($c) => $c->getLabel())->all();
         $this->assertContains('Master Accounts Hub', $hubChildLabels);
         $this->assertContains('Quick Expense Entry', $hubChildLabels);
+        $this->assertContains('Quick Income Entry', $hubChildLabels);
         $this->assertContains('Shared Cost Allocation', $hubChildLabels);
 
         $billingParent = collect($accountsGroup->getItems())->first(fn ($item) => $item->getLabel() === 'Sales & Purchases (Billing)');

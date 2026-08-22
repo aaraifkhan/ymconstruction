@@ -18,32 +18,34 @@ class CompanyBankAccountForm
     {
         return $schema
             ->components([
-                Section::make('Bank and branch')
+                Section::make('Bank & Branch Information')
+                    ->columns(['sm' => 1, 'md' => 2, 'lg' => 4])
+                    ->columnSpanFull()
                     ->schema([
                         TextInput::make('bank_name')
-                            ->label('Bank name')
+                            ->label('Bank Name')
                             ->required()
                             ->maxLength(255),
                         TextInput::make('branch_name')
-                            ->label('Branch name')
+                            ->label('Branch Name')
                             ->maxLength(255),
                         TextInput::make('branch_code')
-                            ->label('Branch code')
+                            ->label('Branch Code')
                             ->maxLength(50),
                         TextInput::make('swift_code')
-                            ->label('SWIFT / BIC code')
+                            ->label('SWIFT / BIC Code')
                             ->maxLength(50),
-                    ])
-                    ->columns(2)
-                    ->columnSpanFull(),
-                Section::make('Account details')
+                    ]),
+                Section::make('Account Credentials & Purpose')
+                    ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
+                    ->columnSpanFull()
                     ->schema([
                         TextInput::make('account_title')
-                            ->label('Account title')
+                            ->label('Account Title')
                             ->required()
                             ->maxLength(255),
                         Select::make('account_type')
-                            ->label('Account type')
+                            ->label('Account Type')
                             ->options(
                                 collect(BankAccountType::cases())
                                     ->mapWithKeys(fn (BankAccountType $type): array => [
@@ -53,38 +55,38 @@ class CompanyBankAccountForm
                             )
                             ->default(BankAccountType::Current->value)
                             ->required(),
+                        TextInput::make('currency_code')
+                            ->label('Currency')
+                            ->default('PKR')
+                            ->required()
+                            ->length(3),
                         TextInput::make('account_number')
-                            ->label('Account number')
+                            ->label('Account Number')
                             ->maxLength(100)
                             ->visible(
                                 fn (string $operation, ?CompanyBankAccount $record): bool => $operation === 'create'
                                     || ($record !== null && Gate::allows('viewSensitive', $record))
                             ),
                         TextInput::make('iban')
-                            ->label('IBAN')
+                            ->label('IBAN (International Bank Account Number)')
                             ->maxLength(100)
+                            ->columnSpan(['sm' => 1, 'md' => 2, 'lg' => 2])
                             ->visible(
                                 fn (string $operation, ?CompanyBankAccount $record): bool => $operation === 'create'
                                     || ($record !== null && Gate::allows('viewSensitive', $record))
                             ),
-                        TextInput::make('currency_code')
-                            ->label('Currency')
-                            ->default('PKR')
-                            ->required()
-                            ->length(3),
                         Toggle::make('is_default_for_payroll')
-                            ->label('Default payroll account')
+                            ->label('Default Payroll Disbursement Account')
                             ->helperText('Only one account per company will remain marked as the payroll default.'),
                         Toggle::make('is_active')
-                            ->label('Active')
+                            ->label('Is Active')
                             ->default(true)
                             ->required(),
                         Textarea::make('notes')
-                            ->rows(3)
+                            ->label('Notes / Signatory Details')
+                            ->rows(2)
                             ->columnSpanFull(),
-                    ])
-                    ->columns(2)
-                    ->columnSpanFull(),
+                    ]),
             ]);
     }
 }

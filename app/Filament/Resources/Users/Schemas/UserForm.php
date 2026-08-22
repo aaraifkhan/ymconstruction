@@ -14,18 +14,22 @@ class UserForm
     {
         return $schema
             ->components([
-                Section::make('User Details')
+                Section::make('System User Account Details')
+                    ->columns(['sm' => 1, 'md' => 2, 'lg' => 2])
+                    ->columnSpanFull()
                     ->schema([
                         TextInput::make('name')
+                            ->label('User Full Name')
                             ->required()
                             ->maxLength(255),
                         TextInput::make('email')
-                            ->label('Email address')
+                            ->label('Corporate Email Address')
                             ->email()
                             ->required()
                             ->unique(ignoreRecord: true)
                             ->maxLength(255),
                         Select::make('roles')
+                            ->label('Assigned System Roles')
                             ->relationship('roles', 'name')
                             ->multiple()
                             ->preload()
@@ -35,14 +39,13 @@ class UserForm
                             ->label('Email Verified At')
                             ->default(now()),
                         TextInput::make('password')
+                            ->label('User Password')
                             ->password()
                             ->dehydrated(fn (?string $state): bool => filled($state))
                             ->required(fn (string $operation): bool => $operation === 'create')
                             ->visible(fn (string $operation): bool => $operation === 'create')
                             ->maxLength(255),
-                    ])
-                    ->columns(2)
-                    ->columnSpanFull(),
+                    ]),
             ]);
     }
 }

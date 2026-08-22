@@ -17,19 +17,12 @@ class DesignationForm
     {
         return $schema
             ->components([
-                Section::make('Designation details')
+                Section::make('Designation Details')
+                    ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
+                    ->columnSpanFull()
                     ->schema([
-                        TextInput::make('name')
-                            ->required()
-                            ->maxLength(255)
-                            ->unique(
-                                ignoreRecord: true,
-                                modifyRuleUsing: fn (Unique $rule): Unique => $rule->where(
-                                    'company_id',
-                                    Filament::getTenant()?->getKey(),
-                                ),
-                            ),
                         TextInput::make('code')
+                            ->label('Designation Code')
                             ->required()
                             ->alphaDash()
                             ->maxLength(50)
@@ -40,8 +33,19 @@ class DesignationForm
                                     Filament::getTenant()?->getKey(),
                                 ),
                             ),
+                        TextInput::make('name')
+                            ->label('Designation Title')
+                            ->required()
+                            ->maxLength(255)
+                            ->unique(
+                                ignoreRecord: true,
+                                modifyRuleUsing: fn (Unique $rule): Unique => $rule->where(
+                                    'company_id',
+                                    Filament::getTenant()?->getKey(),
+                                ),
+                            ),
                         Select::make('department_id')
-                            ->label('Department')
+                            ->label('Department (Optional)')
                             ->relationship(
                                 name: 'department',
                                 titleAttribute: 'name',
@@ -52,17 +56,16 @@ class DesignationForm
                             ->searchable()
                             ->preload()
                             ->nullable()
-                            ->helperText('Optional: Link to a specific department or leave blank for company-wide designation.'),
-                        Textarea::make('description')
-                            ->rows(3)
-                            ->columnSpanFull(),
+                            ->helperText('Leave blank for company-wide designation.'),
                         Toggle::make('is_active')
-                            ->label('Active')
+                            ->label('Is Active')
                             ->default(true)
                             ->required(),
-                    ])
-                    ->columns(2)
-                    ->columnSpanFull(),
+                        Textarea::make('description')
+                            ->label('Job Role Summary / Responsibilities')
+                            ->rows(2)
+                            ->columnSpanFull(),
+                    ]),
             ]);
     }
 }

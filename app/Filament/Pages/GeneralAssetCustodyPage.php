@@ -99,13 +99,14 @@ class GeneralAssetCustodyPage extends Page implements HasTable
             ->components([
                 Section::make('Register & Deploy Group Asset')
                     ->description('Register central/group physical assets (laptops, furniture, ACs, tools) owned by Corporate Holding (7 Orbit) and immediately deploy them to operating companies and employee custodians.')
-                    ->columns(3)
+                    ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
+                    ->columnSpanFull()
                     ->schema([
                         TextInput::make('name')
                             ->label('Asset Name / Model Description')
                             ->placeholder('e.g. Dell Latitude 5440 Core i7, Executive Office Desk, Panasonic 1.5T AC')
                             ->required()
-                            ->columnSpan(2),
+                            ->columnSpan(['sm' => 1, 'md' => 2, 'lg' => 2]),
 
                         Select::make('asset_category_id')
                             ->label('Asset Category')
@@ -190,6 +191,7 @@ class GeneralAssetCustodyPage extends Page implements HasTable
                         Textarea::make('handover_notes')
                             ->label('Handover & Accessory Notes')
                             ->placeholder('e.g. Handed over with original 65W charger, laptop sleeve, mouse, and HDMI cable')
+                            ->rows(2)
                             ->columnSpanFull(),
                     ]),
             ]);

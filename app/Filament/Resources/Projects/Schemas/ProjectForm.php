@@ -20,9 +20,12 @@ class ProjectForm
     public static function configure(Schema $schema): Schema
     {
         return $schema->components([
-            Section::make('Project details')
+            Section::make('Project Identity & Parties')
+                ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
+                ->columnSpanFull()
                 ->schema([
                     TextInput::make('code')
+                        ->label('Project Code')
                         ->required()
                         ->alphaDash()
                         ->maxLength(50)
@@ -33,9 +36,17 @@ class ProjectForm
                                 Filament::getTenant()?->getKey(),
                             ),
                         ),
-                    TextInput::make('name')->required()->maxLength(255),
+                    TextInput::make('name')
+                        ->label('Project Title')
+                        ->required()
+                        ->maxLength(255),
+                    Select::make('status')
+                        ->label('Project Status')
+                        ->options(ProjectStatus::class)
+                        ->default(ProjectStatus::Planned->value)
+                        ->required(),
                     Select::make('client_party_id')
-                        ->label('Client')
+                        ->label('Client / Owner')
                         ->relationship(
                             'client',
                             'name',
@@ -48,7 +59,7 @@ class ProjectForm
                         ->preload()
                         ->required(),
                     Select::make('consultant_party_id')
-                        ->label('Consultant')
+                        ->label('Supervising Consultant')
                         ->relationship(
                             'consultant',
                             'name',
@@ -59,38 +70,53 @@ class ProjectForm
                         )
                         ->searchable()
                         ->preload(),
-                    Textarea::make('location')->rows(2)->columnSpanFull(),
-                    DatePicker::make('planned_start_date'),
-                    DatePicker::make('planned_completion_date')->afterOrEqual('planned_start_date'),
-                    DatePicker::make('actual_start_date'),
-                    DatePicker::make('actual_completion_date')->afterOrEqual('actual_start_date'),
+                    Textarea::make('location')
+                        ->label('Project Site Location / Address')
+                        ->rows(2)
+                        ->columnSpanFull(),
+                ]),
+            Section::make('Schedule & Commercial Values')
+                ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
+                ->columnSpanFull()
+                ->schema([
                     TextInput::make('contract_value')
+                        ->label('Total Contract Value (PKR)')
                         ->required()
                         ->numeric()
                         ->minValue(0)
                         ->default(0)
                         ->prefix('PKR'),
+                    DatePicker::make('planned_start_date')
+                        ->label('Planned Start Date'),
+                    DatePicker::make('planned_completion_date')
+                        ->label('Planned Completion Date')
+                        ->afterOrEqual('planned_start_date'),
+                    DatePicker::make('actual_start_date')
+                        ->label('Actual Start Date'),
+                    DatePicker::make('actual_completion_date')
+                        ->label('Actual Completion Date')
+                        ->afterOrEqual('actual_start_date'),
                     TextInput::make('currency_code')
+                        ->label('Base Currency')
                         ->required()
                         ->length(3)
                         ->default('PKR')
                         ->disabled()
                         ->dehydrated(),
-                    Select::make('status')
-                        ->options(ProjectStatus::class)
-                        ->default(ProjectStatus::Planned->value)
-                        ->required(),
+                ]),
+            Section::make('Commercial & Retention Terms')
+                ->columns(['sm' => 1, 'md' => 2, 'lg' => 2])
+                ->columnSpanFull()
+                ->schema([
                     KeyValue::make('retention_terms')
-                        ->label('Retention terms')
+                        ->label('Retention Terms & Milestones')
                         ->helperText('Contract-specific terms only; do not enter an assumed statutory rate.')
                         ->columnSpanFull(),
                     KeyValue::make('mobilization_terms')
-                        ->label('Mobilization terms')
+                        ->label('Mobilization Advance & Recovery Terms')
                         ->helperText('Contract-specific recovery terms only.')
                         ->columnSpanFull(),
-                ])
-                ->columns(2)
-                ->columnSpanFull(),
+                ]),
         ]);
     }
 }

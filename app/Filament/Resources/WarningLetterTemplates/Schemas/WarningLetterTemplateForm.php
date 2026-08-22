@@ -13,15 +13,40 @@ class WarningLetterTemplateForm
     public static function configure(Schema $schema): Schema
     {
         return $schema->components([
-            Section::make('Warning template')->schema([
-                TextInput::make('code')->required()->alphaDash()->maxLength(50),
-                TextInput::make('name')->required()->maxLength(255),
-                TextInput::make('level')->required()->maxLength(100),
-                TextInput::make('subject')->required()->maxLength(255),
-                Textarea::make('body')->required()->rows(8)->columnSpanFull(),
-                Toggle::make('requires_response')->default(false),
-                Toggle::make('is_active')->default(true),
-            ])->columns(2)->columnSpanFull(),
+            Section::make('Warning Letter Template Details')
+                ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
+                ->columnSpanFull()
+                ->schema([
+                    TextInput::make('code')
+                        ->label('Template Code')
+                        ->required()
+                        ->alphaDash()
+                        ->maxLength(50),
+                    TextInput::make('name')
+                        ->label('Template Name')
+                        ->required()
+                        ->maxLength(255),
+                    TextInput::make('level')
+                        ->label('Warning Level')
+                        ->required()
+                        ->maxLength(100),
+                    TextInput::make('subject')
+                        ->label('Default Subject Line')
+                        ->required()
+                        ->maxLength(255)
+                        ->columnSpan(['sm' => 1, 'md' => 2, 'lg' => 2]),
+                    Toggle::make('requires_response')
+                        ->label('Requires Employee Explanation/Response')
+                        ->default(false),
+                    Toggle::make('is_active')
+                        ->label('Is Active')
+                        ->default(true),
+                    Textarea::make('body')
+                        ->label('Letter Body Template')
+                        ->required()
+                        ->rows(8)
+                        ->columnSpanFull(),
+                ]),
         ]);
     }
 }

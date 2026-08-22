@@ -16,7 +16,7 @@ class UserStatsOverview extends StatsOverviewWidget
     {
         $user = Filament::auth()?->user();
 
-        return $user !== null && ($user->hasRole('super_admin') || $user->can('view_user_stats_overview') || UserResource::canViewAny());
+        return $user !== null && ($user->hasRole('super_admin') || $user->can('View:UserStatsOverview') || $user->can('view_user_stats_overview') || UserResource::canViewAny());
     }
 
     protected int|string|array $columnSpan = 1;

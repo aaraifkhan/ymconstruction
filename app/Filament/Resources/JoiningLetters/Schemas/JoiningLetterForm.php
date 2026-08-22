@@ -19,11 +19,13 @@ class JoiningLetterForm
     public static function configure(Schema $schema): Schema
     {
         return $schema->components([
-            Section::make('Joining letter setup')
+            Section::make('Joining Letter Generation')
                 ->description('Save changes, then use “Regenerate from Template” to refresh the protected letter snapshot.')
+                ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
+                ->columnSpanFull()
                 ->schema([
                     Select::make('employment_id')
-                        ->label('Employee employment')
+                        ->label('Employee')
                         ->options(fn (): array => Employment::query()
                             ->whereBelongsTo(Filament::getTenant())
                             ->with('employee')
@@ -36,7 +38,7 @@ class JoiningLetterForm
                         ->preload()
                         ->required(),
                     Select::make('joining_letter_template_id')
-                        ->label('Template')
+                        ->label('Letter Template')
                         ->relationship(
                             name: 'template',
                             titleAttribute: 'name',
@@ -48,7 +50,7 @@ class JoiningLetterForm
                         ->preload()
                         ->required(),
                     TextInput::make('letter_number')
-                        ->label('Letter number')
+                        ->label('Reference / Letter #')
                         ->required()
                         ->maxLength(100)
                         ->unique(
@@ -58,14 +60,18 @@ class JoiningLetterForm
                                 Filament::getTenant()?->getKey(),
                             ),
                         ),
-                    DatePicker::make('letter_date')->label('Letter date')->default(today())->required(),
+                    DatePicker::make('letter_date')
+                        ->label('Issue Date')
+                        ->default(today())
+                        ->required(),
                     DatePicker::make('employment_effective_date')
-                        ->label('Employment effective date')
+                        ->label('Effective Joining Date')
                         ->default(today())
                         ->required(),
                     TextInput::make('compensation_amount')
-                        ->label('Compensation amount')
+                        ->label('Agreed Monthly Compensation (PKR)')
                         ->numeric()
+                        ->prefix('PKR')
                         ->minValue(0)
                         ->visible(fn (string $operation, ?JoiningLetter $record): bool => self::canManageCompensation($operation, $record)),
                     TextInput::make('currency_code')
@@ -74,9 +80,7 @@ class JoiningLetterForm
                         ->length(3)
                         ->required()
                         ->visible(fn (string $operation, ?JoiningLetter $record): bool => self::canManageCompensation($operation, $record)),
-                ])
-                ->columns(2)
-                ->columnSpanFull(),
+                ]),
         ]);
     }
 

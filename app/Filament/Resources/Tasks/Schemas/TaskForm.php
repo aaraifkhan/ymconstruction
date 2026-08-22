@@ -106,7 +106,7 @@ class TaskForm
                             ->columnSpanFull()
                             ->placeholder('Mention any client dependency or blocker...'),
                     ])
-                    ->columns(3)
+                    ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
                     ->columnSpanFull(),
 
                 // Specialized: Social Media Team Details
@@ -140,7 +140,7 @@ class TaskForm
                         Textarea::make('creative_requirement')->label('Creative Brief (for Designer/Editor)')->rows(2)->columnSpanFull(),
                         Textarea::make('hashtags_keywords')->label('Hashtags & SEO Keywords')->rows(2)->columnSpanFull(),
                     ])
-                    ->columns(3)
+                    ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
                     ->collapsible()
                     ->columnSpanFull(),
 
@@ -163,13 +163,13 @@ class TaskForm
                         TextInput::make('dimensions')->label('Dimensions Spec (e.g. 1080x1080, 1920x1080)'),
                         TextInput::make('target_platform')->label('Target Platform / Medium'),
                         TextInput::make('brand_client')->label('Brand / Client'),
-                        Textarea::make('reference_links')->label('Inspiration / Reference Links')->rows(2)->columnSpan(2),
+                        Textarea::make('reference_links')->label('Inspiration / Reference Links')->rows(2)->columnSpan(['sm' => 1, 'md' => 2, 'lg' => 2]),
                         Textarea::make('copy_content')->label('Design Copy / Text to Include')->rows(3)->columnSpanFull(),
                         TextInput::make('source_file_path')->label('Source File Link (PSD/AI/Figma)'),
                         TextInput::make('preview_file_path')->label('Preview Image / PDF Link'),
                         TextInput::make('final_file_path')->label('Final Export Asset Link'),
                     ])
-                    ->columns(3)
+                    ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
                     ->collapsible()
                     ->columnSpanFull(),
 
@@ -201,7 +201,7 @@ class TaskForm
                         Textarea::make('script_text')->label('Script & Storyline')->rows(3)->columnSpanFull(),
                         Textarea::make('editing_instructions')->label('Editing Instructions & Style')->rows(2)->columnSpanFull(),
                     ])
-                    ->columns(3)
+                    ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
                     ->collapsible()
                     ->columnSpanFull(),
 
@@ -237,7 +237,7 @@ class TaskForm
                         Textarea::make('development_requirement')->label('Technical Specifications & Requirements')->rows(4)->columnSpanFull(),
                         Textarea::make('qa_feedback_notes')->label('QA Feedback & Bugs Notes')->rows(2)->columnSpanFull(),
                     ])
-                    ->columns(3)
+                    ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
                     ->collapsible()
                     ->columnSpanFull(),
             ]);

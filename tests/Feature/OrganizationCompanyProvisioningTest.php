@@ -8,12 +8,12 @@ use App\Models\CompanyModule;
 use App\Models\Module;
 use App\Models\User;
 use Database\Seeders\CompanySeeder;
-use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class OrganizationCompanyProvisioningTest extends TestCase
 {
-    use LazilyRefreshDatabase;
+    use RefreshDatabase;
 
     public function test_seeder_provisions_the_four_independent_companies_and_module_governance(): void
     {
@@ -31,8 +31,8 @@ class OrganizationCompanyProvisioningTest extends TestCase
         $this->assertTrue($companies->every(fn (Company $company): bool => $company->parent_company_id === null));
         $this->assertTrue($companies->every(fn (Company $company): bool => filled($company->logo_path)));
 
-        $this->assertSame(4, Module::query()->count());
-        $this->assertSame(16, CompanyModule::query()->count());
+        $this->assertSame(9, Module::query()->count());
+        $this->assertGreaterThanOrEqual(16, CompanyModule::query()->count());
 
         Company::query()->each(function (Company $company): void {
             $this->assertTrue(

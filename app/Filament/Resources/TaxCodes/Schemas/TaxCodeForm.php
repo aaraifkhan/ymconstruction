@@ -17,30 +17,53 @@ class TaxCodeForm
     public static function configure(Schema $schema): Schema
     {
         return $schema->components([
-            Section::make('Tax code')
+            Section::make('Tax Code Parameters')
                 ->description('No statutory rate is supplied by the system. Activate only accountant-approved rates.')
+                ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
+                ->columnSpanFull()
                 ->schema([
-                    TextInput::make('code')->required()->alphaDash()->maxLength(50),
-                    TextInput::make('name')->required()->maxLength(255),
-                    Select::make('type')->options(TaxCodeType::class)->required(),
+                    TextInput::make('code')
+                        ->label('Tax Code')
+                        ->required()
+                        ->alphaDash()
+                        ->maxLength(50),
+                    TextInput::make('name')
+                        ->label('Tax Head / Name')
+                        ->required()
+                        ->maxLength(255),
+                    Select::make('type')
+                        ->label('Tax Category')
+                        ->options(TaxCodeType::class)
+                        ->required(),
                     TextInput::make('rate')
-                        ->label('Rate (%)')
+                        ->label('Tax Rate (%)')
                         ->required()
                         ->numeric()
+                        ->suffix('%')
                         ->minValue(0)
                         ->maxValue(100),
                     Select::make('calculation_method')
+                        ->label('Calculation Method')
                         ->options(TaxCalculationMethod::class)
                         ->default(TaxCalculationMethod::Exclusive->value)
                         ->required(),
-                    DatePicker::make('effective_from')->required(),
-                    DatePicker::make('effective_to')->afterOrEqual('effective_from'),
-                    Toggle::make('is_recoverable')->label('Recoverable')->default(false),
-                    Toggle::make('is_active')->label('Approved and active')->default(false),
-                    Textarea::make('notes')->rows(3)->columnSpanFull(),
-                ])
-                ->columns(2)
-                ->columnSpanFull(),
+                    DatePicker::make('effective_from')
+                        ->label('Effective From Date')
+                        ->required(),
+                    DatePicker::make('effective_to')
+                        ->label('Effective To Date')
+                        ->afterOrEqual('effective_from'),
+                    Toggle::make('is_recoverable')
+                        ->label('Is Recoverable (Input Tax)')
+                        ->default(false),
+                    Toggle::make('is_active')
+                        ->label('Approved & Active')
+                        ->default(false),
+                    Textarea::make('notes')
+                        ->label('Notes / Statutory References')
+                        ->rows(2)
+                        ->columnSpanFull(),
+                ]),
         ]);
     }
 }

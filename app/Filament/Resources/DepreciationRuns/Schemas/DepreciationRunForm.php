@@ -14,17 +14,25 @@ class DepreciationRunForm
     public static function configure(Schema $schema): Schema
     {
         return $schema->components([
-            Section::make('Depreciation period')->schema([
-                Select::make('financial_period_id')
-                    ->label('Open financial period')
-                    ->options(fn (): array => Filament::getTenant()?->financialPeriods()
-                        ->where('status', 'open')->orderBy('starts_on')->get()
-                        ->mapWithKeys(fn ($period): array => [$period->getKey() => "{$period->starts_on->format('d M Y')} – {$period->ends_on->format('d M Y')}"])
-                        ->all() ?? [])
-                    ->required(),
-                DatePicker::make('depreciation_date')->required(),
-                TextInput::make('reference_number')->disabled()->placeholder('Assigned when posted'),
-            ])->columns(2)->columnSpanFull(),
+            Section::make('Depreciation Period & Details')
+                ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
+                ->columnSpanFull()
+                ->schema([
+                    Select::make('financial_period_id')
+                        ->label('Open Financial Period')
+                        ->options(fn (): array => Filament::getTenant()?->financialPeriods()
+                            ->where('status', 'open')->orderBy('starts_on')->get()
+                            ->mapWithKeys(fn ($period): array => [$period->getKey() => "{$period->starts_on->format('d M Y')} – {$period->ends_on->format('d M Y')}"])
+                            ->all() ?? [])
+                        ->required(),
+                    DatePicker::make('depreciation_date')
+                        ->label('Depreciation Date')
+                        ->required(),
+                    TextInput::make('reference_number')
+                        ->label('Run Reference Number')
+                        ->disabled()
+                        ->placeholder('Assigned when posted'),
+                ]),
         ]);
     }
 }

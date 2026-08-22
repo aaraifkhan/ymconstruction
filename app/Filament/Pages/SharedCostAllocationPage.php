@@ -102,7 +102,7 @@ class SharedCostAllocationPage extends Page implements HasTable
             ->schema([
                 Section::make('Multi-Company Shared Expense Split')
                     ->description('Enter head office or joint expenses (e.g. utility bills, rent, internet) and allocate cost percentages/amounts across group entities.')
-                    ->columns(3)
+                    ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
                     ->schema([
                         Select::make('paying_company_id')
                             ->label('Paying Entity (Fund Source Company)')
@@ -151,6 +151,7 @@ class SharedCostAllocationPage extends Page implements HasTable
                         Textarea::make('description')
                             ->label('Memo / Narration')
                             ->placeholder('e.g. Head Office monthly electricity bill split for July')
+                            ->rows(2)
                             ->required()
                             ->columnSpanFull(),
 
@@ -170,7 +171,7 @@ class SharedCostAllocationPage extends Page implements HasTable
                                     ->prefix('PKR')
                                     ->required(),
                             ])
-                            ->columns(2)
+                            ->columns(['sm' => 1, 'md' => 2, 'lg' => 2])
                             ->addable(false)
                             ->deletable(false)
                             ->columnSpanFull(),

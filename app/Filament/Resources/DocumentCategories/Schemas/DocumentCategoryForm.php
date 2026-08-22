@@ -18,15 +18,18 @@ class DocumentCategoryForm
     {
         return $schema
             ->components([
-                Section::make('Category details')
+                Section::make('Document Category Parameters')
                     ->description('Categories define the default sensitivity and review requirements for documents.')
+                    ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
+                    ->columnSpanFull()
                     ->schema([
                         TextInput::make('name')
+                            ->label('Category Name')
                             ->required()
                             ->maxLength(255),
                         TextInput::make('slug')
-                            ->label('Code')
-                            ->helperText('Stable identifier, for example company-registration.')
+                            ->label('Category Code / Slug')
+                            ->helperText('Stable identifier: e.g. company-registration.')
                             ->required()
                             ->alphaDash()
                             ->maxLength(255)
@@ -37,11 +40,8 @@ class DocumentCategoryForm
                                     Filament::getTenant()?->getKey(),
                                 ),
                             ),
-                        Textarea::make('description')
-                            ->rows(3)
-                            ->columnSpanFull(),
                         Select::make('default_classification')
-                            ->label('Default sensitivity')
+                            ->label('Default Security Sensitivity')
                             ->options(
                                 collect(DocumentClassification::cases())
                                     ->mapWithKeys(fn (DocumentClassification $classification): array => [
@@ -52,28 +52,30 @@ class DocumentCategoryForm
                             ->default(DocumentClassification::Internal->value)
                             ->required(),
                         TextInput::make('retention_days')
-                            ->label('Retention period (days)')
+                            ->label('Retention Period (Days)')
                             ->helperText('Leave empty until a retention policy is confirmed.')
                             ->numeric()
                             ->minValue(1),
-                    ])
-                    ->columns(2)
-                    ->columnSpanFull(),
-                Section::make('Workflow requirements')
+                        Textarea::make('description')
+                            ->label('Category Purpose / Guidelines')
+                            ->rows(2)
+                            ->columnSpanFull(),
+                    ]),
+                Section::make('Compliance & Verification Workflow')
+                    ->columns(['sm' => 1, 'md' => 2, 'lg' => 4])
+                    ->columnSpanFull()
                     ->schema([
                         Toggle::make('requires_expiry')
-                            ->label('Expiry date required'),
+                            ->label('Expiry Date Required'),
                         Toggle::make('requires_verification')
-                            ->label('Verification required'),
+                            ->label('Verification Required'),
                         Toggle::make('requires_approval')
-                            ->label('Approval required'),
+                            ->label('Approval Required'),
                         Toggle::make('is_active')
-                            ->label('Active')
+                            ->label('Is Active')
                             ->default(true)
                             ->required(),
-                    ])
-                    ->columns(2)
-                    ->columnSpanFull(),
+                    ]),
             ]);
     }
 }

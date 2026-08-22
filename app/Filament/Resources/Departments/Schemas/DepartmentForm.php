@@ -19,19 +19,12 @@ class DepartmentForm
     {
         return $schema
             ->components([
-                Section::make('Department details')
+                Section::make('Department Details')
+                    ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
+                    ->columnSpanFull()
                     ->schema([
-                        TextInput::make('name')
-                            ->required()
-                            ->maxLength(255)
-                            ->unique(
-                                ignoreRecord: true,
-                                modifyRuleUsing: fn (Unique $rule): Unique => $rule->where(
-                                    'company_id',
-                                    Filament::getTenant()?->getKey(),
-                                ),
-                            ),
                         TextInput::make('code')
+                            ->label('Department Code')
                             ->required()
                             ->alphaDash()
                             ->maxLength(50)
@@ -42,8 +35,19 @@ class DepartmentForm
                                     Filament::getTenant()?->getKey(),
                                 ),
                             ),
+                        TextInput::make('name')
+                            ->label('Department Name')
+                            ->required()
+                            ->maxLength(255)
+                            ->unique(
+                                ignoreRecord: true,
+                                modifyRuleUsing: fn (Unique $rule): Unique => $rule->where(
+                                    'company_id',
+                                    Filament::getTenant()?->getKey(),
+                                ),
+                            ),
                         Select::make('parent_department_id')
-                            ->label('Parent department')
+                            ->label('Parent Department')
                             ->relationship(
                                 'parentDepartment',
                                 'name',
@@ -53,16 +57,15 @@ class DepartmentForm
                             )
                             ->searchable()
                             ->preload(),
-                        Textarea::make('description')
-                            ->rows(3)
-                            ->columnSpanFull(),
                         Toggle::make('is_active')
-                            ->label('Active')
+                            ->label('Is Active')
                             ->default(true)
                             ->required(),
-                    ])
-                    ->columns(2)
-                    ->columnSpanFull(),
+                        Textarea::make('description')
+                            ->label('Department Mandate / Description')
+                            ->rows(2)
+                            ->columnSpanFull(),
+                    ]),
             ]);
     }
 }

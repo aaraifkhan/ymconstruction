@@ -20,10 +20,16 @@ class JoiningLetterTemplateForm
             ->implode("\n");
 
         return $schema->components([
-            Section::make('Template details')
+            Section::make('Template Details & Body Content')
+                ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
+                ->columnSpanFull()
                 ->schema([
-                    TextInput::make('name')->required()->maxLength(255),
+                    TextInput::make('name')
+                        ->label('Template Name')
+                        ->required()
+                        ->maxLength(255),
                     TextInput::make('code')
+                        ->label('Template Code')
                         ->required()
                         ->alphaDash()
                         ->maxLength(100)
@@ -34,22 +40,24 @@ class JoiningLetterTemplateForm
                                 Filament::getTenant()?->getKey(),
                             ),
                         ),
+                    Toggle::make('is_default')
+                        ->label('Is Company Default Template'),
+                    Toggle::make('is_active')
+                        ->label('Is Active')
+                        ->default(true)
+                        ->required(),
                     TextInput::make('subject_template')
-                        ->label('Subject template')
+                        ->label('Subject Template')
                         ->required()
                         ->maxLength(255)
                         ->columnSpanFull(),
                     Textarea::make('body_template')
-                        ->label('Letter body template')
+                        ->label('Letter Body Template')
                         ->helperText("Allowed placeholders:\n{$placeholderHelp}")
-                        ->rows(20)
+                        ->rows(14)
                         ->required()
                         ->columnSpanFull(),
-                    Toggle::make('is_default')->label('Default template'),
-                    Toggle::make('is_active')->label('Active')->default(true)->required(),
-                ])
-                ->columns(2)
-                ->columnSpanFull(),
+                ]),
         ]);
     }
 }

@@ -27,7 +27,9 @@ class EmploymentForm
     public static function configure(Schema $schema): Schema
     {
         return $schema->components([
-            Section::make('Company employment')
+            Section::make('Company Employment Profile')
+                ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
+                ->columnSpanFull()
                 ->schema([
                     Select::make('employee_id')
                         ->label('Employee')
@@ -57,20 +59,21 @@ class EmploymentForm
                         ->required()
                         ->disabledOn('edit'),
                     TextInput::make('employee_code')
-                        ->label('Employee code')
+                        ->label('Employee Code')
                         ->placeholder('Assigned automatically')
                         ->helperText('Company-specific code; existing codes remain unchanged.')
                         ->disabled()
                         ->dehydrated(false),
                     DatePicker::make('joining_date')
-                        ->label('Date of joining')
+                        ->label('Date of Joining')
                         ->minDate('2000-01-01')
                         ->maxDate(now()->addYear())
                         ->required(),
                     DatePicker::make('ending_date')
-                        ->label('Ending date')
+                        ->label('Ending Date')
                         ->afterOrEqual('joining_date'),
                     Select::make('department_id')
+                        ->label('Department')
                         ->relationship(
                             name: 'department',
                             titleAttribute: 'name',
@@ -109,7 +112,7 @@ class EmploymentForm
                         ->searchable()
                         ->preload(),
                     Select::make('reporting_to_employment_id')
-                        ->label('Reporting to')
+                        ->label('Reporting To')
                         ->options(fn (?Employment $record): array => Employment::query()
                             ->whereBelongsTo(Filament::getTenant())
                             ->whereNotIn('employment_status', [
@@ -128,14 +131,14 @@ class EmploymentForm
                         ->preload()
                         ->placeholder('Select reporting manager (optional)'),
                     Select::make('employment_category')
-                        ->label('Employee category')
+                        ->label('Employee Category')
                         ->options(collect(EmploymentCategory::cases())->mapWithKeys(
                             fn (EmploymentCategory $category): array => [$category->value => $category->label()],
                         )->all())
                         ->default(EmploymentCategory::AdministrativeStaff->value)
                         ->required(),
                     Select::make('employment_type')
-                        ->label('Employment type')
+                        ->label('Employment Type')
                         ->options(collect(EmploymentType::cases())->mapWithKeys(
                             fn (EmploymentType $type): array => [$type->value => $type->label()],
                         )->all())
@@ -152,21 +155,21 @@ class EmploymentForm
                         ->default(EmploymentStatus::Probation->value)
                         ->required(),
                     DatePicker::make('probation_start_date')
-                        ->label('Probation start')
+                        ->label('Probation Start')
                         ->afterOrEqual('joining_date'),
                     DatePicker::make('probation_end_date')
-                        ->label('Probation end')
+                        ->label('Probation End')
                         ->afterOrEqual('probation_start_date'),
                     DatePicker::make('confirmation_date')
-                        ->label('Confirmation date')
+                        ->label('Confirmation Date')
                         ->afterOrEqual('joining_date'),
                     TextInput::make('notice_period_days')
-                        ->label('Notice period (calendar days)')
+                        ->label('Notice Period (Calendar Days)')
                         ->numeric()
                         ->minValue(1)
                         ->maxValue(65535),
                     Select::make('work_location_id')
-                        ->label('Work location')
+                        ->label('Work Location')
                         ->relationship(
                             name: 'workLocation',
                             titleAttribute: 'name',
@@ -177,7 +180,7 @@ class EmploymentForm
                         ->searchable()
                         ->preload(),
                     Select::make('cost_center_id')
-                        ->label('Cost center')
+                        ->label('Cost Center')
                         ->options(fn (): array => CostCenter::query()
                             ->whereBelongsTo(Filament::getTenant())
                             ->where('is_active', true)
@@ -188,7 +191,7 @@ class EmploymentForm
                         ->preload()
                         ->helperText('Default cost center for payroll journal lines.'),
                     Select::make('default_project_id')
-                        ->label('Default project')
+                        ->label('Default Project')
                         ->options(fn (): array => Project::query()
                             ->whereBelongsTo(Filament::getTenant())
                             ->orderBy('name')
@@ -198,7 +201,7 @@ class EmploymentForm
                         ->preload()
                         ->helperText('Applicable for project-staff employees.'),
                     Select::make('payment_method')
-                        ->label('Payment method')
+                        ->label('Disbursement Mode')
                         ->options([
                             'bank_transfer' => 'Bank Transfer',
                             'cash' => 'Cash',
@@ -206,27 +209,27 @@ class EmploymentForm
                         ])
                         ->default('bank_transfer')
                         ->required(),
-                ])
-                ->columns(2)
-                ->columnSpanFull(),
-            Section::make('Work schedule')
+                ]),
+            Section::make('Work Schedule & Working Hours')
+                ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
+                ->columnSpanFull()
                 ->schema([
-                    TimePicker::make('work_start_time')->label('Start time')->seconds(false),
-                    TimePicker::make('work_end_time')->label('End time')->seconds(false),
+                    TimePicker::make('work_start_time')->label('Work Start Time')->seconds(false),
+                    TimePicker::make('work_end_time')->label('Work End Time')->seconds(false),
                     TextInput::make('working_days_per_week')
-                        ->label('Working days per week')
+                        ->label('Working Days Per Week')
                         ->numeric()
                         ->minValue(1)
                         ->maxValue(7)
                         ->default(6)
                         ->required(),
-                ])
-                ->columns(3)
-                ->columnSpanFull(),
-            Section::make('HR office use')
+                ]),
+            Section::make('HR Verification & Confidential Notes')
+                ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
+                ->columnSpanFull()
                 ->schema([
                     Select::make('interviewed_by_id')
-                        ->label('Interview conducted by')
+                        ->label('Interview Conducted By')
                         ->relationship(
                             name: 'interviewedBy',
                             titleAttribute: 'name',
@@ -241,7 +244,7 @@ class EmploymentForm
                         ->preload()
                         ->visible(fn (?Employment $record): bool => self::canManageHrVerification($record)),
                     Select::make('documents_verified_by_id')
-                        ->label('Documents verified by')
+                        ->label('Documents Verified By')
                         ->relationship(
                             name: 'documentsVerifiedBy',
                             titleAttribute: 'name',
@@ -256,18 +259,16 @@ class EmploymentForm
                         ->preload()
                         ->visible(fn (?Employment $record): bool => self::canManageHrVerification($record)),
                     Toggle::make('appointment_letter_issued')
-                        ->label('Appointment letter issued')
+                        ->label('Appointment Letter Issued')
                         ->visible(fn (?Employment $record): bool => self::canManageHrVerification($record)),
                     Textarea::make('hr_notes')
-                        ->label('Private HR notes')
-                        ->rows(3)
+                        ->label('Private HR Notes')
+                        ->rows(2)
                         ->columnSpanFull()
                         ->visible(fn (?Employment $record): bool => $record === null
                             ? (auth()->user()?->can('ViewHrNotes:Employment') ?? false)
                             : Gate::allows('viewHrNotes', $record)),
-                ])
-                ->columns(2)
-                ->columnSpanFull(),
+                ]),
         ]);
     }
 

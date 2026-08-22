@@ -16,7 +16,7 @@ class RoleStatsOverview extends StatsOverviewWidget
     {
         $user = Filament::auth()?->user();
 
-        return $user !== null && ($user->hasRole('super_admin') || $user->can('view_role_stats_overview') || RoleResource::canViewAny());
+        return $user !== null && ($user->hasRole('super_admin') || $user->can('View:RoleStatsOverview') || $user->can('view_role_stats_overview') || RoleResource::canViewAny());
     }
 
     protected int|string|array $columnSpan = 1;

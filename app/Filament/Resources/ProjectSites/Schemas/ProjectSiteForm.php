@@ -18,9 +18,12 @@ class ProjectSiteForm
     public static function configure(Schema $schema): Schema
     {
         return $schema->components([
-            Section::make('Project site or store')
+            Section::make('Project Site & Store Details')
+                ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
+                ->columnSpanFull()
                 ->schema([
                     TextInput::make('code')
+                        ->label('Site / Store Code')
                         ->required()
                         ->alphaDash()
                         ->maxLength(50)
@@ -31,8 +34,17 @@ class ProjectSiteForm
                                 Filament::getTenant()?->getKey(),
                             ),
                         ),
-                    TextInput::make('name')->required()->maxLength(255),
+                    TextInput::make('name')
+                        ->label('Site / Store Name')
+                        ->required()
+                        ->maxLength(255),
+                    Select::make('type')
+                        ->label('Location Type')
+                        ->options(ProjectSiteType::class)
+                        ->default(ProjectSiteType::Site->value)
+                        ->required(),
                     Select::make('project_id')
+                        ->label('Assigned Project')
                         ->relationship(
                             'project',
                             'name',
@@ -42,7 +54,7 @@ class ProjectSiteForm
                         ->preload()
                         ->required(),
                     Select::make('cost_center_id')
-                        ->label('Cost center')
+                        ->label('Cost Center')
                         ->relationship(
                             'costCenter',
                             'name',
@@ -52,15 +64,15 @@ class ProjectSiteForm
                         )
                         ->searchable()
                         ->preload(),
-                    Select::make('type')
-                        ->options(ProjectSiteType::class)
-                        ->default(ProjectSiteType::Site->value)
+                    Toggle::make('is_active')
+                        ->label('Is Active')
+                        ->default(true)
                         ->required(),
-                    Toggle::make('is_active')->label('Active')->default(true)->required(),
-                    Textarea::make('location')->rows(3)->columnSpanFull(),
-                ])
-                ->columns(2)
-                ->columnSpanFull(),
+                    Textarea::make('location')
+                        ->label('Physical Site / Yard Address')
+                        ->rows(2)
+                        ->columnSpanFull(),
+                ]),
         ]);
     }
 }

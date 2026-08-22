@@ -16,10 +16,12 @@ class EmploymentCompensationForm
     public static function configure(Schema $schema): Schema
     {
         return $schema->components([
-            Section::make('Employment and effective period')
+            Section::make('Employment and Effective Period')
+                ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
+                ->columnSpanFull()
                 ->schema([
                     Select::make('employment_id')
-                        ->label('Employee employment')
+                        ->label('Employee Employment')
                         ->options(fn (): array => Employment::query()
                             ->whereBelongsTo(Filament::getTenant())
                             ->with('employee')
@@ -30,75 +32,86 @@ class EmploymentCompensationForm
                             ->all())
                         ->searchable()
                         ->preload()
-                        ->required(),
-                    DatePicker::make('effective_from')->required(),
-                    DatePicker::make('effective_to')
-                        ->afterOrEqual('effective_from')
-                        ->helperText('Leave empty while this compensation remains active.'),
+                        ->required()
+                        ->columnSpan(['sm' => 1, 'md' => 2, 'lg' => 2]),
                     TextInput::make('currency_code')
                         ->label('Currency')
                         ->default('PKR')
                         ->length(3)
                         ->required(),
-                ])
-                ->columns(2)
-                ->columnSpanFull(),
-            Section::make('Monthly compensation')
-                ->description('Gross salary is calculated from basic salary and all allowances.')
+                    DatePicker::make('effective_from')
+                        ->label('Effective From Date')
+                        ->required(),
+                    DatePicker::make('effective_to')
+                        ->label('Effective To Date')
+                        ->afterOrEqual('effective_from')
+                        ->helperText('Leave empty while this compensation remains active.'),
+                ]),
+            Section::make('Monthly Compensation Breakdown')
+                ->description('Gross salary is calculated dynamically from basic salary and all allowances.')
+                ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
+                ->columnSpanFull()
                 ->schema([
                     TextInput::make('basic_salary')
-                        ->label('Basic salary')
+                        ->label('Basic Salary (PKR)')
                         ->numeric()
+                        ->prefix('PKR')
                         ->minValue(0)
                         ->required(),
                     TextInput::make('house_travel_allowance')
-                        ->label('House & travel allowance')
+                        ->label('House & Travel Allowance (PKR)')
                         ->numeric()
+                        ->prefix('PKR')
                         ->minValue(0)
                         ->default(0),
                     TextInput::make('fuel_allowance')
-                        ->label('Fuel allowance')
+                        ->label('Fuel Allowance (PKR)')
                         ->numeric()
+                        ->prefix('PKR')
                         ->minValue(0)
                         ->default(0),
                     TextInput::make('mobile_allowance')
-                        ->label('Mobile allowance')
+                        ->label('Mobile Allowance (PKR)')
                         ->numeric()
+                        ->prefix('PKR')
                         ->minValue(0)
                         ->default(0),
                     TextInput::make('internet_allowance')
-                        ->label('Internet allowance')
+                        ->label('Internet Allowance (PKR)')
                         ->numeric()
+                        ->prefix('PKR')
                         ->minValue(0)
                         ->default(0),
                     TextInput::make('food_allowance')
-                        ->label('Food allowance')
+                        ->label('Food Allowance (PKR)')
                         ->numeric()
+                        ->prefix('PKR')
                         ->minValue(0)
                         ->default(0),
                     TextInput::make('site_allowance')
-                        ->label('Site allowance')
+                        ->label('Site Allowance (PKR)')
                         ->numeric()
+                        ->prefix('PKR')
                         ->minValue(0)
                         ->default(0),
                     TextInput::make('project_allowance')
-                        ->label('Project allowance')
+                        ->label('Project Allowance (PKR)')
                         ->numeric()
+                        ->prefix('PKR')
                         ->minValue(0)
                         ->default(0),
                     TextInput::make('other_allowance')
-                        ->label('Other allowance')
+                        ->label('Other Allowance (PKR)')
                         ->numeric()
+                        ->prefix('PKR')
                         ->minValue(0)
                         ->default(0),
                     Textarea::make('notes')
-                        ->label('Private compensation notes')
+                        ->label('Private Compensation Notes / Approval Memo')
                         ->maxLength(5000)
-                        ->rows(3)
+                        ->rows(2)
                         ->columnSpanFull(),
-                ])
-                ->columns(2)
-                ->columnSpanFull(),
+                ]),
         ]);
     }
 }

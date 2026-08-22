@@ -55,7 +55,13 @@ class RoleResource extends Resource
             ->components([
                 Grid::make()
                     ->schema([
-                        Section::make()
+                        Section::make('Role Identity & Scope')
+                            ->columns([
+                                'sm' => 1,
+                                'md' => 2,
+                                'lg' => 3,
+                            ])
+                            ->columnSpanFull()
                             ->schema([
                                 TextInput::make('name')
                                     ->label(__('filament-shield::filament-shield.field.name'))
@@ -82,12 +88,7 @@ class RoleResource extends Resource
                                     ->dehydrated(fn (): bool => static::shield()->isCentralApp() && Utils::isTenancyEnabled()),
                                 static::getSelectAllFormComponent(),
 
-                            ])
-                            ->columns([
-                                'sm' => 2,
-                                'lg' => 3,
-                            ])
-                            ->columnSpanFull(),
+                            ]),
                     ])
                     ->columnSpanFull(),
                 static::getShieldFormComponents(),
