@@ -19,32 +19,103 @@ class JournalEntryForm
         $types = [VoucherType::Journal, VoucherType::Payment, VoucherType::Receipt, VoucherType::Contra, VoucherType::DebitNote, VoucherType::CreditNote];
 
         return $schema->components([
-            Section::make('Voucher')->columns(3)->schema([
-                Select::make('voucher_type')->options(collect($types)->mapWithKeys(fn (VoucherType $type) => [$type->value => str($type->value)->headline()]))->required(),
-                Select::make('financial_period_id')->relationship('financialPeriod', 'name')->required()->searchable()->preload(),
-                DatePicker::make('transaction_date')->required()->default(today()),
-                TextInput::make('reference')->maxLength(120),
-                TextInput::make('currency_code')->default('PKR')->required()->length(3),
-                Textarea::make('description')->required()->columnSpanFull(),
-            ]),
-            Section::make('Double-entry lines')->schema([
-                Repeater::make('lines')->relationship()->orderColumn('line_number')->minItems(2)->defaultItems(2)
-                    ->mutateRelationshipDataBeforeCreateUsing(fn (array $data): array => [...$data, 'company_id' => Filament::getTenant()->getKey()])
-                    ->schema([
-                        Select::make('account_id')->relationship('account', 'name', modifyQueryUsing: fn ($query) => $query->where('is_active', true)->whereDoesntHave('children'))
-                            ->getOptionLabelFromRecordUsing(fn ($record): string => "{$record->code} — {$record->name}")
-                            ->searchable(['code', 'name'])->preload()->required()->columnSpan(2),
-                        TextInput::make('debit')->numeric()->default(0)->minValue(0)->prefix('PKR'),
-                        TextInput::make('credit')->numeric()->default(0)->minValue(0)->prefix('PKR'),
-                        Select::make('party_id')->relationship('party', 'name')->searchable()->preload(),
-                        Select::make('project_id')->relationship('project', 'name')->searchable()->preload(),
-                        Select::make('project_site_id')->relationship('projectSite', 'name')->searchable()->preload(),
-                        Select::make('cost_center_id')->relationship('costCenter', 'name')->searchable()->preload(),
-                        Select::make('employment_id')->relationship('employment', 'employee_code')->searchable()->preload(),
-                        Select::make('company_bank_account_id')->relationship('companyBankAccount', 'bank_name')->searchable()->preload(),
-                        TextInput::make('description')->columnSpan(2),
-                    ])->columns(4)->columnSpanFull(),
-            ]),
+            Section::make('Voucher Details')
+                ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
+                ->schema([
+                    Select::make('voucher_type')
+                        ->label('Voucher Type')
+                        ->options(collect($types)->mapWithKeys(fn (VoucherType $type) => [$type->value => str($type->value)->headline()]))
+                        ->required(),
+                    Select::make('financial_period_id')
+                        ->label('Financial Period')
+                        ->relationship('financialPeriod', 'name')
+                        ->required()
+                        ->searchable()
+                        ->preload(),
+                    DatePicker::make('transaction_date')
+                        ->label('Transaction Date')
+                        ->required()
+                        ->default(today()),
+                    TextInput::make('reference')
+                        ->label('Reference / Cheque No.')
+                        ->maxLength(120),
+                    TextInput::make('currency_code')
+                        ->label('Currency')
+                        ->default('PKR')
+                        ->required()
+                        ->length(3),
+                    Textarea::make('description')
+                        ->label('Narration / Description')
+                        ->required()
+                        ->rows(2)
+                        ->columnSpanFull(),
+                ]),
+            Section::make('Double-Entry Voucher Lines')
+                ->schema([
+                    Repeater::make('lines')
+                        ->relationship()
+                        ->orderColumn('line_number')
+                        ->minItems(2)
+                        ->defaultItems(2)
+                        ->mutateRelationshipDataBeforeCreateUsing(fn (array $data): array => [...$data, 'company_id' => Filament::getTenant()->getKey()])
+                        ->schema([
+                            Select::make('account_id')
+                                ->label('Account Head')
+                                ->relationship('account', 'name', modifyQueryUsing: fn ($query) => $query->where('is_active', true)->whereDoesntHave('children'))
+                                ->getOptionLabelFromRecordUsing(fn ($record): string => "{$record->code} — {$record->name}")
+                                ->searchable(['code', 'name'])
+                                ->preload()
+                                ->required()
+                                ->columnSpan(['sm' => 1, 'md' => 2, 'lg' => 2]),
+                            TextInput::make('debit')
+                                ->label('Debit (PKR)')
+                                ->numeric()
+                                ->default(0)
+                                ->minValue(0)
+                                ->prefix('PKR'),
+                            TextInput::make('credit')
+                                ->label('Credit (PKR)')
+                                ->numeric()
+                                ->default(0)
+                                ->minValue(0)
+                                ->prefix('PKR'),
+                            Select::make('party_id')
+                                ->label('Party / Customer / Vendor')
+                                ->relationship('party', 'name')
+                                ->searchable()
+                                ->preload(),
+                            Select::make('project_id')
+                                ->label('Project')
+                                ->relationship('project', 'name')
+                                ->searchable()
+                                ->preload(),
+                            Select::make('project_site_id')
+                                ->label('Project Site')
+                                ->relationship('projectSite', 'name')
+                                ->searchable()
+                                ->preload(),
+                            Select::make('company_bank_account_id')
+                                ->label('Bank Account')
+                                ->relationship('companyBankAccount', 'bank_name')
+                                ->searchable()
+                                ->preload(),
+                            Select::make('cost_center_id')
+                                ->label('Cost Center')
+                                ->relationship('costCenter', 'name')
+                                ->searchable()
+                                ->preload(),
+                            Select::make('employment_id')
+                                ->label('Employee')
+                                ->relationship('employment', 'employee_code')
+                                ->searchable()
+                                ->preload(),
+                            TextInput::make('description')
+                                ->label('Line Particulars')
+                                ->columnSpan(['sm' => 1, 'md' => 2, 'lg' => 2]),
+                        ])
+                        ->columns(['sm' => 1, 'md' => 2, 'lg' => 4])
+                        ->columnSpanFull(),
+                ]),
         ]);
     }
 }

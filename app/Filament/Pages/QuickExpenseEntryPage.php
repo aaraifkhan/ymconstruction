@@ -107,7 +107,7 @@ class QuickExpenseEntryPage extends Page implements HasTable
             ->components([
                 Section::make('Record Operational Expense')
                     ->description('Quickly enter expenses without writing manual double-entry lines. The system will automatically construct and post the balanced journal entry.')
-                    ->columns(3)
+                    ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
                     ->schema([
                         Select::make('target_company_id')
                             ->label('Target Company')
@@ -197,6 +197,7 @@ class QuickExpenseEntryPage extends Page implements HasTable
                             ->label('Description / Particulars')
                             ->placeholder('e.g. Site generator fuel, Milk carton & tea for office, Drawing copies for C-21')
                             ->required()
+                            ->rows(2)
                             ->columnSpanFull(),
                     ]),
             ]);

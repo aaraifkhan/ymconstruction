@@ -25,11 +25,11 @@ class PurchaseOrderForm
     public static function configure(Schema $schema): Schema
     {
         return $schema->components([
-            Section::make('Purchase order')
-                ->columns(3)
+            Section::make('Purchase Order Details')
+                ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
                 ->schema([
                     Select::make('purchase_requisition_id')
-                        ->label('Approved requisition')
+                        ->label('Approved Requisition')
                         ->options(fn (): array => PurchaseRequisition::query()
                             ->whereBelongsTo(Filament::getTenant())
                             ->whereIn('status', [
@@ -41,6 +41,7 @@ class PurchaseOrderForm
                             ->all())
                         ->searchable(),
                     Select::make('vendor_id')
+                        ->label('Vendor / Supplier')
                         ->options(fn (): array => Party::query()
                             ->whereBelongsTo(Filament::getTenant())
                             ->active()
@@ -51,15 +52,15 @@ class PurchaseOrderForm
                             ->all())
                         ->searchable()
                         ->required(),
-                    DatePicker::make('order_date')->default(today())->required(),
-                    Select::make('project_id')->relationship('project', 'name')->searchable()->preload()->required(),
-                    Select::make('project_site_id')->relationship('projectSite', 'name')->searchable()->preload()->required(),
-                    TextInput::make('currency_code')->default('PKR')->length(3)->disabled()->dehydrated(),
-                    TextInput::make('payment_terms_days')->integer()->minValue(0)->default(0)->required(),
-                    Textarea::make('payment_terms')->columnSpan(2),
-                    Textarea::make('notes')->columnSpanFull(),
+                    DatePicker::make('order_date')->label('Order Date')->default(today())->required(),
+                    Select::make('project_id')->label('Project')->relationship('project', 'name')->searchable()->preload()->required(),
+                    Select::make('project_site_id')->label('Project Site')->relationship('projectSite', 'name')->searchable()->preload()->required(),
+                    TextInput::make('currency_code')->label('Currency')->default('PKR')->length(3)->disabled()->dehydrated(),
+                    TextInput::make('payment_terms_days')->label('Payment Terms (Days)')->integer()->minValue(0)->default(0)->required(),
+                    Textarea::make('payment_terms')->label('Payment Terms Details')->rows(2)->columnSpan(['sm' => 1, 'md' => 2, 'lg' => 2]),
+                    Textarea::make('notes')->label('Order Notes')->rows(2)->columnSpanFull(),
                 ]),
-            Section::make('Ordered materials and services')
+            Section::make('Ordered Materials and Services')
                 ->schema([
                     Repeater::make('lines')
                         ->relationship()
@@ -71,8 +72,17 @@ class PurchaseOrderForm
                             'company_id' => Filament::getTenant()->getKey(),
                         ])
                         ->schema([
+                            Select::make('item_id')
+                                ->label('Item / Material')
+                                ->options(fn (): array => Item::query()->whereBelongsTo(Filament::getTenant())->active()
+                                    ->orderBy('name')->get()->mapWithKeys(
+                                        fn (Item $item): array => [$item->getKey() => "{$item->code} — {$item->name}"],
+                                    )->all())
+                                ->searchable()
+                                ->required()
+                                ->columnSpan(['sm' => 1, 'md' => 2, 'lg' => 2]),
                             Select::make('purchase_requisition_line_id')
-                                ->label('Requisition line')
+                                ->label('Requisition Line (Optional)')
                                 ->options(fn (Get $get): array => PurchaseRequisitionLine::query()
                                     ->where('purchase_requisition_id', $get('../../purchase_requisition_id'))
                                     ->orderBy('line_number')
@@ -81,30 +91,36 @@ class PurchaseOrderForm
                                         $line->getKey() => "{$line->line_number}. {$line->item_name_snapshot} (remaining "
                                             .bcsub((string) $line->quantity, (string) $line->ordered_quantity, 4).')',
                                     ])->all())
-                                ->searchable(),
-                            Select::make('item_id')
-                                ->options(fn (): array => Item::query()->whereBelongsTo(Filament::getTenant())->active()
-                                    ->orderBy('name')->get()->mapWithKeys(
-                                        fn (Item $item): array => [$item->getKey() => "{$item->code} — {$item->name}"],
-                                    )->all())
                                 ->searchable()
-                                ->required(),
+                                ->columnSpan(['sm' => 1, 'md' => 2, 'lg' => 2]),
                             Select::make('unit_of_measure_id')
-                                ->label('UOM')
+                                ->label('Unit of Measure (UOM)')
                                 ->options(fn (): array => UnitOfMeasure::query()->whereBelongsTo(Filament::getTenant())
                                     ->active()->orderBy('name')->pluck('name', 'id')->all())
                                 ->searchable()
                                 ->required(),
+                            TextInput::make('quantity')
+                                ->label('Quantity')
+                                ->numeric()
+                                ->minValue(0.0001)
+                                ->required(),
+                            TextInput::make('unit_rate')
+                                ->label('Unit Rate (PKR)')
+                                ->numeric()
+                                ->prefix('PKR')
+                                ->minValue(0)
+                                ->required(),
                             Select::make('tax_code_id')
-                                ->label('Tax code')
+                                ->label('Tax Code')
                                 ->options(fn (): array => TaxCode::query()->whereBelongsTo(Filament::getTenant())
                                     ->where('is_active', true)->orderBy('name')->pluck('name', 'id')->all())
                                 ->searchable(),
-                            TextInput::make('quantity')->numeric()->minValue(0.0001)->required(),
-                            TextInput::make('unit_rate')->numeric()->minValue(0)->required(),
-                            Textarea::make('specification')->rows(2)->columnSpanFull(),
+                            Textarea::make('specification')
+                                ->label('Item Specifications / Remarks')
+                                ->rows(2)
+                                ->columnSpanFull(),
                         ])
-                        ->columns(3)
+                        ->columns(['sm' => 1, 'md' => 2, 'lg' => 4])
                         ->columnSpanFull(),
                 ]),
         ]);

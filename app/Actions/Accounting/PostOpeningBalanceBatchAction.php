@@ -59,6 +59,7 @@ class PostOpeningBalanceBatchAction
                     'line_number' => $line->line_number, 'account_id' => $line->account_id,
                     'description' => $line->description, 'debit' => $line->debit, 'credit' => $line->credit,
                     'party_id' => $line->party_id, 'project_id' => $line->project_id, 'cost_center_id' => $line->cost_center_id,
+                    'company_bank_account_id' => $line->company_bank_account_id,
                 ]);
             }
 

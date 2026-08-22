@@ -7,6 +7,7 @@ use App\Actions\Accounting\ProvisionStandardAccountTemplatesAction;
 use App\Enums\AccountingProfile;
 use App\Enums\ExpenseCategory;
 use App\Enums\ExpensePaymentMethod;
+use App\Enums\IncomeCategory;
 use App\Enums\JournalStatus;
 use App\Enums\VoucherType;
 use App\Filament\Pages\MasterAccountsHubPage;
@@ -112,6 +113,49 @@ class MasterAccountsHubTest extends TestCase
         $this->assertSame($companyB->getKey(), $entry->company_id);
         $this->assertSame(JournalStatus::Submitted, $entry->status);
         $this->assertSame('1500.0000', $entry->debit_total);
+        $this->assertSame(2, $entry->lines()->count());
+    }
+
+    public function test_can_record_quick_income_for_another_company(): void
+    {
+        $companyA = $this->provisionCompany('Company A');
+        $companyB = $this->provisionCompany('Company B');
+
+        $user = User::factory()->create();
+        $user->companies()->attach($companyA, ['is_active' => true, 'can_access_descendants' => false]);
+        $user->companies()->attach($companyB, ['is_active' => true, 'can_access_descendants' => false]);
+        $user->givePermissionTo(Permission::findOrCreate('View:MasterAccountsHub'));
+        $user->givePermissionTo(Permission::findOrCreate('Create:JournalEntry'));
+        $user->givePermissionTo(Permission::findOrCreate('Submit:JournalEntry'));
+
+        $this->actingAs($user);
+        Filament::setTenant($companyA);
+        Filament::bootCurrentPanel();
+
+        $periodB = FinancialPeriod::withoutGlobalScopes()->where('company_id', $companyB->getKey())->firstOrFail();
+
+        $component = Livewire::test(MasterAccountsHubPage::class);
+        $component->assertOk();
+
+        $component
+            ->set('data.target_company_id', $companyB->getKey())
+            ->set('data.entry_type', 'income')
+            ->set('data.transaction_date', '2026-07-20')
+            ->set('data.financial_period_id', $periodB->getKey())
+            ->set('data.income_category', IncomeCategory::ServiceRevenue->value)
+            ->set('data.receiving_method', ExpensePaymentMethod::Cash->value)
+            ->set('data.amount', '7500.00')
+            ->set('data.description', 'Received consultancy fee from client')
+            ->call('submit')
+            ->assertHasNoFormErrors();
+
+        // Verify receipt voucher was created directly in Company B
+        $entry = JournalEntry::withoutGlobalScopes()->where('company_id', $companyB->getKey())->latest('id')->first();
+        $this->assertNotNull($entry);
+        $this->assertSame($companyB->getKey(), $entry->company_id);
+        $this->assertSame(VoucherType::Receipt, $entry->voucher_type);
+        $this->assertSame(JournalStatus::Submitted, $entry->status);
+        $this->assertSame('7500.0000', $entry->debit_total);
         $this->assertSame(2, $entry->lines()->count());
     }
 

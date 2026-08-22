@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Actions\Accounting\RecordPettyCashTopUpAction;
 use App\Actions\Accounting\RecordQuickExpenseAction;
 use App\Enums\ExpenseCategory;
 use App\Enums\ExpensePaymentMethod;
@@ -12,6 +13,7 @@ use App\Models\CompanyBankAccount;
 use App\Models\JournalEntry;
 use BackedEnum;
 use Carbon\CarbonImmutable;
+use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
@@ -20,6 +22,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\Enums\Alignment;
 use Filament\Support\Enums\FontFamily;
@@ -54,6 +57,67 @@ class GeneralGroupExpensePage extends Page implements HasTable
     {
         return [
             QuickExpenseStatsWidget::class,
+        ];
+    }
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            Action::make('topUpGeneralFloat')
+                ->label('Fund / Top-Up General Balance')
+                ->icon('heroicon-o-plus-circle')
+                ->color('success')
+                ->form([
+                    DatePicker::make('date')
+                        ->label('Date')
+                        ->default(today()->toDateString())
+                        ->required(),
+                    Select::make('source_type')
+                        ->label('Source of Funds / Injection')
+                        ->options([
+                            'director' => 'Director Advance / Funded (2220 Director Loan)',
+                            'bank' => 'Corporate Bank Account Transfer',
+                            'head_office_cash' => 'Head Office Cash (1111)',
+                        ])
+                        ->default('director')
+                        ->live()
+                        ->required(),
+                    Select::make('company_bank_account_id')
+                        ->label('Corporate Bank Account')
+                        ->options(fn () => CompanyBankAccount::query()->where('company_id', $this->getCorporateCompany()?->getKey())->pluck('bank_name', 'id'))
+                        ->visible(fn (Get $get) => $get('source_type') === 'bank')
+                        ->required(fn (Get $get) => $get('source_type') === 'bank')
+                        ->searchable(),
+                    TextInput::make('amount')
+                        ->label('Amount (PKR)')
+                        ->numeric()
+                        ->minValue(0.01)
+                        ->prefix('PKR')
+                        ->required(),
+                    TextInput::make('description')
+                        ->label('Narration / Reason')
+                        ->default('General holding / petty cash float injection')
+                        ->required(),
+                ])
+                ->action(function (array $data, RecordPettyCashTopUpAction $action): void {
+                    $corporateCompany = $this->getCorporateCompany();
+                    $user = Filament::auth()->user();
+                    $journal = $action->handle(
+                        company: $corporateCompany,
+                        actor: $user,
+                        date: CarbonImmutable::parse($data['date']),
+                        amount: (string) $data['amount'],
+                        sourceType: $data['source_type'],
+                        description: $data['description'],
+                        companyBankAccountId: ! empty($data['company_bank_account_id']) ? (int) $data['company_bank_account_id'] : null,
+                    );
+
+                    Notification::make()
+                        ->title('General Float / Balance Top-Up Successful')
+                        ->body("Voucher {$journal->voucher_number} for PKR ".number_format((float) $data['amount'], 2)." was posted into {$corporateCompany->name}.")
+                        ->success()
+                        ->send();
+                }),
         ];
     }
 
@@ -114,8 +178,8 @@ class GeneralGroupExpensePage extends Page implements HasTable
             ->statePath('data')
             ->components([
                 Section::make('Record Combined / General Group Expense')
-                    ->description('Record staff tea/refreshments, office entertainment, common utilities, and shared assets for the group. These expenses represent joint group overheads and are recorded in the general holding/corporate book without splitting into operational companies.')
-                    ->columns(3)
+                    ->description('Record staff tea/refreshments, office entertainment, common utilities, and shared assets for the group in the Corporate Holding book (7 Orbit) with full visibility.')
+                    ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
                     ->schema([
                         Select::make('target_company_id')
                             ->label('Corporate Master Book (Holding Entity)')
@@ -163,8 +227,8 @@ class GeneralGroupExpensePage extends Page implements HasTable
                                     ->where('is_active', true)
                                     ->pluck('bank_name', 'id');
                             })
-                            ->visible(fn ($get) => $get('payment_method') === ExpensePaymentMethod::Bank->value)
-                            ->required(fn ($get) => $get('payment_method') === ExpensePaymentMethod::Bank->value)
+                            ->visible(fn (Get $get) => $get('payment_method') === ExpensePaymentMethod::Bank->value)
+                            ->required(fn (Get $get) => $get('payment_method') === ExpensePaymentMethod::Bank->value)
                             ->searchable(),
 
                         TextInput::make('reference')
@@ -175,7 +239,8 @@ class GeneralGroupExpensePage extends Page implements HasTable
                             ->label('Description / Particulars')
                             ->placeholder('e.g. Staff daily tea & milk supplies for all departments, Office guest refreshments, Pantry kettle & microwave')
                             ->required()
-                            ->columnSpanFull(),
+                            ->columnSpanFull()
+                            ->rows(2),
                     ]),
             ]);
     }

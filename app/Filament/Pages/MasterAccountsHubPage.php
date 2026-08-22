@@ -4,10 +4,12 @@ namespace App\Filament\Pages;
 
 use App\Actions\Accounting\CheckAccountAvailableBalanceAction;
 use App\Actions\Accounting\RecordQuickExpenseAction;
+use App\Actions\Accounting\RecordQuickIncomeAction;
 use App\Actions\Accounting\SubmitJournalEntryAction;
 use App\Enums\ExpenseCategory;
 use App\Enums\ExpensePaymentMethod;
 use App\Enums\FinancialPeriodStatus;
+use App\Enums\IncomeCategory;
 use App\Enums\JournalStatus;
 use App\Enums\NormalBalance;
 use App\Enums\VoucherType;
@@ -114,7 +116,9 @@ class MasterAccountsHubPage extends Page implements HasTable
             'transaction_date' => today()->toDateString(),
             'financial_period_id' => $openPeriod?->getKey(),
             'payment_method' => ExpensePaymentMethod::Cash->value,
+            'receiving_method' => ExpensePaymentMethod::Cash->value,
             'category' => ExpenseCategory::Miscellaneous->value,
+            'income_category' => IncomeCategory::CustomerReceipt->value,
             'voucher_type' => VoucherType::Journal->value,
             'currency_code' => 'PKR',
             'lines' => [
@@ -135,8 +139,8 @@ class MasterAccountsHubPage extends Page implements HasTable
             ->statePath('data')
             ->components([
                 Section::make('Universal Cross-Company Transaction Entry')
-                    ->description('Record accounting entries directly into any authorized company ledger without switching workspaces.')
-                    ->columns(4)
+                    ->description('Record payments, income receipts, and journals directly into any authorized company ledger with full breathing room.')
+                    ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
                     ->schema([
                         Select::make('target_company_id')
                             ->label('Target Company')
@@ -160,7 +164,8 @@ class MasterAccountsHubPage extends Page implements HasTable
                         Select::make('entry_type')
                             ->label('Entry Mode')
                             ->options([
-                                'expense' => '⚡ Quick Expense / Payment',
+                                'expense' => '⚡ Quick Expense / Payment (Outflow)',
+                                'income' => '💰 Quick Income / Payment Receipt (Inflow)',
                                 'journal' => '📑 Multi-Line Double Entry Journal',
                             ])
                             ->default('expense')
@@ -196,13 +201,22 @@ class MasterAccountsHubPage extends Page implements HasTable
                             ->required(fn (Get $get) => $get('entry_type') === 'expense')
                             ->live(),
 
+                        // --- Quick Income Mode Fields ---
+                        Select::make('income_category')
+                            ->label('Income Source / Head')
+                            ->options(collect(IncomeCategory::cases())->mapWithKeys(fn (IncomeCategory $cat) => [$cat->value => $cat->getLabel()]))
+                            ->searchable()
+                            ->visible(fn (Get $get) => $get('entry_type') === 'income')
+                            ->required(fn (Get $get) => $get('entry_type') === 'income')
+                            ->live(),
+
                         TextInput::make('amount')
                             ->label('Amount (PKR)')
                             ->numeric()
                             ->minValue(0.01)
                             ->prefix('PKR')
-                            ->visible(fn (Get $get) => $get('entry_type') === 'expense')
-                            ->required(fn (Get $get) => $get('entry_type') === 'expense'),
+                            ->visible(fn (Get $get) => in_array($get('entry_type'), ['expense', 'income'], true))
+                            ->required(fn (Get $get) => in_array($get('entry_type'), ['expense', 'income'], true)),
 
                         Select::make('payment_method')
                             ->label('Paid Via / Funded By')
@@ -211,8 +225,20 @@ class MasterAccountsHubPage extends Page implements HasTable
                             ->required(fn (Get $get) => $get('entry_type') === 'expense')
                             ->live(),
 
+                        Select::make('receiving_method')
+                            ->label('Received Into')
+                            ->options([
+                                ExpensePaymentMethod::Bank->value => '🏦 Company Bank Account',
+                                ExpensePaymentMethod::Cash->value => '💵 Cash in Hand (1111)',
+                                ExpensePaymentMethod::PettyCash->value => '💼 Site Petty Cash Float (1112)',
+                            ])
+                            ->default(ExpensePaymentMethod::Bank->value)
+                            ->visible(fn (Get $get) => $get('entry_type') === 'income')
+                            ->required(fn (Get $get) => $get('entry_type') === 'income')
+                            ->live(),
+
                         Select::make('company_bank_account_id')
-                            ->label('Target Company Bank Account')
+                            ->label('Company Bank Account')
                             ->options(function (Get $get) {
                                 $companyId = $get('target_company_id') ?? Filament::getTenant()?->getKey();
 
@@ -221,41 +247,44 @@ class MasterAccountsHubPage extends Page implements HasTable
                                     ->where('is_active', true)
                                     ->pluck('bank_name', 'id');
                             })
-                            ->visible(fn (Get $get) => $get('entry_type') === 'expense' && $get('payment_method') === ExpensePaymentMethod::Bank->value)
-                            ->required(fn (Get $get) => $get('entry_type') === 'expense' && $get('payment_method') === ExpensePaymentMethod::Bank->value)
+                            ->visible(fn (Get $get) => ($get('entry_type') === 'expense' && $get('payment_method') === ExpensePaymentMethod::Bank->value)
+                                || ($get('entry_type') === 'income' && $get('receiving_method') === ExpensePaymentMethod::Bank->value))
+                            ->required(fn (Get $get) => ($get('entry_type') === 'expense' && $get('payment_method') === ExpensePaymentMethod::Bank->value)
+                                || ($get('entry_type') === 'income' && $get('receiving_method') === ExpensePaymentMethod::Bank->value))
                             ->searchable(),
 
                         Select::make('project_id')
-                            ->label('Project / Site (Cost Allocation)')
+                            ->label('Project / Site (Cost / Revenue Center)')
                             ->options(function (Get $get) {
                                 $companyId = $get('target_company_id') ?? Filament::getTenant()?->getKey();
 
                                 return Project::withoutGlobalScopes()->where('company_id', $companyId)->pluck('name', 'id');
                             })
-                            ->visible(fn (Get $get) => $get('entry_type') === 'expense')
+                            ->visible(fn (Get $get) => in_array($get('entry_type'), ['expense', 'income'], true))
                             ->searchable(),
 
                         Select::make('party_id')
-                            ->label('Payee / Vendor / Party (Optional)')
+                            ->label(fn (Get $get) => $get('entry_type') === 'income' ? 'Customer / Client / Party' : 'Payee / Vendor / Party')
                             ->options(function (Get $get) {
                                 $companyId = $get('target_company_id') ?? Filament::getTenant()?->getKey();
 
                                 return Party::withoutGlobalScopes()->where('company_id', $companyId)->where('is_active', true)->pluck('name', 'id');
                             })
-                            ->visible(fn (Get $get) => $get('entry_type') === 'expense')
+                            ->visible(fn (Get $get) => in_array($get('entry_type'), ['expense', 'income'], true))
                             ->searchable(),
 
                         TextInput::make('reference')
-                            ->label('Bill / Voucher Ref')
+                            ->label('Cheque / Receipt / Voucher Ref')
                             ->maxLength(100)
-                            ->visible(fn (Get $get) => $get('entry_type') === 'expense'),
+                            ->visible(fn (Get $get) => in_array($get('entry_type'), ['expense', 'income'], true)),
 
                         Textarea::make('description')
                             ->label('Particulars / Description')
-                            ->placeholder('e.g. Office generator fuel, drawings prints, petty tea')
-                            ->visible(fn (Get $get) => $get('entry_type') === 'expense')
-                            ->required(fn (Get $get) => $get('entry_type') === 'expense')
-                            ->columnSpanFull(),
+                            ->placeholder('e.g. Received customer milestone payment, Office generator fuel, Director capital injection')
+                            ->visible(fn (Get $get) => in_array($get('entry_type'), ['expense', 'income'], true))
+                            ->required(fn (Get $get) => in_array($get('entry_type'), ['expense', 'income'], true))
+                            ->columnSpanFull()
+                            ->rows(2),
 
                         // --- Multi-Line Journal Mode Fields ---
                         Select::make('voucher_type')
@@ -274,7 +303,8 @@ class MasterAccountsHubPage extends Page implements HasTable
                             ->label('Voucher Narration / Header Description')
                             ->visible(fn (Get $get) => $get('entry_type') === 'journal')
                             ->required(fn (Get $get) => $get('entry_type') === 'journal')
-                            ->columnSpan(2),
+                            ->columnSpan(['sm' => 1, 'md' => 2, 'lg' => 3])
+                            ->rows(2),
 
                         Repeater::make('lines')
                             ->label('Double-Entry Voucher Lines')
@@ -296,7 +326,7 @@ class MasterAccountsHubPage extends Page implements HasTable
                                     ->searchable()
                                     ->preload()
                                     ->required()
-                                    ->columnSpan(2)
+                                    ->columnSpan(['sm' => 1, 'md' => 2, 'lg' => 2])
                                     ->live()
                                     ->helperText(function ($state, Get $get): ?string {
                                         if (! $state) {
@@ -355,7 +385,7 @@ class MasterAccountsHubPage extends Page implements HasTable
                                     ->searchable(),
 
                                 Select::make('party_id')
-                                    ->label('Party / Vendor')
+                                    ->label('Party / Customer / Vendor')
                                     ->options(function (Get $get) {
                                         $companyId = $get('../../target_company_id') ?? Filament::getTenant()?->getKey();
 
@@ -365,9 +395,9 @@ class MasterAccountsHubPage extends Page implements HasTable
 
                                 TextInput::make('description')
                                     ->label('Line Particulars')
-                                    ->columnSpan(2),
+                                    ->columnSpan(['sm' => 1, 'md' => 2, 'lg' => 2]),
                             ])
-                            ->columns(4)
+                            ->columns(['sm' => 1, 'md' => 2, 'lg' => 4])
                             ->columnSpanFull(),
 
                         Placeholder::make('balance_summary')
@@ -432,6 +462,7 @@ class MasterAccountsHubPage extends Page implements HasTable
 
                 return;
             }
+
             if ($validated['entry_type'] === 'expense') {
                 $category = ExpenseCategory::from($validated['category']);
                 $paymentMethod = ExpensePaymentMethod::from($validated['payment_method']);
@@ -453,6 +484,29 @@ class MasterAccountsHubPage extends Page implements HasTable
                 Notification::make()
                     ->title("Expense Recorded in {$targetCompany->name}")
                     ->body("Voucher {$journal->voucher_number} ({$category->getLabel()} - PKR ".number_format((float) $validated['amount'], 2).") was posted directly to {$targetCompany->name}'s ledger.")
+                    ->success()
+                    ->send();
+            } elseif ($validated['entry_type'] === 'income') {
+                $category = IncomeCategory::from($validated['income_category']);
+                $receivingMethod = ExpensePaymentMethod::from($validated['receiving_method'] ?? ExpensePaymentMethod::Cash->value);
+
+                $journal = app(RecordQuickIncomeAction::class)->handle(
+                    company: $targetCompany,
+                    actor: $user,
+                    date: CarbonImmutable::parse($validated['transaction_date']),
+                    category: $category,
+                    receivingMethod: $receivingMethod,
+                    amount: (string) $validated['amount'],
+                    description: $validated['description'],
+                    projectId: ! empty($validated['project_id']) ? (int) $validated['project_id'] : null,
+                    partyId: ! empty($validated['party_id']) ? (int) $validated['party_id'] : null,
+                    companyBankAccountId: ! empty($validated['company_bank_account_id']) ? (int) $validated['company_bank_account_id'] : null,
+                    reference: $validated['reference'] ?? null,
+                );
+
+                Notification::make()
+                    ->title("Income / Receipt Recorded in {$targetCompany->name}")
+                    ->body("Receipt Voucher {$journal->voucher_number} ({$category->getLabel()} - PKR ".number_format((float) $validated['amount'], 2).") was posted directly to {$targetCompany->name}'s ledger.")
                     ->success()
                     ->send();
             } else {
@@ -529,7 +583,9 @@ class MasterAccountsHubPage extends Page implements HasTable
                 'transaction_date' => $validated['transaction_date'],
                 'financial_period_id' => $validated['financial_period_id'],
                 'payment_method' => ExpensePaymentMethod::Cash->value,
+                'receiving_method' => ExpensePaymentMethod::Cash->value,
                 'category' => ExpenseCategory::Miscellaneous->value,
+                'income_category' => IncomeCategory::CustomerReceipt->value,
                 'voucher_type' => VoucherType::Journal->value,
                 'currency_code' => 'PKR',
                 'lines' => [

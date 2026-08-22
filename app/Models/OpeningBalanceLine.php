@@ -12,7 +12,7 @@ use Illuminate\Validation\ValidationException;
 
 #[Fillable([
     'opening_balance_batch_id', 'company_id', 'line_number', 'account_id', 'description',
-    'debit', 'credit', 'party_id', 'project_id', 'cost_center_id',
+    'debit', 'credit', 'party_id', 'project_id', 'cost_center_id', 'company_bank_account_id',
 ])]
 class OpeningBalanceLine extends Model
 {
@@ -39,7 +39,7 @@ class OpeningBalanceLine extends Model
                 throw ValidationException::withMessages(['account_id' => 'The account must belong to the opening-balance company.']);
             }
 
-            foreach (['party_id' => Party::class, 'project_id' => Project::class, 'cost_center_id' => CostCenter::class] as $field => $model) {
+            foreach (['party_id' => Party::class, 'project_id' => Project::class, 'cost_center_id' => CostCenter::class, 'company_bank_account_id' => CompanyBankAccount::class] as $field => $model) {
                 if ($line->{$field} !== null && ! $model::query()->whereKey($line->{$field})->where('company_id', $line->company_id)->exists()) {
                     throw ValidationException::withMessages([$field => 'Every opening-balance dimension must belong to the company.']);
                 }
@@ -66,6 +66,11 @@ class OpeningBalanceLine extends Model
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);
+    }
+
+    public function companyBankAccount(): BelongsTo
+    {
+        return $this->belongsTo(CompanyBankAccount::class);
     }
 
     public function party(): BelongsTo

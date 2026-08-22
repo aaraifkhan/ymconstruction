@@ -25,70 +25,102 @@ class GoodsReceiptForm
     public static function configure(Schema $schema): Schema
     {
         return $schema->components([
-            Section::make('Vendor delivery')->columns(3)->schema([
-                Select::make('purchase_order_id')
-                    ->label('Issued purchase order')
-                    ->options(fn (): array => PurchaseOrder::query()
-                        ->whereBelongsTo(Filament::getTenant())
-                        ->whereIn('status', [PurchaseOrderStatus::Ordered, PurchaseOrderStatus::PartiallyReceived])
-                        ->latest()->get()
-                        ->mapWithKeys(fn (PurchaseOrder $order): array => [
-                            $order->getKey() => $order->purchase_order_number ?? 'Issued PO #'.$order->getKey(),
-                        ])->all())
-                    ->live()->searchable()->required(),
-                Select::make('vendor_id')
-                    ->options(fn (): array => Party::query()->whereBelongsTo(Filament::getTenant())
-                        ->active()->orderBy('name')->pluck('name', 'id')->all())
-                    ->searchable()->required(),
-                DatePicker::make('delivery_date')->default(today())->required(),
-                Select::make('project_id')
-                    ->options(fn (): array => Project::query()->whereBelongsTo(Filament::getTenant())
-                        ->orderBy('name')->pluck('name', 'id')->all())
-                    ->searchable()->required(),
-                Select::make('project_site_id')
-                    ->label('Receiving site / store')
-                    ->options(fn (): array => ProjectSite::query()->whereBelongsTo(Filament::getTenant())
-                        ->active()->orderBy('name')->pluck('name', 'id')->all())
-                    ->searchable()->required(),
-                TextInput::make('delivery_reference')->maxLength(255),
-                Textarea::make('receiving_notes')->columnSpanFull(),
-            ]),
-            Section::make('Delivered materials')->schema([
-                Repeater::make('lines')
-                    ->relationship()
-                    ->orderColumn('line_number')
-                    ->minItems(1)
-                    ->defaultItems(1)
-                    ->mutateRelationshipDataBeforeCreateUsing(fn (array $data): array => [
-                        ...$data,
-                        'company_id' => Filament::getTenant()->getKey(),
-                    ])
-                    ->schema([
-                        Select::make('purchase_order_line_id')
-                            ->label('PO line')
-                            ->options(fn (Get $get): array => PurchaseOrderLine::query()
-                                ->where('purchase_order_id', $get('../../purchase_order_id'))
-                                ->orderBy('line_number')->get()
-                                ->filter(fn (PurchaseOrderLine $line): bool => bccomp($line->availableToReceive(), '0', 4) === 1)
-                                ->mapWithKeys(fn (PurchaseOrderLine $line): array => [
-                                    $line->getKey() => "{$line->line_number}. {$line->item_name_snapshot} ({$line->availableToReceive()} available)",
-                                ])->all())
-                            ->searchable()->required(),
-                        Select::make('item_id')
-                            ->options(fn (): array => Item::query()->whereBelongsTo(Filament::getTenant())
-                                ->active()->where('track_inventory', true)->orderBy('name')
-                                ->get()->mapWithKeys(fn (Item $item): array => [
-                                    $item->getKey() => "{$item->code} — {$item->name}",
-                                ])->all())
-                            ->searchable()->required(),
-                        Select::make('unit_of_measure_id')
-                            ->label('UOM')
-                            ->options(fn (): array => UnitOfMeasure::query()->whereBelongsTo(Filament::getTenant())
-                                ->active()->orderBy('name')->pluck('name', 'id')->all())
-                            ->searchable()->required(),
-                        TextInput::make('received_quantity')->numeric()->minValue(0.0001)->required(),
-                    ])->columns(4)->columnSpanFull(),
-            ]),
+            Section::make('Vendor Delivery Details')
+                ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
+                ->schema([
+                    Select::make('purchase_order_id')
+                        ->label('Issued Purchase Order')
+                        ->options(fn (): array => PurchaseOrder::query()
+                            ->whereBelongsTo(Filament::getTenant())
+                            ->whereIn('status', [PurchaseOrderStatus::Ordered, PurchaseOrderStatus::PartiallyReceived])
+                            ->latest()->get()
+                            ->mapWithKeys(fn (PurchaseOrder $order): array => [
+                                $order->getKey() => $order->purchase_order_number ?? 'Issued PO #'.$order->getKey(),
+                            ])->all())
+                        ->live()
+                        ->searchable()
+                        ->required(),
+                    Select::make('vendor_id')
+                        ->label('Vendor / Supplier')
+                        ->options(fn (): array => Party::query()->whereBelongsTo(Filament::getTenant())
+                            ->active()->orderBy('name')->pluck('name', 'id')->all())
+                        ->searchable()
+                        ->required(),
+                    DatePicker::make('delivery_date')
+                        ->label('Delivery Date')
+                        ->default(today())
+                        ->required(),
+                    Select::make('project_id')
+                        ->label('Project')
+                        ->options(fn (): array => Project::query()->whereBelongsTo(Filament::getTenant())
+                            ->orderBy('name')->pluck('name', 'id')->all())
+                        ->searchable()
+                        ->required(),
+                    Select::make('project_site_id')
+                        ->label('Receiving Site / Store')
+                        ->options(fn (): array => ProjectSite::query()->whereBelongsTo(Filament::getTenant())
+                            ->active()->orderBy('name')->pluck('name', 'id')->all())
+                        ->searchable()
+                        ->required(),
+                    TextInput::make('delivery_reference')
+                        ->label('Delivery Challan / Gate Pass Ref')
+                        ->maxLength(255),
+                    Textarea::make('receiving_notes')
+                        ->label('Receiving Notes / Inspection Remarks')
+                        ->rows(2)
+                        ->columnSpanFull(),
+                ]),
+            Section::make('Delivered Materials')
+                ->schema([
+                    Repeater::make('lines')
+                        ->relationship()
+                        ->orderColumn('line_number')
+                        ->minItems(1)
+                        ->defaultItems(1)
+                        ->mutateRelationshipDataBeforeCreateUsing(fn (array $data): array => [
+                            ...$data,
+                            'company_id' => Filament::getTenant()->getKey(),
+                        ])
+                        ->schema([
+                            Select::make('purchase_order_line_id')
+                                ->label('PO Line')
+                                ->options(fn (Get $get): array => PurchaseOrderLine::query()
+                                    ->where('purchase_order_id', $get('../../purchase_order_id'))
+                                    ->orderBy('line_number')->get()
+                                    ->filter(fn (PurchaseOrderLine $line): bool => bccomp($line->availableToReceive(), '0', 4) === 1)
+                                    ->mapWithKeys(fn (PurchaseOrderLine $line): array => [
+                                        $line->getKey() => "{$line->line_number}. {$line->item_name_snapshot} ({$line->availableToReceive()} available)",
+                                    ])->all())
+                                ->searchable()
+                                ->required()
+                                ->columnSpan(['sm' => 1, 'md' => 2, 'lg' => 2]),
+                            Select::make('item_id')
+                                ->label('Item / Material')
+                                ->options(fn (): array => Item::query()->whereBelongsTo(Filament::getTenant())
+                                    ->active()->where('track_inventory', true)->orderBy('name')
+                                    ->get()->mapWithKeys(fn (Item $item): array => [
+                                        $item->getKey() => "{$item->code} — {$item->name}",
+                                    ])->all())
+                                ->searchable()
+                                ->required()
+                                ->columnSpan(['sm' => 1, 'md' => 2, 'lg' => 2]),
+                            Select::make('unit_of_measure_id')
+                                ->label('Unit of Measure (UOM)')
+                                ->options(fn (): array => UnitOfMeasure::query()->whereBelongsTo(Filament::getTenant())
+                                    ->active()->orderBy('name')->pluck('name', 'id')->all())
+                                ->searchable()
+                                ->required()
+                                ->columnSpan(['sm' => 1, 'md' => 1, 'lg' => 2]),
+                            TextInput::make('received_quantity')
+                                ->label('Received Quantity')
+                                ->numeric()
+                                ->minValue(0.0001)
+                                ->required()
+                                ->columnSpan(['sm' => 1, 'md' => 1, 'lg' => 2]),
+                        ])
+                        ->columns(['sm' => 1, 'md' => 2, 'lg' => 4])
+                        ->columnSpanFull(),
+                ]),
         ]);
     }
 }
