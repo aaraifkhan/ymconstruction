@@ -108,11 +108,13 @@ class QuickIncomeEntryPage extends Page implements HasTable
             : $user?->companies()->wherePivot('is_active', true)->pluck('companies.id')->all() ?? [];
 
         return $form
+            ->columns(1)
             ->statePath('data')
             ->components([
                 Section::make('Record Income / Fund Receipt (Inflow)')
                     ->description('Quickly record income, customer receipts, capital injections, and fund inflows without writing manual double-entry lines. The system will automatically construct and post the balanced receipt voucher.')
                     ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
+                    ->columnSpanFull()
                     ->schema([
                         Select::make('target_company_id')
                             ->label('Target Company')

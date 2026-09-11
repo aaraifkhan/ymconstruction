@@ -17,6 +17,7 @@ class CompanyBankAccountForm
     public static function configure(Schema $schema): Schema
     {
         return $schema
+            ->columns(1)
             ->components([
                 Section::make('Bank & Branch Information')
                     ->columns(['sm' => 1, 'md' => 2, 'lg' => 4])

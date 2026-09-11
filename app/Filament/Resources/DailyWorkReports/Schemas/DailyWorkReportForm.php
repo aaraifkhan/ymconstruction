@@ -21,6 +21,7 @@ class DailyWorkReportForm
     public static function configure(Schema $schema): Schema
     {
         return $schema
+            ->columns(1)
             ->components([
                 Section::make('Basic Information')
                     ->description('Daily work reporting is mandatory by 6:00 PM.')

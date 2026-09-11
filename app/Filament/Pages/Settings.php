@@ -41,6 +41,7 @@ class Settings extends Page
     public function form(Schema $form): Schema
     {
         return $form
+            ->columns(1)
             ->components([
                 Tabs::make('Settings')
                     ->persistTabInQueryString('settings-tab')

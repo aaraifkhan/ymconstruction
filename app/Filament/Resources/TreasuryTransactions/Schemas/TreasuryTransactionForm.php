@@ -37,211 +37,215 @@ class TreasuryTransactionForm
 {
     public static function configure(Schema $schema): Schema
     {
-        return $schema->components([
-            Section::make('Cash / Bank Transaction Details')
-                ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
-                ->schema([
-                    Select::make('type')
-                        ->label('Transaction Type')
-                        ->options(TreasuryTransactionType::class)
-                        ->default(TreasuryTransactionType::Payment)
-                        ->live()
-                        ->required(),
-                    Select::make('purpose')
-                        ->label('Purpose')
-                        ->options(TreasuryPurpose::class)
-                        ->default(TreasuryPurpose::Settlement)
-                        ->live()
-                        ->required(),
-                    DatePicker::make('transaction_date')
-                        ->label('Transaction Date')
-                        ->default(today())
-                        ->required(),
-                    DatePicker::make('value_date')
-                        ->label('Value Date'),
-                    Select::make('counterparty_type')
-                        ->label('Counterparty Type')
-                        ->options(TreasuryCounterpartyType::class)
-                        ->live(),
-                    Select::make('party_id')
-                        ->label('Party / Vendor / Customer')
-                        ->options(fn (): array => Party::query()->whereBelongsTo(Filament::getTenant())
-                            ->active()->orderBy('name')->pluck('name', 'id')->all())
-                        ->searchable()
-                        ->visible(fn (Get $get): bool => $get('counterparty_type') === TreasuryCounterpartyType::Party->value),
-                    Select::make('employment_id')
-                        ->label('Employee / Employment')
-                        ->options(fn (): array => Employment::query()->whereBelongsTo(Filament::getTenant())
-                            ->with('employee')->get()->mapWithKeys(fn (Employment $employment): array => [
-                                $employment->getKey() => "{$employment->employee->full_name} ({$employment->employee_code})",
-                            ])->all())
-                        ->searchable()
-                        ->visible(fn (Get $get): bool => $get('counterparty_type') === TreasuryCounterpartyType::Employment->value),
-                    TextInput::make('amount')
-                        ->label('Amount (PKR)')
-                        ->numeric()
-                        ->prefix('PKR')
-                        ->minValue(0.0001)
-                        ->required(),
-                    Select::make('source_account_id')
-                        ->label('Source / Credit Account')
-                        ->options(fn (Get $get): array => $get('type') === TreasuryTransactionType::Receipt->value
-                            && in_array($get('purpose'), [TreasuryPurpose::Refund->value, TreasuryPurpose::Other->value], true)
-                                ? self::postingAccountOptions()
-                                : self::liquidAccountOptions())
-                        ->searchable()
-                        ->required(fn (Get $get): bool => $get('type') !== TreasuryTransactionType::Receipt->value
-                            || in_array($get('purpose'), [TreasuryPurpose::Refund->value, TreasuryPurpose::Other->value], true)),
-                    Select::make('source_company_bank_account_id')
-                        ->label('Source Bank Account')
-                        ->options(fn (): array => self::bankAccountOptions())
-                        ->searchable()
-                        ->visible(fn (Get $get): bool => in_array($get('type'), [
-                            TreasuryTransactionType::Payment->value,
-                            TreasuryTransactionType::Transfer->value,
-                        ], true)),
-                    Select::make('destination_account_id')
-                        ->label('Destination / Debit Account')
-                        ->options(fn (Get $get): array => $get('type') === TreasuryTransactionType::Payment->value
-                            && in_array($get('purpose'), [TreasuryPurpose::Refund->value, TreasuryPurpose::Other->value], true)
-                                ? self::postingAccountOptions()
-                                : self::liquidAccountOptions())
-                        ->searchable()
-                        ->required(fn (Get $get): bool => $get('type') !== TreasuryTransactionType::Payment->value
-                            || in_array($get('purpose'), [TreasuryPurpose::Refund->value, TreasuryPurpose::Other->value], true)),
-                    Select::make('destination_company_bank_account_id')
-                        ->label('Destination Bank Account')
-                        ->options(fn (): array => self::bankAccountOptions())
-                        ->searchable()
-                        ->visible(fn (Get $get): bool => in_array($get('type'), [
-                            TreasuryTransactionType::Receipt->value,
-                            TreasuryTransactionType::Transfer->value,
-                        ], true)),
-                    Select::make('instrument_type')
-                        ->label('Payment Instrument')
-                        ->options(TreasuryInstrumentType::class)
-                        ->default(TreasuryInstrumentType::Electronic)
-                        ->live()
-                        ->required(),
-                    TextInput::make('instrument_number')
-                        ->label('Cheque / Instrument No.')
-                        ->maxLength(100),
-                    DatePicker::make('instrument_date')
-                        ->label('Instrument Date'),
-                    TextInput::make('bank_reference')
-                        ->label('Bank Transaction Reference')
-                        ->maxLength(255),
-                    TextInput::make('external_reference')
-                        ->label('External Reference')
-                        ->maxLength(255),
-                    TextInput::make('currency_code')
-                        ->label('Currency')
-                        ->default('PKR')
-                        ->disabled()
-                        ->dehydrated(),
-                    Textarea::make('description')
-                        ->label('Narration / Description')
-                        ->required()
-                        ->rows(2)
-                        ->columnSpanFull(),
-                    Textarea::make('notes')
-                        ->label('Internal Notes')
-                        ->rows(2)
-                        ->columnSpanFull(),
-                ]),
-            Section::make('Open-Item Allocations')
-                ->description('Allocate Vendor or Payroll payments, or Customer receipts, against posted open items.')
-                ->visible(fn (Get $get): bool => in_array($get('type'), [
-                    TreasuryTransactionType::Payment->value,
-                    TreasuryTransactionType::Receipt->value,
-                ], true) && $get('purpose') === TreasuryPurpose::Settlement->value)
-                ->schema([
-                    Repeater::make('allocations')
-                        ->relationship()
-                        ->defaultItems(0)
-                        ->mutateRelationshipDataBeforeCreateUsing(fn (array $data, Get $get): array => [
-                            ...$data,
-                            'company_id' => Filament::getTenant()->getKey(),
-                            'allocatable_type' => match (true) {
-                                $get('../../type') === TreasuryTransactionType::Receipt->value => CustomerInvoice::class,
-                                ($data['allocation_type'] ?? null) === TreasuryAllocationType::FinalSettlement->value => FinalSettlement::class,
-                                filled($get('../../employment_id')) => PayrollEntry::class,
-                                default => VendorBill::class,
-                            },
-                            'allocation_type' => match (true) {
-                                $get('../../type') === TreasuryTransactionType::Receipt->value => TreasuryAllocationType::CustomerInvoice,
-                                ($data['allocation_type'] ?? null) === TreasuryAllocationType::FinalSettlement->value => TreasuryAllocationType::FinalSettlement,
-                                filled($get('../../employment_id')) => TreasuryAllocationType::PayrollEntry,
-                                default => TreasuryAllocationType::VendorBill,
-                            },
-                        ])
-                        ->schema([
-                            Hidden::make('allocatable_type'),
-                            Select::make('allocation_type')
-                                ->label('Open Item Type')
-                                ->options(fn (Get $get): array => filled($get('../../employment_id'))
-                                    ? [
-                                        TreasuryAllocationType::PayrollEntry->value => 'Payroll Entry',
-                                        TreasuryAllocationType::FinalSettlement->value => 'Final Settlement',
-                                    ] : [])
-                                ->default(TreasuryAllocationType::PayrollEntry->value)
-                                ->live()
-                                ->visible(fn (Get $get): bool => filled($get('../../employment_id')))
-                                ->required(fn (Get $get): bool => filled($get('../../employment_id'))),
-                            Select::make('allocatable_id')
-                                ->label('Posted Open Item')
-                                ->options(fn (Get $get): array => match (true) {
-                                    $get('allocation_type') === TreasuryAllocationType::FinalSettlement->value => FinalSettlement::query()
-                                        ->whereBelongsTo(Filament::getTenant())
-                                        ->where('employment_id', $get('../../employment_id'))
-                                        ->whereIn('status', [FinalSettlementStatus::Posted, FinalSettlementStatus::Settled])
-                                        ->where('balance_direction', $get('../../type') === TreasuryTransactionType::Receipt->value ? 'receivable' : 'payable')
-                                        ->get()->filter(fn (FinalSettlement $settlement): bool => bccomp($settlement->postedOpenAmount(), '0', 4) === 1)
-                                        ->mapWithKeys(fn (FinalSettlement $settlement): array => [
-                                            $settlement->getKey() => "{$settlement->reference_number} — PKR {$settlement->postedOpenAmount()}",
-                                        ])->all(),
-                                    $get('../../type') === TreasuryTransactionType::Receipt->value => CustomerInvoice::query()->whereBelongsTo(Filament::getTenant())
-                                        ->where('customer_id', $get('../../party_id'))
-                                        ->where('type', CustomerInvoiceType::Invoice)
-                                        ->where('status', CustomerInvoiceStatus::Posted)
-                                        ->orderBy('due_date')->get()
-                                        ->filter(fn (CustomerInvoice $invoice): bool => bccomp($invoice->postedOpenAmount(), '0', 4) === 1)
-                                        ->mapWithKeys(fn (CustomerInvoice $invoice): array => [
-                                            $invoice->getKey() => ($invoice->invoice_number ?? '#'.$invoice->getKey()).' — PKR '.$invoice->postedOpenAmount(),
-                                        ])->all(),
-                                    filled($get('../../employment_id')) => PayrollEntry::query()->whereBelongsTo(Filament::getTenant())
-                                        ->where('employment_id', $get('../../employment_id'))
-                                        ->whereHas('payrollRun', fn ($query) => $query
-                                            ->whereNotNull('journal_entry_id')->whereNull('reversal_journal_entry_id'))
-                                        ->with('payrollRun')->get()
-                                        ->filter(fn (PayrollEntry $entry): bool => bccomp($entry->postedOpenAmount(), '0', 4) === 1)
-                                        ->mapWithKeys(fn (PayrollEntry $entry): array => [
-                                            $entry->getKey() => "{$entry->payrollRun->reference_number} — PKR {$entry->postedOpenAmount()}",
-                                        ])->all(),
-                                    default => VendorBill::query()->whereBelongsTo(Filament::getTenant())
-                                        ->where('vendor_id', $get('../../party_id'))
-                                        ->where('type', VendorBillType::Invoice)
-                                        ->where('status', VendorBillStatus::Posted)
-                                        ->orderBy('due_date')->get()
-                                        ->filter(fn (VendorBill $bill): bool => bccomp($bill->postedOpenAmount(), '0', 4) === 1)
-                                        ->mapWithKeys(fn (VendorBill $bill): array => [
-                                            $bill->getKey() => ($bill->vendor_bill_number ?? '#'.$bill->getKey()).' — PKR '.$bill->postedOpenAmount(),
-                                        ])->all(),
-                                })
-                                ->searchable()
-                                ->required()
-                                ->columnSpan(['sm' => 1, 'md' => 2, 'lg' => 2]),
-                            TextInput::make('amount')
-                                ->label('Allocated Amount (PKR)')
-                                ->numeric()
-                                ->prefix('PKR')
-                                ->minValue(0.0001)
-                                ->required(),
-                        ])
-                        ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
-                        ->columnSpanFull(),
-                ]),
-        ]);
+        return $schema
+            ->columns(1)
+            ->components([
+                Section::make('Cash / Bank Transaction Details')
+                    ->columnSpanFull()
+                    ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
+                    ->schema([
+                        Select::make('type')
+                            ->label('Transaction Type')
+                            ->options(TreasuryTransactionType::class)
+                            ->default(TreasuryTransactionType::Payment)
+                            ->live()
+                            ->required(),
+                        Select::make('purpose')
+                            ->label('Purpose')
+                            ->options(TreasuryPurpose::class)
+                            ->default(TreasuryPurpose::Settlement)
+                            ->live()
+                            ->required(),
+                        DatePicker::make('transaction_date')
+                            ->label('Transaction Date')
+                            ->default(today())
+                            ->required(),
+                        DatePicker::make('value_date')
+                            ->label('Value Date'),
+                        Select::make('counterparty_type')
+                            ->label('Counterparty Type')
+                            ->options(TreasuryCounterpartyType::class)
+                            ->live(),
+                        Select::make('party_id')
+                            ->label('Party / Vendor / Customer')
+                            ->options(fn (): array => Party::query()->whereBelongsTo(Filament::getTenant())
+                                ->active()->orderBy('name')->pluck('name', 'id')->all())
+                            ->searchable()
+                            ->visible(fn (Get $get): bool => $get('counterparty_type') === TreasuryCounterpartyType::Party->value),
+                        Select::make('employment_id')
+                            ->label('Employee / Employment')
+                            ->options(fn (): array => Employment::query()->whereBelongsTo(Filament::getTenant())
+                                ->with('employee')->get()->mapWithKeys(fn (Employment $employment): array => [
+                                    $employment->getKey() => "{$employment->employee->full_name} ({$employment->employee_code})",
+                                ])->all())
+                            ->searchable()
+                            ->visible(fn (Get $get): bool => $get('counterparty_type') === TreasuryCounterpartyType::Employment->value),
+                        TextInput::make('amount')
+                            ->label('Amount (PKR)')
+                            ->numeric()
+                            ->prefix('PKR')
+                            ->minValue(0.0001)
+                            ->required(),
+                        Select::make('source_account_id')
+                            ->label('Source / Credit Account')
+                            ->options(fn (Get $get): array => $get('type') === TreasuryTransactionType::Receipt->value
+                                && in_array($get('purpose'), [TreasuryPurpose::Refund->value, TreasuryPurpose::Other->value], true)
+                                    ? self::postingAccountOptions()
+                                    : self::liquidAccountOptions())
+                            ->searchable()
+                            ->required(fn (Get $get): bool => $get('type') !== TreasuryTransactionType::Receipt->value
+                                || in_array($get('purpose'), [TreasuryPurpose::Refund->value, TreasuryPurpose::Other->value], true)),
+                        Select::make('source_company_bank_account_id')
+                            ->label('Source Bank Account')
+                            ->options(fn (): array => self::bankAccountOptions())
+                            ->searchable()
+                            ->visible(fn (Get $get): bool => in_array($get('type'), [
+                                TreasuryTransactionType::Payment->value,
+                                TreasuryTransactionType::Transfer->value,
+                            ], true)),
+                        Select::make('destination_account_id')
+                            ->label('Destination / Debit Account')
+                            ->options(fn (Get $get): array => $get('type') === TreasuryTransactionType::Payment->value
+                                && in_array($get('purpose'), [TreasuryPurpose::Refund->value, TreasuryPurpose::Other->value], true)
+                                    ? self::postingAccountOptions()
+                                    : self::liquidAccountOptions())
+                            ->searchable()
+                            ->required(fn (Get $get): bool => $get('type') !== TreasuryTransactionType::Payment->value
+                                || in_array($get('purpose'), [TreasuryPurpose::Refund->value, TreasuryPurpose::Other->value], true)),
+                        Select::make('destination_company_bank_account_id')
+                            ->label('Destination Bank Account')
+                            ->options(fn (): array => self::bankAccountOptions())
+                            ->searchable()
+                            ->visible(fn (Get $get): bool => in_array($get('type'), [
+                                TreasuryTransactionType::Receipt->value,
+                                TreasuryTransactionType::Transfer->value,
+                            ], true)),
+                        Select::make('instrument_type')
+                            ->label('Payment Instrument')
+                            ->options(TreasuryInstrumentType::class)
+                            ->default(TreasuryInstrumentType::Electronic)
+                            ->live()
+                            ->required(),
+                        TextInput::make('instrument_number')
+                            ->label('Cheque / Instrument No.')
+                            ->maxLength(100),
+                        DatePicker::make('instrument_date')
+                            ->label('Instrument Date'),
+                        TextInput::make('bank_reference')
+                            ->label('Bank Transaction Reference')
+                            ->maxLength(255),
+                        TextInput::make('external_reference')
+                            ->label('External Reference')
+                            ->maxLength(255),
+                        TextInput::make('currency_code')
+                            ->label('Currency')
+                            ->default('PKR')
+                            ->disabled()
+                            ->dehydrated(),
+                        Textarea::make('description')
+                            ->label('Narration / Description')
+                            ->required()
+                            ->rows(2)
+                            ->columnSpanFull(),
+                        Textarea::make('notes')
+                            ->label('Internal Notes')
+                            ->rows(2)
+                            ->columnSpanFull(),
+                    ]),
+                Section::make('Open-Item Allocations')
+                    ->columnSpanFull()
+                    ->description('Allocate Vendor or Payroll payments, or Customer receipts, against posted open items.')
+                    ->visible(fn (Get $get): bool => in_array($get('type'), [
+                        TreasuryTransactionType::Payment->value,
+                        TreasuryTransactionType::Receipt->value,
+                    ], true) && $get('purpose') === TreasuryPurpose::Settlement->value)
+                    ->schema([
+                        Repeater::make('allocations')
+                            ->relationship()
+                            ->defaultItems(0)
+                            ->mutateRelationshipDataBeforeCreateUsing(fn (array $data, Get $get): array => [
+                                ...$data,
+                                'company_id' => Filament::getTenant()->getKey(),
+                                'allocatable_type' => match (true) {
+                                    $get('../../type') === TreasuryTransactionType::Receipt->value => CustomerInvoice::class,
+                                    ($data['allocation_type'] ?? null) === TreasuryAllocationType::FinalSettlement->value => FinalSettlement::class,
+                                    filled($get('../../employment_id')) => PayrollEntry::class,
+                                    default => VendorBill::class,
+                                },
+                                'allocation_type' => match (true) {
+                                    $get('../../type') === TreasuryTransactionType::Receipt->value => TreasuryAllocationType::CustomerInvoice,
+                                    ($data['allocation_type'] ?? null) === TreasuryAllocationType::FinalSettlement->value => TreasuryAllocationType::FinalSettlement,
+                                    filled($get('../../employment_id')) => TreasuryAllocationType::PayrollEntry,
+                                    default => TreasuryAllocationType::VendorBill,
+                                },
+                            ])
+                            ->schema([
+                                Hidden::make('allocatable_type'),
+                                Select::make('allocation_type')
+                                    ->label('Open Item Type')
+                                    ->options(fn (Get $get): array => filled($get('../../employment_id'))
+                                        ? [
+                                            TreasuryAllocationType::PayrollEntry->value => 'Payroll Entry',
+                                            TreasuryAllocationType::FinalSettlement->value => 'Final Settlement',
+                                        ] : [])
+                                    ->default(TreasuryAllocationType::PayrollEntry->value)
+                                    ->live()
+                                    ->visible(fn (Get $get): bool => filled($get('../../employment_id')))
+                                    ->required(fn (Get $get): bool => filled($get('../../employment_id'))),
+                                Select::make('allocatable_id')
+                                    ->label('Posted Open Item')
+                                    ->options(fn (Get $get): array => match (true) {
+                                        $get('allocation_type') === TreasuryAllocationType::FinalSettlement->value => FinalSettlement::query()
+                                            ->whereBelongsTo(Filament::getTenant())
+                                            ->where('employment_id', $get('../../employment_id'))
+                                            ->whereIn('status', [FinalSettlementStatus::Posted, FinalSettlementStatus::Settled])
+                                            ->where('balance_direction', $get('../../type') === TreasuryTransactionType::Receipt->value ? 'receivable' : 'payable')
+                                            ->get()->filter(fn (FinalSettlement $settlement): bool => bccomp($settlement->postedOpenAmount(), '0', 4) === 1)
+                                            ->mapWithKeys(fn (FinalSettlement $settlement): array => [
+                                                $settlement->getKey() => "{$settlement->reference_number} — PKR {$settlement->postedOpenAmount()}",
+                                            ])->all(),
+                                        $get('../../type') === TreasuryTransactionType::Receipt->value => CustomerInvoice::query()->whereBelongsTo(Filament::getTenant())
+                                            ->where('customer_id', $get('../../party_id'))
+                                            ->where('type', CustomerInvoiceType::Invoice)
+                                            ->where('status', CustomerInvoiceStatus::Posted)
+                                            ->orderBy('due_date')->get()
+                                            ->filter(fn (CustomerInvoice $invoice): bool => bccomp($invoice->postedOpenAmount(), '0', 4) === 1)
+                                            ->mapWithKeys(fn (CustomerInvoice $invoice): array => [
+                                                $invoice->getKey() => ($invoice->invoice_number ?? '#'.$invoice->getKey()).' — PKR '.$invoice->postedOpenAmount(),
+                                            ])->all(),
+                                        filled($get('../../employment_id')) => PayrollEntry::query()->whereBelongsTo(Filament::getTenant())
+                                            ->where('employment_id', $get('../../employment_id'))
+                                            ->whereHas('payrollRun', fn ($query) => $query
+                                                ->whereNotNull('journal_entry_id')->whereNull('reversal_journal_entry_id'))
+                                            ->with('payrollRun')->get()
+                                            ->filter(fn (PayrollEntry $entry): bool => bccomp($entry->postedOpenAmount(), '0', 4) === 1)
+                                            ->mapWithKeys(fn (PayrollEntry $entry): array => [
+                                                $entry->getKey() => "{$entry->payrollRun->reference_number} — PKR {$entry->postedOpenAmount()}",
+                                            ])->all(),
+                                        default => VendorBill::query()->whereBelongsTo(Filament::getTenant())
+                                            ->where('vendor_id', $get('../../party_id'))
+                                            ->where('type', VendorBillType::Invoice)
+                                            ->where('status', VendorBillStatus::Posted)
+                                            ->orderBy('due_date')->get()
+                                            ->filter(fn (VendorBill $bill): bool => bccomp($bill->postedOpenAmount(), '0', 4) === 1)
+                                            ->mapWithKeys(fn (VendorBill $bill): array => [
+                                                $bill->getKey() => ($bill->vendor_bill_number ?? '#'.$bill->getKey()).' — PKR '.$bill->postedOpenAmount(),
+                                            ])->all(),
+                                    })
+                                    ->searchable()
+                                    ->required()
+                                    ->columnSpan(['sm' => 1, 'md' => 2, 'lg' => 2]),
+                                TextInput::make('amount')
+                                    ->label('Allocated Amount (PKR)')
+                                    ->numeric()
+                                    ->prefix('PKR')
+                                    ->minValue(0.0001)
+                                    ->required(),
+                            ])
+                            ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
+                            ->columnSpanFull(),
+                    ]),
+            ]);
     }
 
     /** @return array<int, string> */

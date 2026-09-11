@@ -16,6 +16,7 @@ class DesignationForm
     public static function configure(Schema $schema): Schema
     {
         return $schema
+            ->columns(1)
             ->components([
                 Section::make('Designation Details')
                     ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])

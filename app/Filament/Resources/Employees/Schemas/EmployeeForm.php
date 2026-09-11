@@ -27,184 +27,186 @@ class EmployeeForm
 {
     public static function configure(Schema $schema): Schema
     {
-        return $schema->components([
-            Section::make('Employee Profile & Status')
-                ->schema([
-                    TextInput::make('full_name')->label('Full Name')->required()->maxLength(255),
-                    Toggle::make('is_active')->label('Active Profile')->default(true)->required(),
-                    FileUpload::make('photograph_path')
-                        ->label('Photograph')
-                        ->image()
-                        ->imageEditor()
-                        ->disk('public')
-                        ->directory('employees/photos')
-                        ->maxSize(2048)
-                        ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
-                        ->rules(['nullable', 'image', 'max:2048'])
-                        ->helperText('Max 2 MB. JPEG, PNG, or WebP.')
-                        ->columnSpanFull()
-                        ->visible(fn (string $operation, ?Employee $record): bool => self::canManageSensitive($operation, $record)),
-                ])
-                ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
-                ->columnSpanFull(),
-            Section::make('Identity Information')
-                ->schema([
-                    TextInput::make('father_or_husband_name')->label("Father's / Husband's Name")->maxLength(255),
-                    TextInput::make('cnic')->label('CNIC Number')->placeholder('12345-1234567-1')->maxLength(15),
-                    DatePicker::make('date_of_birth')->label('Date of Birth')->beforeOrEqual('today'),
-                    Select::make('gender')->label('Gender')->options(collect(Gender::cases())->mapWithKeys(
-                        fn (Gender $gender): array => [$gender->value => $gender->label()],
-                    )->all()),
-                    Select::make('marital_status')->label('Marital Status')->options(collect(MaritalStatus::cases())->mapWithKeys(
-                        fn (MaritalStatus $status): array => [$status->value => $status->label()],
-                    )->all()),
-                    TextInput::make('nationality')->label('Nationality')->default('Pakistani')->maxLength(100),
-                ])
-                ->visible(fn (string $operation, ?Employee $record): bool => self::canManageSensitive($operation, $record))
-                ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
-                ->columnSpanFull(),
-            Section::make('Contact & Medical Information')
-                ->schema([
-                    TextInput::make('mobile')->label('Primary Mobile')->tel()->maxLength(50),
-                    TextInput::make('alternate_contact')->label('Alternate Contact')->tel()->maxLength(50),
-                    TextInput::make('email')->label('Personal Email')->email()->maxLength(255),
-                    Select::make('blood_group')->label('Blood Group')->options(array_combine(
-                        ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'],
-                        ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'],
-                    )),
-                    Textarea::make('address')->label('Residential Address')->rows(2)->columnSpanFull(),
-                ])
-                ->visible(fn (string $operation, ?Employee $record): bool => self::canManageSensitive($operation, $record))
-                ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
-                ->columnSpanFull(),
-            Section::make('Initial Company Employment')
-                ->description('Creates the profile and its first employment in the active company together.')
-                ->schema([
-                    TextInput::make('employment_employee_code_preview')
-                        ->label('Employee Code')
-                        ->placeholder('Assigned automatically')
-                        ->disabled()
-                        ->dehydrated(false),
-                    DatePicker::make('employment_joining_date')
-                        ->label('Date of Joining')
-                        ->minDate('2000-01-01')
-                        ->maxDate(now()->addYear())
-                        ->required(),
-                    Select::make('employment_department_id')
-                        ->label('Department')
-                        ->options(fn (): array => Filament::getTenant()?->departments()
-                            ->where('is_active', true)
-                            ->orderBy('name')
-                            ->pluck('name', 'id')
-                            ->all() ?? [])
-                        ->searchable()
-                        ->preload()
-                        ->live(),
-                    Select::make('employment_designation_id')
-                        ->label('Designation')
-                        ->options(function (Get $get): array {
-                            $tenant = Filament::getTenant();
-
-                            if ($tenant === null) {
-                                return [];
-                            }
-
-                            $departmentId = $get('employment_department_id');
-
-                            return $tenant->designations()
+        return $schema
+            ->columns(1)
+            ->components([
+                Section::make('Employee Profile & Status')
+                    ->schema([
+                        TextInput::make('full_name')->label('Full Name')->required()->maxLength(255),
+                        Toggle::make('is_active')->label('Active Profile')->default(true)->required(),
+                        FileUpload::make('photograph_path')
+                            ->label('Photograph')
+                            ->image()
+                            ->imageEditor()
+                            ->disk('public')
+                            ->directory('employees/photos')
+                            ->maxSize(2048)
+                            ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
+                            ->rules(['nullable', 'image', 'max:2048'])
+                            ->helperText('Max 2 MB. JPEG, PNG, or WebP.')
+                            ->columnSpanFull()
+                            ->visible(fn (string $operation, ?Employee $record): bool => self::canManageSensitive($operation, $record)),
+                    ])
+                    ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
+                    ->columnSpanFull(),
+                Section::make('Identity Information')
+                    ->schema([
+                        TextInput::make('father_or_husband_name')->label("Father's / Husband's Name")->maxLength(255),
+                        TextInput::make('cnic')->label('CNIC Number')->placeholder('12345-1234567-1')->maxLength(15),
+                        DatePicker::make('date_of_birth')->label('Date of Birth')->beforeOrEqual('today'),
+                        Select::make('gender')->label('Gender')->options(collect(Gender::cases())->mapWithKeys(
+                            fn (Gender $gender): array => [$gender->value => $gender->label()],
+                        )->all()),
+                        Select::make('marital_status')->label('Marital Status')->options(collect(MaritalStatus::cases())->mapWithKeys(
+                            fn (MaritalStatus $status): array => [$status->value => $status->label()],
+                        )->all()),
+                        TextInput::make('nationality')->label('Nationality')->default('Pakistani')->maxLength(100),
+                    ])
+                    ->visible(fn (string $operation, ?Employee $record): bool => self::canManageSensitive($operation, $record))
+                    ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
+                    ->columnSpanFull(),
+                Section::make('Contact & Medical Information')
+                    ->schema([
+                        TextInput::make('mobile')->label('Primary Mobile')->tel()->maxLength(50),
+                        TextInput::make('alternate_contact')->label('Alternate Contact')->tel()->maxLength(50),
+                        TextInput::make('email')->label('Personal Email')->email()->maxLength(255),
+                        Select::make('blood_group')->label('Blood Group')->options(array_combine(
+                            ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'],
+                            ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'],
+                        )),
+                        Textarea::make('address')->label('Residential Address')->rows(2)->columnSpanFull(),
+                    ])
+                    ->visible(fn (string $operation, ?Employee $record): bool => self::canManageSensitive($operation, $record))
+                    ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
+                    ->columnSpanFull(),
+                Section::make('Initial Company Employment')
+                    ->description('Creates the profile and its first employment in the active company together.')
+                    ->schema([
+                        TextInput::make('employment_employee_code_preview')
+                            ->label('Employee Code')
+                            ->placeholder('Assigned automatically')
+                            ->disabled()
+                            ->dehydrated(false),
+                        DatePicker::make('employment_joining_date')
+                            ->label('Date of Joining')
+                            ->minDate('2000-01-01')
+                            ->maxDate(now()->addYear())
+                            ->required(),
+                        Select::make('employment_department_id')
+                            ->label('Department')
+                            ->options(fn (): array => Filament::getTenant()?->departments()
                                 ->where('is_active', true)
-                                ->when(
-                                    filled($departmentId),
-                                    fn (Builder $query): Builder => $query->where(
-                                        fn (Builder $subQuery): Builder => $subQuery
-                                            ->where('department_id', $departmentId)
-                                            ->orWhereNull('department_id'),
-                                    ),
-                                )
                                 ->orderBy('name')
                                 ->pluck('name', 'id')
-                                ->all();
-                        })
-                        ->searchable()
-                        ->preload(),
-                    Select::make('employment_reporting_to_employment_id')
-                        ->label('Reporting To')
-                        ->options(fn (): array => Employment::query()
-                            ->whereBelongsTo(Filament::getTenant())
-                            ->whereNotIn('employment_status', [
-                                EmploymentStatus::Resigned->value,
-                                EmploymentStatus::Terminated->value,
-                                EmploymentStatus::Ended->value,
-                            ])
-                            ->with('employee')
-                            ->get()
-                            ->mapWithKeys(fn (Employment $employment): array => [
-                                $employment->getKey() => "{$employment->employee->full_name} ({$employment->employee_code})",
-                            ])
-                            ->all())
-                        ->searchable()
-                        ->preload()
-                        ->placeholder('Select reporting manager (optional)'),
-                    Select::make('employment_employment_category')
-                        ->label('Employee Category')
-                        ->options(collect(EmploymentCategory::cases())->mapWithKeys(
-                            fn (EmploymentCategory $category): array => [$category->value => $category->label()],
-                        )->all())
-                        ->default(EmploymentCategory::AdministrativeStaff->value)
-                        ->required(),
-                    Select::make('employment_employment_type')
-                        ->label('Employment Type')
-                        ->options(collect(EmploymentType::cases())->mapWithKeys(
-                            fn (EmploymentType $type): array => [$type->value => $type->label()],
-                        )->all())
-                        ->default(EmploymentType::Permanent->value)
-                        ->required(),
-                    Select::make('employment_employment_status')
-                        ->label('Status')
-                        ->options(collect(EmploymentStatus::cases())
-                            ->reject(fn (EmploymentStatus $status): bool => $status->isLegacy())
-                            ->mapWithKeys(
-                                fn (EmploymentStatus $status): array => [$status->value => $status->label()],
+                                ->all() ?? [])
+                            ->searchable()
+                            ->preload()
+                            ->live(),
+                        Select::make('employment_designation_id')
+                            ->label('Designation')
+                            ->options(function (Get $get): array {
+                                $tenant = Filament::getTenant();
+
+                                if ($tenant === null) {
+                                    return [];
+                                }
+
+                                $departmentId = $get('employment_department_id');
+
+                                return $tenant->designations()
+                                    ->where('is_active', true)
+                                    ->when(
+                                        filled($departmentId),
+                                        fn (Builder $query): Builder => $query->where(
+                                            fn (Builder $subQuery): Builder => $subQuery
+                                                ->where('department_id', $departmentId)
+                                                ->orWhereNull('department_id'),
+                                        ),
+                                    )
+                                    ->orderBy('name')
+                                    ->pluck('name', 'id')
+                                    ->all();
+                            })
+                            ->searchable()
+                            ->preload(),
+                        Select::make('employment_reporting_to_employment_id')
+                            ->label('Reporting To')
+                            ->options(fn (): array => Employment::query()
+                                ->whereBelongsTo(Filament::getTenant())
+                                ->whereNotIn('employment_status', [
+                                    EmploymentStatus::Resigned->value,
+                                    EmploymentStatus::Terminated->value,
+                                    EmploymentStatus::Ended->value,
+                                ])
+                                ->with('employee')
+                                ->get()
+                                ->mapWithKeys(fn (Employment $employment): array => [
+                                    $employment->getKey() => "{$employment->employee->full_name} ({$employment->employee_code})",
+                                ])
+                                ->all())
+                            ->searchable()
+                            ->preload()
+                            ->placeholder('Select reporting manager (optional)'),
+                        Select::make('employment_employment_category')
+                            ->label('Employee Category')
+                            ->options(collect(EmploymentCategory::cases())->mapWithKeys(
+                                fn (EmploymentCategory $category): array => [$category->value => $category->label()],
                             )->all())
-                        ->default(EmploymentStatus::Probation->value)
-                        ->required(),
-                    DatePicker::make('employment_probation_start_date')
-                        ->label('Probation Start')
-                        ->afterOrEqual('employment_joining_date'),
-                    DatePicker::make('employment_probation_end_date')
-                        ->label('Probation End')
-                        ->afterOrEqual('employment_probation_start_date'),
-                    DatePicker::make('employment_confirmation_date')
-                        ->label('Confirmation Date')
-                        ->afterOrEqual('employment_joining_date'),
-                    TextInput::make('employment_notice_period_days')
-                        ->label('Notice Period (Calendar Days)')
-                        ->numeric()
-                        ->minValue(1)
-                        ->maxValue(65535),
-                    Select::make('employment_work_location_id')
-                        ->label('Work Location')
-                        ->options(fn (): array => Filament::getTenant()?->workLocations()
-                            ->where('is_active', true)
-                            ->orderBy('name')
-                            ->pluck('name', 'id')
-                            ->all() ?? [])
-                        ->searchable()
-                        ->preload(),
-                    TimePicker::make('employment_work_start_time')->label('Start Time')->seconds(false),
-                    TimePicker::make('employment_work_end_time')->label('End Time')->seconds(false),
-                    TextInput::make('employment_working_days_per_week')
-                        ->label('Working Days Per Week')
-                        ->numeric()
-                        ->minValue(1)
-                        ->maxValue(7)
-                        ->default(6)
-                        ->required(),
-                ])
-                ->visibleOn('create')
-                ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
-                ->columnSpanFull(),
-        ]);
+                            ->default(EmploymentCategory::AdministrativeStaff->value)
+                            ->required(),
+                        Select::make('employment_employment_type')
+                            ->label('Employment Type')
+                            ->options(collect(EmploymentType::cases())->mapWithKeys(
+                                fn (EmploymentType $type): array => [$type->value => $type->label()],
+                            )->all())
+                            ->default(EmploymentType::Permanent->value)
+                            ->required(),
+                        Select::make('employment_employment_status')
+                            ->label('Status')
+                            ->options(collect(EmploymentStatus::cases())
+                                ->reject(fn (EmploymentStatus $status): bool => $status->isLegacy())
+                                ->mapWithKeys(
+                                    fn (EmploymentStatus $status): array => [$status->value => $status->label()],
+                                )->all())
+                            ->default(EmploymentStatus::Probation->value)
+                            ->required(),
+                        DatePicker::make('employment_probation_start_date')
+                            ->label('Probation Start')
+                            ->afterOrEqual('employment_joining_date'),
+                        DatePicker::make('employment_probation_end_date')
+                            ->label('Probation End')
+                            ->afterOrEqual('employment_probation_start_date'),
+                        DatePicker::make('employment_confirmation_date')
+                            ->label('Confirmation Date')
+                            ->afterOrEqual('employment_joining_date'),
+                        TextInput::make('employment_notice_period_days')
+                            ->label('Notice Period (Calendar Days)')
+                            ->numeric()
+                            ->minValue(1)
+                            ->maxValue(65535),
+                        Select::make('employment_work_location_id')
+                            ->label('Work Location')
+                            ->options(fn (): array => Filament::getTenant()?->workLocations()
+                                ->where('is_active', true)
+                                ->orderBy('name')
+                                ->pluck('name', 'id')
+                                ->all() ?? [])
+                            ->searchable()
+                            ->preload(),
+                        TimePicker::make('employment_work_start_time')->label('Start Time')->seconds(false),
+                        TimePicker::make('employment_work_end_time')->label('End Time')->seconds(false),
+                        TextInput::make('employment_working_days_per_week')
+                            ->label('Working Days Per Week')
+                            ->numeric()
+                            ->minValue(1)
+                            ->maxValue(7)
+                            ->default(6)
+                            ->required(),
+                    ])
+                    ->visibleOn('create')
+                    ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
+                    ->columnSpanFull(),
+            ]);
     }
 
     private static function canManageSensitive(string $operation, ?Employee $record): bool

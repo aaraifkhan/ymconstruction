@@ -125,10 +125,10 @@ class PettyCashRegisterPage extends Page
                         ->searchable(),
                     TextInput::make('description')->label('Particulars / Narration')->required(),
                 ])
-                ->action(function (array $data, RecordQuickExpenseAction $action, PettyCashRegisterReport $reportService): void {
+                ->action(function (array $data, RecordQuickExpenseAction $quickExpenseAction, PettyCashRegisterReport $reportService): void {
                     $company = Filament::getTenant();
                     $user = Filament::auth()->user();
-                    $action->handle(
+                    $quickExpenseAction->handle(
                         company: $company,
                         actor: $user,
                         date: CarbonImmutable::parse($data['date']),
@@ -167,10 +167,10 @@ class PettyCashRegisterPage extends Page
                     TextInput::make('amount')->label('Amount (PKR)')->numeric()->minValue(0.01)->prefix('PKR')->required(),
                     TextInput::make('description')->label('Narration / Memo')->default('Petty cash float replenishment')->required(),
                 ])
-                ->action(function (array $data, RecordPettyCashTopUpAction $action, PettyCashRegisterReport $reportService): void {
+                ->action(function (array $data, RecordPettyCashTopUpAction $topUpAction, PettyCashRegisterReport $reportService): void {
                     $company = Filament::getTenant();
                     $user = Filament::auth()->user();
-                    $action->handle(
+                    $topUpAction->handle(
                         company: $company,
                         actor: $user,
                         date: CarbonImmutable::parse($data['date']),
@@ -193,10 +193,10 @@ class PettyCashRegisterPage extends Page
                     TextInput::make('on_account')->label('On-Account Cash Held by Staff (PKR)')->numeric()->minValue(0)->prefix('PKR')->default(0),
                     Textarea::make('explanation')->label('Notes / Variance Explanation'),
                 ])
-                ->action(function (array $data, PerformPettyCashReconciliationAction $action): void {
+                ->action(function (array $data, PerformPettyCashReconciliationAction $reconciliationAction): void {
                     $company = Filament::getTenant();
                     $user = Filament::auth()->user();
-                    $reconciliation = $action->handle(
+                    $reconciliation = $reconciliationAction->handle(
                         company: $company,
                         actor: $user,
                         date: CarbonImmutable::parse($data['date']),

@@ -13,6 +13,7 @@ class CompanyForm
     public static function configure(Schema $schema): Schema
     {
         return $schema
+            ->columns(1)
             ->components([
                 Section::make('Company Identity & Registration')
                     ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])

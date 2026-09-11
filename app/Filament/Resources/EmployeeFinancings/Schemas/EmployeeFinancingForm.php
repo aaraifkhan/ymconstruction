@@ -18,6 +18,7 @@ class EmployeeFinancingForm
     public static function configure(Schema $schema): Schema
     {
         return $schema
+            ->columns(1)
             ->components([
                 CompanyContextField::make(),
                 Section::make('Financing Request Details')

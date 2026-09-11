@@ -54,6 +54,7 @@ class DocumentForm
     public static function configure(Schema $schema): Schema
     {
         return $schema
+            ->columns(1)
             ->components([
                 Section::make('Document Classification & Parameters')
                     ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])

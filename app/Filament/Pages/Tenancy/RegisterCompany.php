@@ -27,9 +27,12 @@ class RegisterCompany extends RegisterTenant
     public function form(Schema $schema): Schema
     {
         return $schema
+            ->columns(1)
             ->components([
                 Section::make('First company')
                     ->description('Create a company and grant your user access to it.')
+                    ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
+                    ->columnSpanFull()
                     ->schema([
                         TextInput::make('name')
                             ->required()

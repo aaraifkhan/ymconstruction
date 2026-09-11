@@ -99,10 +99,10 @@ class GeneralGroupExpensePage extends Page implements HasTable
                         ->default('General holding / petty cash float injection')
                         ->required(),
                 ])
-                ->action(function (array $data, RecordPettyCashTopUpAction $action): void {
+                ->action(function (array $data, RecordPettyCashTopUpAction $topUpAction): void {
                     $corporateCompany = $this->getCorporateCompany();
                     $user = Filament::auth()->user();
-                    $journal = $action->handle(
+                    $journal = $topUpAction->handle(
                         company: $corporateCompany,
                         actor: $user,
                         date: CarbonImmutable::parse($data['date']),
@@ -175,11 +175,13 @@ class GeneralGroupExpensePage extends Page implements HasTable
             : $user?->companies()->wherePivot('is_active', true)->pluck('companies.id')->all() ?? [];
 
         return $form
+            ->columns(1)
             ->statePath('data')
             ->components([
                 Section::make('Record Combined / General Group Expense')
                     ->description('Record staff tea/refreshments, office entertainment, common utilities, and shared assets for the group in the Corporate Holding book (7 Orbit) with full visibility.')
                     ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
+                    ->columnSpanFull()
                     ->schema([
                         Select::make('target_company_id')
                             ->label('Corporate Master Book (Holding Entity)')

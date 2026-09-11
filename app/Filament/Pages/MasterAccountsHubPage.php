@@ -136,11 +136,13 @@ class MasterAccountsHubPage extends Page implements HasTable
             : $user?->companies()->wherePivot('is_active', true)->pluck('companies.id')->all() ?? [];
 
         return $form
+            ->columns(1)
             ->statePath('data')
             ->components([
                 Section::make('Universal Cross-Company Transaction Entry')
                     ->description('Record payments, income receipts, and journals directly into any authorized company ledger with full breathing room.')
                     ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
+                    ->columnSpanFull()
                     ->schema([
                         Select::make('target_company_id')
                             ->label('Target Company')

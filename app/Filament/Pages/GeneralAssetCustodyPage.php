@@ -95,6 +95,7 @@ class GeneralAssetCustodyPage extends Page implements HasTable
             : $user?->companies()->wherePivot('is_active', true)->pluck('companies.name', 'companies.id') ?? collect();
 
         return $form
+            ->columns(1)
             ->statePath('data')
             ->components([
                 Section::make('Register & Deploy Group Asset')

@@ -18,70 +18,72 @@ class JoiningLetterForm
 {
     public static function configure(Schema $schema): Schema
     {
-        return $schema->components([
-            Section::make('Joining Letter Generation')
-                ->description('Save changes, then use “Regenerate from Template” to refresh the protected letter snapshot.')
-                ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
-                ->columnSpanFull()
-                ->schema([
-                    Select::make('employment_id')
-                        ->label('Employee')
-                        ->options(fn (): array => Employment::query()
-                            ->whereBelongsTo(Filament::getTenant())
-                            ->with('employee')
-                            ->get()
-                            ->mapWithKeys(fn (Employment $employment): array => [
-                                $employment->getKey() => "{$employment->employee->full_name} ({$employment->employee_code})",
-                            ])
-                            ->all())
-                        ->searchable()
-                        ->preload()
-                        ->required(),
-                    Select::make('joining_letter_template_id')
-                        ->label('Letter Template')
-                        ->relationship(
-                            name: 'template',
-                            titleAttribute: 'name',
-                            modifyQueryUsing: fn (Builder $query): Builder => $query
+        return $schema
+            ->columns(1)
+            ->components([
+                Section::make('Joining Letter Generation')
+                    ->description('Save changes, then use “Regenerate from Template” to refresh the protected letter snapshot.')
+                    ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
+                    ->columnSpanFull()
+                    ->schema([
+                        Select::make('employment_id')
+                            ->label('Employee')
+                            ->options(fn (): array => Employment::query()
                                 ->whereBelongsTo(Filament::getTenant())
-                                ->where('is_active', true),
-                        )
-                        ->searchable()
-                        ->preload()
-                        ->required(),
-                    TextInput::make('letter_number')
-                        ->label('Reference / Letter #')
-                        ->required()
-                        ->maxLength(100)
-                        ->unique(
-                            ignoreRecord: true,
-                            modifyRuleUsing: fn (Unique $rule): Unique => $rule->where(
-                                'company_id',
-                                Filament::getTenant()?->getKey(),
+                                ->with('employee')
+                                ->get()
+                                ->mapWithKeys(fn (Employment $employment): array => [
+                                    $employment->getKey() => "{$employment->employee->full_name} ({$employment->employee_code})",
+                                ])
+                                ->all())
+                            ->searchable()
+                            ->preload()
+                            ->required(),
+                        Select::make('joining_letter_template_id')
+                            ->label('Letter Template')
+                            ->relationship(
+                                name: 'template',
+                                titleAttribute: 'name',
+                                modifyQueryUsing: fn (Builder $query): Builder => $query
+                                    ->whereBelongsTo(Filament::getTenant())
+                                    ->where('is_active', true),
+                            )
+                            ->searchable()
+                            ->preload()
+                            ->required(),
+                        TextInput::make('letter_number')
+                            ->label('Reference / Letter #')
+                            ->required()
+                            ->maxLength(100)
+                            ->unique(
+                                ignoreRecord: true,
+                                modifyRuleUsing: fn (Unique $rule): Unique => $rule->where(
+                                    'company_id',
+                                    Filament::getTenant()?->getKey(),
+                                ),
                             ),
-                        ),
-                    DatePicker::make('letter_date')
-                        ->label('Issue Date')
-                        ->default(today())
-                        ->required(),
-                    DatePicker::make('employment_effective_date')
-                        ->label('Effective Joining Date')
-                        ->default(today())
-                        ->required(),
-                    TextInput::make('compensation_amount')
-                        ->label('Agreed Monthly Compensation (PKR)')
-                        ->numeric()
-                        ->prefix('PKR')
-                        ->minValue(0)
-                        ->visible(fn (string $operation, ?JoiningLetter $record): bool => self::canManageCompensation($operation, $record)),
-                    TextInput::make('currency_code')
-                        ->label('Currency')
-                        ->default('PKR')
-                        ->length(3)
-                        ->required()
-                        ->visible(fn (string $operation, ?JoiningLetter $record): bool => self::canManageCompensation($operation, $record)),
-                ]),
-        ]);
+                        DatePicker::make('letter_date')
+                            ->label('Issue Date')
+                            ->default(today())
+                            ->required(),
+                        DatePicker::make('employment_effective_date')
+                            ->label('Effective Joining Date')
+                            ->default(today())
+                            ->required(),
+                        TextInput::make('compensation_amount')
+                            ->label('Agreed Monthly Compensation (PKR)')
+                            ->numeric()
+                            ->prefix('PKR')
+                            ->minValue(0)
+                            ->visible(fn (string $operation, ?JoiningLetter $record): bool => self::canManageCompensation($operation, $record)),
+                        TextInput::make('currency_code')
+                            ->label('Currency')
+                            ->default('PKR')
+                            ->length(3)
+                            ->required()
+                            ->visible(fn (string $operation, ?JoiningLetter $record): bool => self::canManageCompensation($operation, $record)),
+                    ]),
+            ]);
     }
 
     private static function canManageCompensation(string $operation, ?JoiningLetter $record): bool

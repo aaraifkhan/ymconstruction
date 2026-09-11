@@ -109,12 +109,12 @@ class BiddingExpenseLedgerPage extends Page
                     TextInput::make('amount')->label('Amount to Capitalize (PKR)')->numeric()->minValue(0.01)->prefix('PKR')->required(),
                     Textarea::make('description')->label('Particulars')->default('Transfer of accumulated tender / bid costs into awarded project direct costs')->required(),
                 ])
-                ->action(function (array $data, TransferBiddingCostToProjectAction $action, BiddingExpenseLedgerReport $reportService): void {
+                ->action(function (array $data, TransferBiddingCostToProjectAction $transferAction, BiddingExpenseLedgerReport $reportService): void {
                     $company = Filament::getTenant();
                     $user = Filament::auth()->user();
                     $project = Project::query()->where('company_id', $company->getKey())->findOrFail($data['project_id']);
 
-                    $journal = $action->handle(
+                    $journal = $transferAction->handle(
                         company: $company,
                         actor: $user,
                         project: $project,

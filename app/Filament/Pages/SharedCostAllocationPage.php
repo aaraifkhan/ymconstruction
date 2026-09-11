@@ -98,11 +98,13 @@ class SharedCostAllocationPage extends Page implements HasTable
             : $user?->companies()->wherePivot('is_active', true)->pluck('companies.id')->all() ?? [];
 
         return $form
+            ->columns(1)
             ->statePath('data')
             ->schema([
                 Section::make('Multi-Company Shared Expense Split')
                     ->description('Enter head office or joint expenses (e.g. utility bills, rent, internet) and allocate cost percentages/amounts across group entities.')
                     ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
+                    ->columnSpanFull()
                     ->schema([
                         Select::make('paying_company_id')
                             ->label('Paying Entity (Fund Source Company)')

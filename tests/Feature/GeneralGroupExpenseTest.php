@@ -135,6 +135,34 @@ class GeneralGroupExpenseTest extends TestCase
         $this->assertSame('1280', $debitLine->account_code_snapshot);
     }
 
+    public function test_can_top_up_general_petty_cash_float(): void
+    {
+        $corporate = $this->provisionCompany('7 Orbit Corporate');
+        $user = User::factory()->create()->assignRole(Role::findOrCreate('super_admin'));
+
+        $this->actingAs($user);
+        Filament::setCurrentPanel(Filament::getPanel('accounts-hub'));
+        Filament::bootCurrentPanel();
+
+        Livewire::test(GeneralGroupExpensePage::class)
+            ->assertOk()
+            ->callAction('topUpGeneralFloat', [
+                'date' => '2026-08-19',
+                'source_type' => 'director',
+                'amount' => '5000',
+                'description' => 'Petty cash injection',
+            ])
+            ->assertHasNoActionErrors();
+
+        $entry = JournalEntry::withoutGlobalScopes()
+            ->where('company_id', $corporate->getKey())
+            ->latest('id')
+            ->first();
+
+        $this->assertNotNull($entry);
+        $this->assertSame('5000.0000', $entry->debit_total);
+    }
+
     private function provisionCompany(string $name): Company
     {
         $company = Company::factory()->create(['name' => $name]);

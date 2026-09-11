@@ -59,6 +59,7 @@ class EmployeePerformancePage extends Page implements HasForms
         $company = Filament::getTenant();
 
         return $schema
+            ->columns(1)
             ->components([
                 Section::make('Filter & Scope Parameters')
                     ->description('Select an employee and reporting period to analyze composite productivity metrics and delivery breakdown.')
