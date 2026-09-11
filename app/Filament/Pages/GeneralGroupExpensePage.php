@@ -101,6 +101,16 @@ class GeneralGroupExpensePage extends Page implements HasTable
                 ])
                 ->action(function (array $data, RecordPettyCashTopUpAction $topUpAction): void {
                     $corporateCompany = $this->getCorporateCompany();
+                    if (! $corporateCompany) {
+                        Notification::make()
+                            ->title('Corporate Entity Not Found')
+                            ->body('No active corporate company was found to post this transaction.')
+                            ->danger()
+                            ->send();
+
+                        return;
+                    }
+
                     $user = Filament::auth()->user();
                     $journal = $topUpAction->handle(
                         company: $corporateCompany,

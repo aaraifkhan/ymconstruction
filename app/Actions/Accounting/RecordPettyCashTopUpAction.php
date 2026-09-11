@@ -67,25 +67,38 @@ class RecordPettyCashTopUpAction
             $pettyCashMapping = AccountingMapping::where('company_id', $company->getKey())
                 ->where('system_key', AccountingMappingKey::SitePettyCash)
                 ->where('is_active', true)
-                ->firstOrFail();
+                ->first();
+
+            if (! $pettyCashMapping?->account) {
+                throw ValidationException::withMessages([
+                    'source_type' => "Site Petty Cash (1112) accounting mapping is missing for {$company->name}. Please ensure account mappings are configured.",
+                ]);
+            }
             $pettyCashAccount = $pettyCashMapping->account;
 
             // Credit Account: Source of funds
-            $creditAccount = match ($sourceType) {
+            $creditMapping = match ($sourceType) {
                 'director' => AccountingMapping::where('company_id', $company->getKey())
                     ->where('system_key', AccountingMappingKey::DirectorLoan)
                     ->where('is_active', true)
-                    ->firstOrFail()->account,
+                    ->first(),
                 'head_office_cash' => AccountingMapping::where('company_id', $company->getKey())
                     ->where('system_key', AccountingMappingKey::DefaultCash)
                     ->where('is_active', true)
-                    ->firstOrFail()->account,
+                    ->first(),
                 'bank' => AccountingMapping::where('company_id', $company->getKey())
                     ->where('company_bank_account_id', $companyBankAccountId)
                     ->where('is_active', true)
-                    ->firstOrFail()->account,
+                    ->first(),
                 default => throw ValidationException::withMessages(['source_type' => 'Invalid top-up source.']),
             };
+
+            if (! $creditMapping?->account) {
+                throw ValidationException::withMessages([
+                    'source_type' => "Source account mapping ({$sourceType}) is missing or has no linked account for {$company->name}.",
+                ]);
+            }
+            $creditAccount = $creditMapping->account;
 
             $journal = JournalEntry::create([
                 'company_id' => $company->getKey(),
