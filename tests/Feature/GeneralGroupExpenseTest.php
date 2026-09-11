@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Actions\Accounting\CheckAccountAvailableBalanceAction;
 use App\Actions\Accounting\ProvisionCompanyAccountingFoundationAction;
 use App\Actions\Accounting\ProvisionStandardAccountTemplatesAction;
 use App\Enums\AccountingProfile;
@@ -139,10 +140,18 @@ class GeneralGroupExpenseTest extends TestCase
     {
         $corporate = $this->provisionCompany('7 Orbit Corporate');
         $user = User::factory()->create()->assignRole(Role::findOrCreate('super_admin'));
+        // Independent poster so maker-checker can complete immediately.
+        User::factory()->create()->assignRole(Role::findOrCreate('super_admin'));
 
         $this->actingAs($user);
         Filament::setCurrentPanel(Filament::getPanel('accounts-hub'));
         Filament::bootCurrentPanel();
+
+        $balanceBefore = app(CheckAccountAvailableBalanceAction::class)
+            ->getAccountBalance(
+                $corporate,
+                $corporate->accounts()->where('code', '1112')->firstOrFail(),
+            );
 
         Livewire::test(GeneralGroupExpensePage::class)
             ->assertOk()
@@ -152,7 +161,8 @@ class GeneralGroupExpenseTest extends TestCase
                 'amount' => '5000',
                 'description' => 'Petty cash injection',
             ])
-            ->assertHasNoActionErrors();
+            ->assertHasNoActionErrors()
+            ->assertNotified();
 
         $entry = JournalEntry::withoutGlobalScopes()
             ->where('company_id', $corporate->getKey())
@@ -160,7 +170,18 @@ class GeneralGroupExpenseTest extends TestCase
             ->first();
 
         $this->assertNotNull($entry);
+        $this->assertSame(JournalStatus::Posted, $entry->status);
         $this->assertSame('5000.0000', $entry->debit_total);
+        $this->assertNotNull($entry->voucher_number);
+
+        $balanceAfter = app(CheckAccountAvailableBalanceAction::class)
+            ->getAccountBalance(
+                $corporate,
+                $corporate->accounts()->where('code', '1112')->firstOrFail(),
+            );
+
+        $this->assertSame('0.0000', $balanceBefore);
+        $this->assertSame('5000.0000', $balanceAfter);
     }
 
     private function provisionCompany(string $name): Company

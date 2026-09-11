@@ -111,22 +111,33 @@ class GeneralGroupExpensePage extends Page implements HasTable
                         return;
                     }
 
-                    $user = Filament::auth()->user();
-                    $journal = $topUpAction->handle(
-                        company: $corporateCompany,
-                        actor: $user,
-                        date: CarbonImmutable::parse($data['date']),
-                        amount: (string) $data['amount'],
-                        sourceType: $data['source_type'],
-                        description: $data['description'],
-                        companyBankAccountId: ! empty($data['company_bank_account_id']) ? (int) $data['company_bank_account_id'] : null,
-                    );
+                    try {
+                        $user = Filament::auth()->user();
+                        $journal = $topUpAction->handle(
+                            company: $corporateCompany,
+                            actor: $user,
+                            date: CarbonImmutable::parse($data['date']),
+                            amount: (string) $data['amount'],
+                            sourceType: $data['source_type'],
+                            description: $data['description'],
+                            companyBankAccountId: ! empty($data['company_bank_account_id']) ? (int) $data['company_bank_account_id'] : null,
+                            postImmediately: true,
+                        );
 
-                    Notification::make()
-                        ->title('General Float / Balance Top-Up Successful')
-                        ->body("Voucher {$journal->voucher_number} for PKR ".number_format((float) $data['amount'], 2)." was posted into {$corporateCompany->name}.")
-                        ->success()
-                        ->send();
+                        Notification::make()
+                            ->title('General Float / Balance Top-Up Successful')
+                            ->body("Voucher {$journal->voucher_number} for PKR ".number_format((float) $data['amount'], 2)." was posted into {$corporateCompany->name}. Cash / petty cash balance is updated.")
+                            ->success()
+                            ->send();
+
+                        $this->dispatch('petty-cash-float-updated');
+                    } catch (\Throwable $exception) {
+                        Notification::make()
+                            ->title('Top-Up Failed')
+                            ->body($exception->getMessage())
+                            ->danger()
+                            ->send();
+                    }
                 }),
         ];
     }

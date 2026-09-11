@@ -20,6 +20,13 @@ class QuickExpenseStatsWidget extends StatsOverviewWidget
         'xl' => 4,
     ];
 
+    protected function getListeners(): array
+    {
+        return [
+            'petty-cash-float-updated' => '$refresh',
+        ];
+    }
+
     protected function getStats(): array
     {
         $tenant = Filament::getTenant();

@@ -170,7 +170,7 @@ class PettyCashRegisterPage extends Page
                 ->action(function (array $data, RecordPettyCashTopUpAction $topUpAction, PettyCashRegisterReport $reportService): void {
                     $company = Filament::getTenant();
                     $user = Filament::auth()->user();
-                    $topUpAction->handle(
+                    $journal = $topUpAction->handle(
                         company: $company,
                         actor: $user,
                         date: CarbonImmutable::parse($data['date']),
@@ -178,8 +178,13 @@ class PettyCashRegisterPage extends Page
                         sourceType: $data['source_type'],
                         description: $data['description'],
                         companyBankAccountId: ! empty($data['company_bank_account_id']) ? (int) $data['company_bank_account_id'] : null,
+                        postImmediately: true,
                     );
-                    Notification::make()->title('Petty cash top-up recorded')->success()->send();
+                    Notification::make()
+                        ->title('Petty cash top-up posted')
+                        ->body("Voucher {$journal->voucher_number} posted. Register balance updated.")
+                        ->success()
+                        ->send();
                     $this->loadReport($reportService);
                 }),
 

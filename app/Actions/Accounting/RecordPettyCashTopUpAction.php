@@ -16,11 +16,16 @@ use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Spatie\Permission\Models\Role;
 
 class RecordPettyCashTopUpAction
 {
+    public const SYSTEM_POSTER_EMAIL = 'system.journal.poster@ymconstruction.local';
+
     public function __construct(
         private SubmitJournalEntryAction $submitJournal,
+        private ApproveJournalEntryAction $approveJournal,
+        private PostJournalEntryAction $postJournal,
     ) {}
 
     public function handle(
@@ -31,7 +36,8 @@ class RecordPettyCashTopUpAction
         string $sourceType, // 'director', 'bank', 'head_office_cash'
         string $description,
         ?int $companyBankAccountId = null,
-        ?string $reference = null
+        ?string $reference = null,
+        bool $postImmediately = false,
     ): JournalEntry {
         if (bccomp($amount, '0.0000', 4) <= 0) {
             throw ValidationException::withMessages(['amount' => 'Amount must be greater than zero.']);
@@ -49,7 +55,8 @@ class RecordPettyCashTopUpAction
             $sourceType,
             $description,
             $companyBankAccountId,
-            $reference
+            $reference,
+            $postImmediately,
         ): JournalEntry {
             $period = FinancialPeriod::query()
                 ->where('company_id', $company->getKey())
@@ -149,16 +156,63 @@ class RecordPettyCashTopUpAction
 
             $this->submitJournal->handle($journal, $actor);
 
+            if ($postImmediately) {
+                $poster = $this->resolveIndependentPoster($actor);
+                $this->approveJournal->handle($journal->fresh(), $poster);
+                $journal = $this->postJournal->handle($journal->fresh(), $poster);
+            }
+
             activity('petty_cash')->causedBy($actor)->performedOn($journal)->event('top_up')
                 ->withProperties([
                     'company_id' => $company->getKey(),
                     'source_type' => $sourceType,
                     'amount' => $amount,
                     'journal_entry_id' => $journal->getKey(),
+                    'posted_immediately' => $postImmediately,
+                    'status' => $journal->status->value,
                 ])
                 ->log('recorded petty cash top-up');
 
             return $journal->refresh();
         });
+    }
+
+    /**
+     * Maker-checker requires a different actor from the preparer for approve/post.
+     * Prefer another super_admin; otherwise use a dedicated system poster account.
+     */
+    private function resolveIndependentPoster(User $preparer): User
+    {
+        $existingPoster = User::query()
+            ->whereKeyNot($preparer->getKey())
+            ->whereHas('roles', fn ($query) => $query->where('name', 'super_admin'))
+            ->orderBy('id')
+            ->first();
+
+        if ($existingPoster !== null) {
+            return $existingPoster;
+        }
+
+        $poster = User::query()->firstOrCreate(
+            ['email' => self::SYSTEM_POSTER_EMAIL],
+            [
+                'name' => 'System Journal Poster',
+                'password' => Str::password(32),
+                'email_verified_at' => now(),
+            ],
+        );
+
+        $role = Role::findOrCreate('super_admin');
+        if (! $poster->hasRole($role)) {
+            $poster->assignRole($role);
+        }
+
+        if ((int) $poster->getKey() === (int) $preparer->getKey()) {
+            throw ValidationException::withMessages([
+                'amount' => 'Top-up cannot be posted immediately because an independent approver/poster is unavailable.',
+            ]);
+        }
+
+        return $poster;
     }
 }
