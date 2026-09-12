@@ -5,11 +5,13 @@ namespace Tests\Feature;
 use App\Actions\Accounting\CheckAccountAvailableBalanceAction;
 use App\Actions\Accounting\ProvisionCompanyAccountingFoundationAction;
 use App\Actions\Accounting\ProvisionStandardAccountTemplatesAction;
+use App\Enums\AccountingMappingKey;
 use App\Enums\AccountingProfile;
 use App\Enums\ExpenseCategory;
 use App\Enums\ExpensePaymentMethod;
 use App\Enums\JournalStatus;
 use App\Filament\Pages\GeneralGroupExpensePage;
+use App\Models\AccountingMapping;
 use App\Models\Company;
 use App\Models\CompanyBankAccount;
 use App\Models\JournalEntry;
@@ -182,6 +184,67 @@ class GeneralGroupExpenseTest extends TestCase
 
         $this->assertSame('0.0000', $balanceBefore);
         $this->assertSame('5000.0000', $balanceAfter);
+    }
+
+    public function test_top_up_heals_missing_site_petty_cash_mapping_from_account_code(): void
+    {
+        $corporate = $this->provisionCompany('7 Orbit');
+        $corporate->update(['slug' => '7-orbit']);
+
+        AccountingMapping::query()
+            ->where('company_id', $corporate->getKey())
+            ->where('system_key', AccountingMappingKey::SitePettyCash)
+            ->delete();
+
+        $pettyCash = $corporate->accounts()->where('code', '1112')->firstOrFail();
+        $pettyCash->forceFill(['system_key' => null])->saveQuietly();
+
+        $user = User::factory()->create()->assignRole(Role::findOrCreate('super_admin'));
+        User::factory()->create()->assignRole(Role::findOrCreate('super_admin'));
+
+        $this->actingAs($user);
+        Filament::setCurrentPanel(Filament::getPanel('accounts-hub'));
+        Filament::bootCurrentPanel();
+
+        Livewire::test(GeneralGroupExpensePage::class)
+            ->assertOk()
+            ->callAction('topUpGeneralFloat', [
+                'date' => '2026-08-19',
+                'source_type' => 'director',
+                'amount' => '2500',
+                'description' => 'Heal mapping top-up',
+            ])
+            ->assertHasNoActionErrors()
+            ->assertNotified();
+
+        $this->assertNotNull(
+            AccountingMapping::query()
+                ->where('company_id', $corporate->getKey())
+                ->where('system_key', AccountingMappingKey::SitePettyCash)
+                ->where('account_id', $pettyCash->getKey())
+                ->where('is_active', true)
+                ->first()
+        );
+
+        $entry = JournalEntry::withoutGlobalScopes()
+            ->where('company_id', $corporate->getKey())
+            ->latest('id')
+            ->first();
+
+        $this->assertSame(JournalStatus::Posted, $entry->status);
+        $this->assertSame('2500.0000', $entry->debit_total);
+    }
+
+    public function test_get_corporate_company_prefers_exact_7_orbit_slug(): void
+    {
+        $holding = $this->provisionCompany('7 Orbit');
+        $holding->update(['slug' => '7-orbit']);
+        $medical = $this->provisionCompany('7 Orbit Medical Billing');
+        $medical->update(['slug' => '7-orbit-medical-billing']);
+
+        $page = app(GeneralGroupExpensePage::class);
+
+        $this->assertSame($holding->getKey(), $page->getCorporateCompany()?->getKey());
     }
 
     private function provisionCompany(string $name): Company

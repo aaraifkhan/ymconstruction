@@ -6,6 +6,7 @@ use App\Enums\AccountingMappingKey;
 use App\Enums\FinancialPeriodStatus;
 use App\Enums\JournalStatus;
 use App\Enums\VoucherType;
+use App\Models\Account;
 use App\Models\AccountingMapping;
 use App\Models\Company;
 use App\Models\FinancialPeriod;
@@ -70,42 +71,29 @@ class RecordPettyCashTopUpAction
                 throw ValidationException::withMessages(['date' => 'An open financial period is required for the transaction date.']);
             }
 
-            // Debit Account: Site Petty Cash (1112)
-            $pettyCashMapping = AccountingMapping::where('company_id', $company->getKey())
-                ->where('system_key', AccountingMappingKey::SitePettyCash)
-                ->where('is_active', true)
-                ->first();
+            $pettyCashAccount = $this->resolveSystemMappedAccount(
+                company: $company,
+                key: AccountingMappingKey::SitePettyCash,
+                accountCode: '1112',
+                label: 'Site Petty Cash (1112)',
+            );
 
-            if (! $pettyCashMapping?->account) {
-                throw ValidationException::withMessages([
-                    'source_type' => "Site Petty Cash (1112) accounting mapping is missing for {$company->name}. Please ensure account mappings are configured.",
-                ]);
-            }
-            $pettyCashAccount = $pettyCashMapping->account;
-
-            // Credit Account: Source of funds
-            $creditMapping = match ($sourceType) {
-                'director' => AccountingMapping::where('company_id', $company->getKey())
-                    ->where('system_key', AccountingMappingKey::DirectorLoan)
-                    ->where('is_active', true)
-                    ->first(),
-                'head_office_cash' => AccountingMapping::where('company_id', $company->getKey())
-                    ->where('system_key', AccountingMappingKey::DefaultCash)
-                    ->where('is_active', true)
-                    ->first(),
-                'bank' => AccountingMapping::where('company_id', $company->getKey())
-                    ->where('company_bank_account_id', $companyBankAccountId)
-                    ->where('is_active', true)
-                    ->first(),
+            $creditAccount = match ($sourceType) {
+                'director' => $this->resolveSystemMappedAccount(
+                    company: $company,
+                    key: AccountingMappingKey::DirectorLoan,
+                    accountCode: '2220',
+                    label: 'Director Loan (2220)',
+                ),
+                'head_office_cash' => $this->resolveSystemMappedAccount(
+                    company: $company,
+                    key: AccountingMappingKey::DefaultCash,
+                    accountCode: '1111',
+                    label: 'Head Office Cash (1111)',
+                ),
+                'bank' => $this->resolveBankMappedAccount($company, (int) $companyBankAccountId),
                 default => throw ValidationException::withMessages(['source_type' => 'Invalid top-up source.']),
             };
-
-            if (! $creditMapping?->account) {
-                throw ValidationException::withMessages([
-                    'source_type' => "Source account mapping ({$sourceType}) is missing or has no linked account for {$company->name}.",
-                ]);
-            }
-            $creditAccount = $creditMapping->account;
 
             $journal = JournalEntry::create([
                 'company_id' => $company->getKey(),
@@ -122,7 +110,6 @@ class RecordPettyCashTopUpAction
                 'prepared_by_id' => $actor->getKey(),
             ]);
 
-            // Line 1: Debit Petty Cash
             JournalLine::create([
                 'journal_entry_id' => $journal->getKey(),
                 'company_id' => $company->getKey(),
@@ -135,7 +122,6 @@ class RecordPettyCashTopUpAction
                 'description' => $description,
             ]);
 
-            // Line 2: Credit Source
             JournalLine::create([
                 'journal_entry_id' => $journal->getKey(),
                 'company_id' => $company->getKey(),
@@ -175,6 +161,72 @@ class RecordPettyCashTopUpAction
 
             return $journal->refresh();
         });
+    }
+
+    private function resolveSystemMappedAccount(
+        Company $company,
+        AccountingMappingKey $key,
+        string $accountCode,
+        string $label,
+    ): Account {
+        $mapping = AccountingMapping::query()
+            ->where('company_id', $company->getKey())
+            ->where('system_key', $key)
+            ->with('account')
+            ->first();
+
+        if ($mapping?->account && $mapping->is_active && $mapping->account->is_active) {
+            return $mapping->account;
+        }
+
+        $account = Account::query()
+            ->where('company_id', $company->getKey())
+            ->where('is_active', true)
+            ->where('allows_manual_posting', true)
+            ->where(function ($query) use ($key, $accountCode): void {
+                $query->where('system_key', $key->value)
+                    ->orWhere('code', $accountCode);
+            })
+            ->orderByRaw('CASE WHEN system_key = ? THEN 0 WHEN code = ? THEN 1 ELSE 2 END', [$key->value, $accountCode])
+            ->first();
+
+        if ($account === null) {
+            throw ValidationException::withMessages([
+                'source_type' => "{$label} account/mapping is missing for {$company->name}. Run AccountingFoundationSeeder or create account {$accountCode} with an active mapping.",
+            ]);
+        }
+
+        AccountingMapping::updateOrCreate(
+            [
+                'company_id' => $company->getKey(),
+                'system_key' => $key,
+            ],
+            [
+                'account_id' => $account->getKey(),
+                'company_bank_account_id' => null,
+                'is_active' => true,
+            ],
+        );
+
+        return $account;
+    }
+
+    private function resolveBankMappedAccount(Company $company, int $companyBankAccountId): Account
+    {
+        $mapping = AccountingMapping::query()
+            ->where('company_id', $company->getKey())
+            ->where('company_bank_account_id', $companyBankAccountId)
+            ->where('is_active', true)
+            ->with('account')
+            ->first();
+
+        if ($mapping?->account) {
+            return $mapping->account;
+        }
+
+        throw ValidationException::withMessages([
+            'company_bank_account_id' => "Source bank account mapping is missing or has no linked account for {$company->name}.",
+        ]);
     }
 
     /**

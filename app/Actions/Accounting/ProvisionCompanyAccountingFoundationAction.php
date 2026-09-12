@@ -53,7 +53,7 @@ class ProvisionCompanyAccountingFoundationAction
             $accountsByTemplate = [];
             foreach (AccountTemplate::query()->orderBy('sort_order')->get() as $template) {
                 $parentId = $template->parent_id ? $accountsByTemplate[$template->parent_id]->getKey() : null;
-                $accountsByTemplate[$template->getKey()] = Account::firstOrCreate(
+                $account = Account::firstOrCreate(
                     ['company_id' => $company->getKey(), 'code' => $template->code],
                     [
                         'parent_id' => $parentId, 'account_template_id' => $template->getKey(), 'name' => $template->name,
@@ -64,15 +64,31 @@ class ProvisionCompanyAccountingFoundationAction
                         'sort_order' => $template->sort_order,
                     ],
                 );
-            }
 
-            foreach ($accountsByTemplate as $account) {
-                if ($account->system_key !== null) {
-                    AccountingMapping::firstOrCreate(
-                        ['company_id' => $company->getKey(), 'system_key' => $account->system_key],
-                        ['account_id' => $account->getKey(), 'is_active' => true],
+                // Existing company charts may pre-date system keys. Heal when safe; mapping still uses the template key.
+                if ($template->system_key !== null && blank($account->system_key)) {
+                    try {
+                        $account->forceFill(['system_key' => $template->system_key])->save();
+                    } catch (ValidationException) {
+                        // Posted history can block structural edits; mapping creation below still proceeds.
+                    }
+                }
+
+                if ($template->system_key !== null) {
+                    AccountingMapping::updateOrCreate(
+                        [
+                            'company_id' => $company->getKey(),
+                            'system_key' => $template->system_key,
+                        ],
+                        [
+                            'account_id' => $account->getKey(),
+                            'company_bank_account_id' => null,
+                            'is_active' => true,
+                        ],
                     );
                 }
+
+                $accountsByTemplate[$template->getKey()] = $account->refresh();
             }
 
             $date = $asOf ?? CarbonImmutable::now($settings->timezone);

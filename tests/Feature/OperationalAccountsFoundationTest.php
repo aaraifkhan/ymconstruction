@@ -70,4 +70,32 @@ class OperationalAccountsFoundationTest extends TestCase
             $this->assertNotNull($account, "Account with code {$code} for category {$category->value} should exist in YMC accounts.");
         }
     }
+
+    public function test_reprovision_heals_missing_system_mappings_for_existing_accounts(): void
+    {
+        app(ProvisionStandardAccountTemplatesAction::class)->handle();
+
+        $company = Company::factory()->create(['name' => '7 Orbit', 'slug' => '7-orbit']);
+        $action = app(ProvisionCompanyAccountingFoundationAction::class);
+        $action->handle($company, AccountingProfile::ItServices);
+
+        AccountingMapping::query()
+            ->where('company_id', $company->getKey())
+            ->where('system_key', AccountingMappingKey::SitePettyCash)
+            ->delete();
+
+        $pettyCash = $company->accounts()->where('code', '1112')->firstOrFail();
+        $pettyCash->forceFill(['system_key' => null])->saveQuietly();
+
+        $action->handle($company->fresh(), AccountingProfile::ItServices);
+
+        $mapping = AccountingMapping::query()
+            ->where('company_id', $company->getKey())
+            ->where('system_key', AccountingMappingKey::SitePettyCash)
+            ->first();
+
+        $this->assertNotNull($mapping);
+        $this->assertTrue($mapping->is_active);
+        $this->assertSame($pettyCash->getKey(), $mapping->account_id);
+    }
 }

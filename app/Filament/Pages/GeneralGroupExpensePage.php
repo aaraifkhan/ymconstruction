@@ -162,14 +162,20 @@ class GeneralGroupExpensePage extends Page implements HasTable
 
     public function getCorporateCompany(): ?Company
     {
-        return Company::withoutGlobalScopes()
-            ->where('is_active', true)
-            ->where(function ($q): void {
-                $q->where('name', 'LIKE', '%7%Orbit%')
-                    ->orWhere('slug', 'LIKE', '%7-orbit%');
-            })
-            ->first()
-            ?? Company::withoutGlobalScopes()->where('is_active', true)->first();
+        // Prefer the holding company exactly. Avoid matching "7 Orbit Medical Billing".
+        return Company::withoutGlobalScopes()->where('is_active', true)->where('slug', '7-orbit')->first()
+            ?? Company::withoutGlobalScopes()->where('is_active', true)->where('name', '7 Orbit')->first()
+            ?? Company::withoutGlobalScopes()
+                ->where('is_active', true)
+                ->where(function ($query): void {
+                    $query->where('name', 'LIKE', '%7%Orbit%')
+                        ->orWhere('slug', 'LIKE', '7-orbit%');
+                })
+                ->where('slug', 'NOT LIKE', '%medical%')
+                ->where('name', 'NOT LIKE', '%Medical%')
+                ->orderBy('id')
+                ->first()
+            ?? Company::withoutGlobalScopes()->where('is_active', true)->orderBy('id')->first();
     }
 
     public function mount(): void
