@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Actions\Accounting\EnsureCompanyAccountingFoundationAction;
 use App\Actions\Accounting\RecordPettyCashTopUpAction;
 use App\Actions\Accounting\RecordQuickExpenseAction;
 use App\Enums\ExpenseCategory;
@@ -63,6 +64,40 @@ class GeneralGroupExpensePage extends Page implements HasTable
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('repairCorporateAccounting')
+                ->label('Repair 7 Orbit Accounts')
+                ->icon('heroicon-o-wrench-screwdriver')
+                ->color('warning')
+                ->requiresConfirmation()
+                ->modalHeading('Repair corporate chart of accounts?')
+                ->modalDescription('This creates any missing accounts, mappings, and open financial periods for 7 Orbit. Existing posted journals are not changed.')
+                ->action(function (EnsureCompanyAccountingFoundationAction $ensureFoundation): void {
+                    $corporateCompany = $this->getCorporateCompany();
+                    if (! $corporateCompany) {
+                        Notification::make()
+                            ->title('Corporate Entity Not Found')
+                            ->danger()
+                            ->send();
+
+                        return;
+                    }
+
+                    try {
+                        $result = $ensureFoundation->handle($corporateCompany);
+                        Notification::make()
+                            ->title('Corporate Accounting Repaired')
+                            ->body("{$corporateCompany->name}: {$result['accounts']} accounts ready. You can top-up now.")
+                            ->success()
+                            ->send();
+                        $this->dispatch('petty-cash-float-updated');
+                    } catch (\Throwable $exception) {
+                        Notification::make()
+                            ->title('Repair Failed')
+                            ->body($exception->getMessage())
+                            ->danger()
+                            ->send();
+                    }
+                }),
             Action::make('topUpGeneralFloat')
                 ->label('Fund / Top-Up General Balance')
                 ->icon('heroicon-o-plus-circle')

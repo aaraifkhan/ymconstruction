@@ -13,6 +13,7 @@ use App\Models\FinancialPeriod;
 use App\Models\JournalEntry;
 use App\Models\JournalLine;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -27,6 +28,7 @@ class RecordPettyCashTopUpAction
         private SubmitJournalEntryAction $submitJournal,
         private ApproveJournalEntryAction $approveJournal,
         private PostJournalEntryAction $postJournal,
+        private EnsureCompanyAccountingFoundationAction $ensureFoundation,
     ) {}
 
     public function handle(
@@ -59,6 +61,12 @@ class RecordPettyCashTopUpAction
             $reference,
             $postImmediately,
         ): JournalEntry {
+            // Production hubs may target a company whose COA/mappings were never provisioned.
+            $this->ensureFoundation->handle(
+                $company,
+                $date instanceof CarbonImmutable ? $date : CarbonImmutable::parse($date->toDateString()),
+            );
+
             $period = FinancialPeriod::query()
                 ->where('company_id', $company->getKey())
                 ->where('status', FinancialPeriodStatus::Open)

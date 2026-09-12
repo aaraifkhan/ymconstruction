@@ -235,6 +235,66 @@ class GeneralGroupExpenseTest extends TestCase
         $this->assertSame('2500.0000', $entry->debit_total);
     }
 
+    public function test_top_up_auto_provisions_missing_chart_of_accounts(): void
+    {
+        app(ProvisionStandardAccountTemplatesAction::class)->handle();
+
+        $corporate = Company::factory()->create([
+            'name' => '7 Orbit',
+            'slug' => '7-orbit',
+            'is_active' => true,
+        ]);
+
+        $this->assertSame(0, $corporate->accounts()->count());
+        $this->assertNull(
+            AccountingMapping::query()
+                ->where('company_id', $corporate->getKey())
+                ->where('system_key', AccountingMappingKey::SitePettyCash)
+                ->first()
+        );
+
+        $user = User::factory()->create()->assignRole(Role::findOrCreate('super_admin'));
+        User::factory()->create()->assignRole(Role::findOrCreate('super_admin'));
+
+        $this->actingAs($user);
+        Filament::setCurrentPanel(Filament::getPanel('accounts-hub'));
+        Filament::bootCurrentPanel();
+
+        Livewire::test(GeneralGroupExpensePage::class)
+            ->assertOk()
+            ->callAction('topUpGeneralFloat', [
+                'date' => '2026-08-19',
+                'source_type' => 'director',
+                'amount' => '7500',
+                'description' => 'Auto provision top-up',
+            ])
+            ->assertHasNoActionErrors()
+            ->assertNotified();
+
+        $this->assertTrue($corporate->accounts()->where('code', '1112')->exists());
+        $this->assertNotNull(
+            AccountingMapping::query()
+                ->where('company_id', $corporate->getKey())
+                ->where('system_key', AccountingMappingKey::SitePettyCash)
+                ->first()
+        );
+
+        $entry = JournalEntry::withoutGlobalScopes()
+            ->where('company_id', $corporate->getKey())
+            ->latest('id')
+            ->first();
+
+        $this->assertSame(JournalStatus::Posted, $entry->status);
+        $this->assertSame('7500.0000', $entry->debit_total);
+        $this->assertSame(
+            '7500.0000',
+            app(CheckAccountAvailableBalanceAction::class)->getAccountBalance(
+                $corporate,
+                $corporate->accounts()->where('code', '1112')->firstOrFail(),
+            ),
+        );
+    }
+
     public function test_get_corporate_company_prefers_exact_7_orbit_slug(): void
     {
         $holding = $this->provisionCompany('7 Orbit');
