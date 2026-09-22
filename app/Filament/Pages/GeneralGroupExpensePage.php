@@ -62,12 +62,25 @@ class GeneralGroupExpensePage extends Page implements HasTable
 
     protected function getHeaderActions(): array
     {
+        $user = Filament::auth()->user();
+        $accessibleCompanies = $user?->hasRole('super_admin')
+            ? Company::withoutGlobalScopes()->where('is_active', true)->pluck('name', 'id')->all()
+            : ($user?->companies()->wherePivot('is_active', true)->pluck('companies.name', 'companies.id')->all() ?? []);
+
         return [
             Action::make('topUpGeneralFloat')
                 ->label('Fund / Top-Up General Balance')
                 ->icon('heroicon-o-plus-circle')
                 ->color('success')
                 ->form([
+                    Select::make('target_company_id')
+                        ->label('Target Company / Entity Book')
+                        ->options($accessibleCompanies)
+                        ->default(fn () => $this->getCorporateCompany()?->getKey() ?? array_key_first($accessibleCompanies))
+                        ->required()
+                        ->searchable()
+                        ->live()
+                        ->afterStateUpdated(fn ($set) => $set('company_bank_account_id', null)),
                     DatePicker::make('date')
                         ->label('Date')
                         ->default(today()->toDateString())
@@ -76,15 +89,22 @@ class GeneralGroupExpensePage extends Page implements HasTable
                         ->label('Source of Funds / Injection')
                         ->options([
                             'director' => 'Director Advance / Funded (2220 Director Loan)',
-                            'bank' => 'Corporate Bank Account Transfer',
+                            'bank' => 'Bank Account Transfer',
                             'head_office_cash' => 'Head Office Cash (1111)',
                         ])
                         ->default('director')
                         ->live()
                         ->required(),
                     Select::make('company_bank_account_id')
-                        ->label('Corporate Bank Account')
-                        ->options(fn () => CompanyBankAccount::query()->where('company_id', $this->getCorporateCompany()?->getKey())->pluck('bank_name', 'id'))
+                        ->label('Bank Account')
+                        ->options(function (Get $get) {
+                            $targetId = $get('target_company_id') ?: $this->getCorporateCompany()?->getKey();
+
+                            return CompanyBankAccount::query()
+                                ->where('company_id', $targetId)
+                                ->where('is_active', true)
+                                ->pluck('bank_name', 'id');
+                        })
                         ->visible(fn (Get $get) => $get('source_type') === 'bank')
                         ->required(fn (Get $get) => $get('source_type') === 'bank')
                         ->searchable(),
@@ -100,11 +120,15 @@ class GeneralGroupExpensePage extends Page implements HasTable
                         ->required(),
                 ])
                 ->action(function (array $data, RecordPettyCashTopUpAction $topUpAction): void {
-                    $corporateCompany = $this->getCorporateCompany();
-                    if (! $corporateCompany) {
+                    $targetCompanyId = $data['target_company_id'] ?? $this->getCorporateCompany()?->getKey();
+                    $targetCompany = $targetCompanyId
+                        ? (Company::withoutGlobalScopes()->find($targetCompanyId) ?? $this->getCorporateCompany())
+                        : $this->getCorporateCompany();
+
+                    if (! $targetCompany) {
                         Notification::make()
-                            ->title('Corporate Entity Not Found')
-                            ->body('No active corporate company was found to post this transaction.')
+                            ->title('Company Not Found')
+                            ->body('No active company was found to post this transaction.')
                             ->danger()
                             ->send();
 
@@ -114,7 +138,7 @@ class GeneralGroupExpensePage extends Page implements HasTable
                     try {
                         $user = Filament::auth()->user();
                         $journal = $topUpAction->handle(
-                            company: $corporateCompany,
+                            company: $targetCompany,
                             actor: $user,
                             date: CarbonImmutable::parse($data['date']),
                             amount: (string) $data['amount'],
@@ -125,8 +149,8 @@ class GeneralGroupExpensePage extends Page implements HasTable
                         );
 
                         Notification::make()
-                            ->title('General Float / Balance Top-Up Successful')
-                            ->body("Voucher {$journal->voucher_number} for PKR ".number_format((float) $data['amount'], 2)." was posted into {$corporateCompany->name}. Cash / petty cash balance is updated.")
+                            ->title('Float / Balance Top-Up Successful')
+                            ->body("Voucher {$journal->voucher_number} for PKR ".number_format((float) $data['amount'], 2)." was posted into {$targetCompany->name}. Cash / petty cash balance is updated.")
                             ->success()
                             ->send();
 
@@ -197,26 +221,28 @@ class GeneralGroupExpensePage extends Page implements HasTable
     {
         $user = Filament::auth()->user();
         $corporateCompany = $this->getCorporateCompany();
-        $accessibleCompanyIds = $user?->hasRole('super_admin')
-            ? Company::withoutGlobalScopes()->where('is_active', true)->pluck('id')->all()
-            : $user?->companies()->wherePivot('is_active', true)->pluck('companies.id')->all() ?? [];
+        $accessibleCompanies = $user?->hasRole('super_admin')
+            ? Company::withoutGlobalScopes()->where('is_active', true)->pluck('name', 'id')->all()
+            : ($user?->companies()->wherePivot('is_active', true)->pluck('companies.name', 'companies.id')->all() ?? []);
 
         return $form
             ->columns(1)
             ->statePath('data')
             ->components([
                 Section::make('Record Combined / General Group Expense')
-                    ->description('Record staff tea/refreshments, office entertainment, common utilities, and shared assets for the group in the Corporate Holding book (7 Orbit) with full visibility.')
+                    ->description('Record staff tea/refreshments, office entertainment, common utilities, and shared assets for any company with full visibility.')
                     ->columns(['sm' => 1, 'md' => 2, 'lg' => 3])
                     ->columnSpanFull()
                     ->schema([
                         Select::make('target_company_id')
-                            ->label('Corporate Master Book (Holding Entity)')
-                            ->options(fn () => Company::withoutGlobalScopes()->whereIn('id', $accessibleCompanyIds)->where('is_active', true)->pluck('name', 'id'))
-                            ->default(fn () => $corporateCompany?->getKey())
-                            ->disabled()
-                            ->dehydrated()
-                            ->helperText('Fixed to Corporate Master / Holding Book (7 Orbit) for all general shared expenses & group assets.')
+                            ->label('Target Company / Entity Book')
+                            ->options($accessibleCompanies)
+                            ->default(fn () => $corporateCompany?->getKey() ?? array_key_first($accessibleCompanies))
+                            ->required()
+                            ->searchable()
+                            ->live()
+                            ->afterStateUpdated(fn ($set) => $set('company_bank_account_id', null))
+                            ->helperText('Select the company / entity book where this expense will be recorded.')
                             ->columnSpanFull(),
 
                         DatePicker::make('transaction_date')
@@ -247,9 +273,9 @@ class GeneralGroupExpensePage extends Page implements HasTable
                             ->live(),
 
                         Select::make('company_bank_account_id')
-                            ->label('Corporate Bank Account')
-                            ->options(function () use ($corporateCompany) {
-                                $compKey = $corporateCompany?->getKey();
+                            ->label('Bank Account')
+                            ->options(function (Get $get) use ($corporateCompany) {
+                                $compKey = $get('target_company_id') ?: $corporateCompany?->getKey();
 
                                 return CompanyBankAccount::query()
                                     ->where('company_id', $compKey)

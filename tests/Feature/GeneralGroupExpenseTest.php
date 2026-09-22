@@ -307,6 +307,80 @@ class GeneralGroupExpenseTest extends TestCase
         $this->assertSame($holding->getKey(), $page->getCorporateCompany()?->getKey());
     }
 
+    public function test_can_record_general_expense_for_any_selected_company(): void
+    {
+        $corporate = $this->provisionCompany('7 Orbit Corporate');
+        $ymc = $this->provisionCompany('YMC Construction');
+
+        $user = User::factory()->create()->assignRole(Role::findOrCreate('super_admin'));
+
+        $this->actingAs($user);
+        Filament::setCurrentPanel(Filament::getPanel('accounts-hub'));
+        Filament::bootCurrentPanel();
+
+        Livewire::test(GeneralGroupExpensePage::class)
+            ->assertOk()
+            ->set('data.target_company_id', $ymc->getKey())
+            ->set('data.transaction_date', '2026-08-20')
+            ->set('data.category', ExpenseCategory::Stationery->value)
+            ->set('data.payment_method', ExpensePaymentMethod::Director->value)
+            ->set('data.amount', '3200.00')
+            ->set('data.description', 'Office printer paper and stationery supplies for YMC site office')
+            ->call('submit');
+
+        // Verify journal entry in YMC Construction entity
+        $entry = JournalEntry::withoutGlobalScopes()
+            ->where('company_id', $ymc->getKey())
+            ->latest('id')
+            ->first();
+
+        $this->assertNotNull($entry);
+        $this->assertSame(JournalStatus::Submitted, $entry->status);
+        $this->assertSame('3200.0000', $entry->debit_total);
+        $this->assertStringContainsString('printer paper', $entry->description);
+
+        // Corporate entity should NOT have this entry
+        $corporateCount = JournalEntry::withoutGlobalScopes()
+            ->where('company_id', $corporate->getKey())
+            ->where('description', 'LIKE', '%printer paper%')
+            ->count();
+        $this->assertSame(0, $corporateCount);
+    }
+
+    public function test_can_top_up_float_for_selected_non_corporate_company(): void
+    {
+        $corporate = $this->provisionCompany('7 Orbit Corporate');
+        $bmc = $this->provisionCompany('BMC Construction');
+
+        $user = User::factory()->create()->assignRole(Role::findOrCreate('super_admin'));
+        User::factory()->create()->assignRole(Role::findOrCreate('super_admin'));
+
+        $this->actingAs($user);
+        Filament::setCurrentPanel(Filament::getPanel('accounts-hub'));
+        Filament::bootCurrentPanel();
+
+        Livewire::test(GeneralGroupExpensePage::class)
+            ->assertOk()
+            ->callAction('topUpGeneralFloat', [
+                'target_company_id' => $bmc->getKey(),
+                'date' => '2026-08-20',
+                'source_type' => 'director',
+                'amount' => '4500',
+                'description' => 'BMC site petty cash top-up',
+            ])
+            ->assertHasNoActionErrors()
+            ->assertNotified();
+
+        $entry = JournalEntry::withoutGlobalScopes()
+            ->where('company_id', $bmc->getKey())
+            ->latest('id')
+            ->first();
+
+        $this->assertNotNull($entry);
+        $this->assertSame(JournalStatus::Posted, $entry->status);
+        $this->assertSame('4500.0000', $entry->debit_total);
+    }
+
     private function provisionCompany(string $name): Company
     {
         $company = Company::factory()->create(['name' => $name]);

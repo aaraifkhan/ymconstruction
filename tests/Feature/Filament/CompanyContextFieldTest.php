@@ -15,8 +15,10 @@ use App\Models\Employment;
 use App\Models\User;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Collection;
 use Tests\TestCase;
 
 class CompanyContextFieldTest extends TestCase
@@ -84,7 +86,7 @@ class CompanyContextFieldTest extends TestCase
 
         foreach ($schemas as $formClass) {
             $schema = $formClass::configure(Schema::make());
-            $components = collect($schema->getComponents());
+            $components = $this->getFormFields($schema);
             /** @var Select|null $companyField */
             $companyField = $components->first(fn ($component): bool => $component instanceof Select && $component->getName() === 'company_id');
 
@@ -120,7 +122,7 @@ class CompanyContextFieldTest extends TestCase
         Filament::setTenant($currentCompany);
 
         $schema = AttendanceCorrectionForm::configure(Schema::make());
-        $components = collect($schema->getComponents());
+        $components = $this->getFormFields($schema);
         /** @var Select $recordField */
         $recordField = $components->first(fn ($component): bool => $component instanceof Select && $component->getName() === 'attendance_record_id');
 
@@ -143,12 +145,28 @@ class CompanyContextFieldTest extends TestCase
         Filament::setTenant($currentCompany);
 
         $schema = LeaveRequestForm::configure(Schema::make());
-        $components = collect($schema->getComponents());
+        $components = $this->getFormFields($schema);
         /** @var Select $employmentField */
         $employmentField = $components->first(fn ($component): bool => $component instanceof Select && $component->getName() === 'employment_id');
 
         $options = $employmentField->getOptions();
         $this->assertArrayHasKey($currentEmployment->getKey(), $options);
         $this->assertArrayNotHasKey($otherEmployment->getKey(), $options);
+    }
+
+    /**
+     * @return Collection<int, mixed>
+     */
+    private function getFormFields(Schema $schema): Collection
+    {
+        return collect($schema->getComponents())->flatMap(function ($component) {
+            if ($component instanceof Section) {
+                $children = $component->getDefaultChildComponents();
+
+                return is_array($children) ? $children : [$children];
+            }
+
+            return [$component];
+        });
     }
 }

@@ -55,6 +55,7 @@ class SalesReportsTest extends TestCase
             'amount' => '12000.0000',
         ]);
         app(ApproveProjectBudgetAction::class)->handle($budget, $actors[1]);
+        $budget->forceFill(['approved_at' => CarbonImmutable::parse('2026-08-15 10:00:00')])->saveQuietly();
 
         $aging = app(AccountsReceivableAgingReport::class)->forCompany(
             $company,
